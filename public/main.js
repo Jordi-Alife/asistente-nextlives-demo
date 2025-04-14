@@ -1,26 +1,26 @@
-const messages = document.getElementById("messages");
-const input = document.getElementById("user-input");
+async function sendMessage() {
+  const input = document.getElementById('input');
+  const text = input.value.trim();
+  if (!text) return;
 
-function mostrarMensaje(texto, clase) {
-  const div = document.createElement("div");
-  div.textContent = texto;
-  div.className = clase;
-  messages.appendChild(div);
-}
+  appendMessage('user', text);
+  input.value = '';
 
-async function enviar() {
-  const mensaje = input.value;
-  if (!mensaje.trim()) return;
-
-  mostrarMensaje("Tú: " + mensaje, "usuario");
-  input.value = "";
-
-  const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: mensaje })
+  const response = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: text })
   });
 
-  const data = await res.json();
-  mostrarMensaje("Asistente: " + data.reply, "asistente");
+  const data = await response.json();
+  appendMessage('assistant', data.reply);
+}
+
+function appendMessage(role, content) {
+  const chat = document.getElementById('chat-messages');
+  const msg = document.createElement('div');
+  msg.className = 'message ' + role;
+  msg.textContent = content;
+  chat.appendChild(msg);
+  chat.scrollTop = chat.scrollHeight;
 }
