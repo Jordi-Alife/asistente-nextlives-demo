@@ -1,26 +1,36 @@
+const chatMessages = document.getElementById('chat-messages');
+const input = document.getElementById('input');
+const button = document.querySelector('button');
+
+function addMessage(role, content) {
+  const message = document.createElement('div');
+  message.className = `message ${role}`;
+  message.textContent = content;
+  chatMessages.appendChild(message);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
 async function sendMessage() {
-  const input = document.getElementById('input');
   const text = input.value.trim();
   if (!text) return;
 
-  appendMessage('user', text);
+  addMessage('user', text);
   input.value = '';
 
-  const response = await fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: text })
-  });
-
-  const data = await response.json();
-  appendMessage('assistant', data.reply);
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text }),
+    });
+    const data = await res.json();
+    addMessage('assistant', data.reply);
+  } catch (err) {
+    addMessage('assistant', 'Ha ocurrido un error.');
+  }
 }
 
-function appendMessage(role, content) {
-  const chat = document.getElementById('chat-messages');
-  const msg = document.createElement('div');
-  msg.className = 'message ' + role;
-  msg.textContent = content;
-  chat.appendChild(msg);
-  chat.scrollTop = chat.scrollHeight;
-}
+button.addEventListener('click', sendMessage);
+input.addEventListener('keypress', e => {
+  if (e.key === 'Enter') sendMessage();
+});
