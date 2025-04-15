@@ -39,13 +39,15 @@
     .chat-title {
       display: flex;
       align-items: center;
+      gap: 10px;
     }
 
     .chat-title img {
-      width: 32px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
-      margin-right: 10px;
+      object-fit: cover;
+      background: white;
     }
 
     .chat-header-text {
@@ -69,6 +71,7 @@
       color: white;
       font-size: 20px;
       cursor: pointer;
+      padding: 0 4px;
     }
 
     .chat-messages {
@@ -131,7 +134,7 @@
   <div id="chat-widget">
     <div class="chat-header">
       <div class="chat-title">
-        <img src="icono.jpg" alt="Asistente Icono" />
+        <img src="icono.jpg" alt="Icono Asistente" />
         <div class="chat-header-text">
           <h3>Soporte Canal Digital</h3>
           <span>Funeraria Esperanza</span>
