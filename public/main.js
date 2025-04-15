@@ -1,22 +1,15 @@
-async function sendMessage() {
-  const input = document.getElementById('input');
-  const message = input.value;
+document.getElementById("chat-form").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  const userInput = document.getElementById("user-input").value;
 
-  const response = await fetch('/api/chat', {
-    method: 'POST',
+  const response = await fetch("/api/chat", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json'
+      "Content-Type": "application/json",
     },
-    body: JSON.stringify({ message })
+    body: JSON.stringify({ message: userInput }),
   });
 
   const data = await response.json();
-
-  const messagesContainer = document.getElementById('chat-messages');
-  const assistantMsg = document.createElement('div');
-  assistantMsg.className = 'message assistant';
-  assistantMsg.innerText = data.reply;
-  messagesContainer.appendChild(assistantMsg);
-
-  input.value = '';
-}
+  alert("Respuesta del asistente: " + data.reply);
+});
