@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Asistente Canal Digital</title>
   <style>
     html, body {
@@ -11,8 +11,7 @@
       font-family: sans-serif;
       background: #f2f2f2;
       height: 100%;
-      overscroll-behavior: none;
-      -webkit-overflow-scrolling: touch;
+      overflow: hidden;
     }
 
     #chat-widget {
@@ -107,7 +106,6 @@
       padding: 10px;
       border-top: 1px solid #ddd;
       background: white;
-      align-items: center;
     }
 
     .chat-input input {
@@ -117,7 +115,6 @@
       padding: 10px;
       font-size: 14px;
       background: #f0f0f0;
-      outline: none;
     }
 
     .chat-input button {
@@ -154,5 +151,25 @@
   </div>
 
   <script src="main.js"></script>
+
+  <!-- Anti desplazamiento móvil -->
+  <script>
+    const input = document.getElementById("messageInput");
+
+    input.addEventListener("focus", () => {
+      setTimeout(() => {
+        window.scrollTo(0, document.body.scrollHeight);
+      }, 300);
+    });
+
+    window.addEventListener("resize", () => {
+      const active = document.activeElement;
+      if (active && active.tagName === "INPUT") {
+        setTimeout(() => {
+          active.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 300);
+      }
+    });
+  </script>
 </body>
 </html>
