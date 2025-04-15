@@ -3,61 +3,114 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Asistente IA - Canal Digital</title>
+  <title>Asistente Canal Digital</title>
   <style>
     body {
+      margin: 0;
       font-family: sans-serif;
-      background: #f9f9f9;
-      padding: 40px;
-      max-width: 600px;
-      margin: auto;
+      background: #f2f2f2;
     }
 
-    h1 {
-      color: #333;
-    }
-
-    #chat-form {
+    #chat-widget {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 360px;
+      max-height: 80vh;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
       display: flex;
-      gap: 10px;
-      margin-top: 20px;
+      flex-direction: column;
+      overflow: hidden;
+      font-size: 14px;
+      z-index: 9999;
     }
 
-    #user-input {
-      flex: 1;
-      padding: 10px;
+    .chat-header {
+      background: #4A90E2;
+      color: white;
+      padding: 16px;
+    }
+
+    .chat-header h3 {
+      margin: 0;
       font-size: 16px;
     }
 
-    button {
-      padding: 10px 20px;
+    .chat-header span {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
+      background: #e5ddd5;
+    }
+
+    .message {
+      margin-bottom: 10px;
+      max-width: 80%;
+      padding: 10px 14px;
+      border-radius: 18px;
+      line-height: 1.4;
+      clear: both;
+    }
+
+    .user {
+      background: #dcf8c6;
+      align-self: flex-end;
+      float: right;
+    }
+
+    .assistant {
+      background: white;
+      align-self: flex-start;
+      float: left;
+    }
+
+    .chat-input {
+      display: flex;
+      padding: 10px;
+      border-top: 1px solid #ddd;
+      background: white;
+    }
+
+    .chat-input input {
+      flex: 1;
+      border: none;
+      border-radius: 20px;
+      padding: 10px;
+      font-size: 14px;
+      background: #f0f0f0;
+    }
+
+    .chat-input button {
+      margin-left: 10px;
       background: #4A90E2;
       color: white;
       border: none;
+      padding: 10px 16px;
+      border-radius: 20px;
+      font-size: 14px;
       cursor: pointer;
-      font-size: 16px;
-      border-radius: 4px;
-    }
-
-    #respuesta {
-      margin-top: 20px;
-      background: #fff;
-      padding: 15px;
-      border-radius: 6px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-      white-space: pre-wrap;
     }
   </style>
 </head>
 <body>
-  <h1>Asistente IA Canal Digital</h1>
-
-  <form id="chat-form">
-    <input type="text" id="user-input" placeholder="Escribe tu mensaje..." required />
-    <button type="submit">Consultar</button>
-  </form>
-
-  <div id="respuesta"></div>
+  <div id="chat-widget">
+    <div class="chat-header">
+      <h3>Soporte Canal Digital</h3>
+      <span>Funeraria Esperanza</span>
+    </div>
+    <div class="chat-messages" id="messages"></div>
+    <div class="chat-input">
+      <input id="messageInput" placeholder="Escribir..." />
+      <button onclick="sendMessage()">Consultar</button>
+    </div>
+  </div>
 
   <script src="main.js"></script>
 </body>
