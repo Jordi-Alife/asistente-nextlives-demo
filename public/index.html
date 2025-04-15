@@ -28,19 +28,48 @@
     }
 
     .chat-header {
-      background: #4A90E2;
+      display: flex;
+      align-items: center;
+      background-color: #4A90E2;
       color: white;
-      padding: 16px;
+      padding: 12px;
+      position: relative;
     }
 
-    .chat-header h3 {
-      margin: 0;
+    .chat-icon {
+      width: 40px;
+      height: 40px;
+      margin-right: 12px;
+      border-radius: 50%;
+      object-fit: cover;
+      background-color: white;
+    }
+
+    .chat-title {
+      font-weight: bold;
       font-size: 16px;
     }
 
-    .chat-header span {
-      font-size: 12px;
-      opacity: 0.9;
+    .chat-subtitle {
+      font-size: 13px;
+      color: #e0e0e0;
+    }
+
+    .chat-minimize {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      background: transparent;
+      border: none;
+      font-size: 20px;
+      color: white;
+      cursor: pointer;
+    }
+
+    .chat-body {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
     }
 
     .chat-messages {
@@ -102,16 +131,29 @@
 <body>
   <div id="chat-widget">
     <div class="chat-header">
-      <h3>Soporte Canal Digital</h3>
-      <span>Funeraria Esperanza</span>
+      <img src="icono.jpg" alt="Icono Asistente" class="chat-icon" />
+      <div>
+        <div class="chat-title">Soporte Canal Digital</div>
+        <div class="chat-subtitle">Funeraria Esperanza</div>
+      </div>
+      <button class="chat-minimize" onclick="toggleChat()">−</button>
     </div>
-    <div class="chat-messages" id="messages"></div>
-    <div class="chat-input">
-      <input id="messageInput" placeholder="Escribir..." />
-      <button onclick="sendMessage()">Consultar</button>
+
+    <div class="chat-body" id="chatBody">
+      <div class="chat-messages" id="messages"></div>
+      <div class="chat-input">
+        <input id="messageInput" placeholder="Escribir..." />
+        <button onclick="sendMessage()">Consultar</button>
+      </div>
     </div>
   </div>
 
   <script src="main.js"></script>
+  <script>
+    function toggleChat() {
+      const body = document.getElementById("chatBody");
+      body.style.display = body.style.display === "none" ? "flex" : "none";
+    }
+  </script>
 </body>
 </html>
