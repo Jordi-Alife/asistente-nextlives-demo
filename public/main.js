@@ -12,12 +12,11 @@ async function sendMessage() {
 
   const data = await response.json();
 
-  // Mostrar el mensaje del asistente
   const messagesContainer = document.getElementById('chat-messages');
   const assistantMsg = document.createElement('div');
   assistantMsg.className = 'message assistant';
   assistantMsg.innerText = data.reply;
   messagesContainer.appendChild(assistantMsg);
 
-  input.value = ''; // limpia el campo
+  input.value = '';
 }
