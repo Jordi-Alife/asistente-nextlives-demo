@@ -1,4 +1,4 @@
-// Botón para abrir/cerrar chat
+// Abrir/cerrar el chat al hacer clic en el botón de "Ayuda"
 document.addEventListener('DOMContentLoaded', () => {
   const launchButton = document.getElementById('launch-chat');
   const chatWidget = document.getElementById('chat-widget');
@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
 const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('messageInput');
 
@@ -50,7 +51,7 @@ async function sendMessage() {
   addMessage(text, 'user');
   input.value = '';
 
-  // Animación de puntos escribiendo
+  // Animación escribiendo
   const typingBubble = document.createElement('div');
   typingBubble.className = 'message assistant';
   typingBubble.innerHTML = '<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>';
