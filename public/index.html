@@ -1,8 +1,64 @@
-<div id="chat-container">
-  <div id="chat-messages"></div>
-  <div id="chat-input">
-    <input type="text" id="input" placeholder="Escribe tu mensaje..." />
-    <button onclick="sendMessage()">Consultar</button>
-  </div>
-</div>
-<script type="module" src="./main.js"></script>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Asistente IA - Canal Digital</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f9f9f9;
+      padding: 40px;
+      max-width: 600px;
+      margin: auto;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    #chat-form {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    #user-input {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 10px 20px;
+      background: #4A90E2;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      border-radius: 4px;
+    }
+
+    #respuesta {
+      margin-top: 20px;
+      background: #fff;
+      padding: 15px;
+      border-radius: 6px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>Asistente IA Canal Digital</h1>
+
+  <form id="chat-form">
+    <input type="text" id="user-input" placeholder="Escribe tu mensaje..." required />
+    <button type="submit">Consultar</button>
+  </form>
+
+  <div id="respuesta"></div>
+
+  <script src="main.js"></script>
+</body>
+</html>
