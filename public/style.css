@@ -167,3 +167,22 @@ html, body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   cursor: pointer;
 }
+/* Efecto escribiendo... */
+.typing-dots {
+  display: inline-block;
+  font-size: 18px;
+  letter-spacing: 2px;
+  animation: blink 1.2s infinite steps(1, start);
+}
+
+@keyframes blink {
+  0%, 20% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
