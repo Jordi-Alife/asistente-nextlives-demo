@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
+import fetch from "node-fetch"; // <- necesario para enviar a Slack
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,43 +11,55 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Middlewares
+// Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static("public")); // Servir archivos estáticos
+app.use(express.static("public"));
 
-// Ruta de la IA
+// Función para enviar a Slack
+async function sendToSlack(message) {
+  const webhook = process.env.SLACK_WEBHOOK_URL;
+  if (!webhook) return;
+
+  const payload = {
+    text: message,
+  };
+
+  try {
+    await fetch(webhook, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.error("Error al enviar a Slack:", err);
+  }
+}
+
+// Ruta principal del chat
 app.post("/api/chat", async (req, res) => {
   const { message } = req.body;
 
   try {
     const chatResponse = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4",
       messages: [
         {
           role: "system",
-          content: `Eres un asistente virtual llamado "Asistente IA Canal Digital". Estás integrado dentro de la web de homenaje de una funeraria y tu función es ayudar a los visitantes a resolver dudas sobre el canal digital.
-
-Responde siempre con información específica de NextLives y del canal digital, según el siguiente contexto:
-
-- El canal digital es una web de homenaje personalizada con los datos del funeral, fotos, videos y mensajes.
-- Los visitantes pueden enviar mensajes de texto, dibujo o audio.
-- Registrándose, pueden acceder a una zona privada familiar para publicar fotos, vídeos y citas.
-- Para usar la zona familiar deben recibir permiso de un administrador o superadministrador.
-- También se puede comprar flores desde la web.
-- El canal digital puede verse en Smart TV, tiene opciones multilingües y cuenta con asistencia.
-- No menciones NextLives directamente en la respuesta si no lo hace el usuario; responde como si fueses parte del servicio de la funeraria.
-
-Sé siempre claro, conciso y útil. No des definiciones genéricas.`
+          content: "Eres el asistente de soporte del canal digital de homenaje de NextLives. Responde siempre de forma específica sobre el funcionamiento de la web, sus contenidos, permisos y servicios, en base a la información proporcionada por la empresa funeraria.",
         },
         {
           role: "user",
-          content: message
-        }
-      ]
+          content: message,
+        },
+      ],
     });
 
     const reply = chatResponse.choices[0].message.content;
+
+    // Enviar a Slack
+    await sendToSlack(`👤 Usuario: ${message}\n🤖 Asistente: ${reply}`);
+
     res.json({ reply });
   } catch (error) {
     console.error("Error GPT:", error);
