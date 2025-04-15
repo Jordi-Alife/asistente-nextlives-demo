@@ -1,34 +1,41 @@
 import express from "express";
 import cors from "cors";
-import path from "path";
-import { fileURLToPath } from "url";
+import OpenAI from "openai";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Soporte para __dirname en módulos ES
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Configurar OpenAI
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 // Middlewares
 app.use(cors());
 app.use(express.json());
+app.use(express.static("public")); // Servir archivos estáticos
 
-// Servir archivos estáticos desde "public"
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Ruta principal
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-// Endpoint de prueba (puedes borrarlo más adelante)
+// Ruta de la IA
 app.post("/api/chat", async (req, res) => {
   const { message } = req.body;
-  return res.json({ reply: `Recibido: "${message}". Esta es una respuesta de prueba.` });
+
+  try {
+    const chatResponse = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [{ role: "user", content: message }],
+    });
+
+    const reply = chatResponse.choices[0].message.content;
+    res.json({ reply });
+  } catch (error) {
+    console.error("Error GPT:", error);
+    res.status(500).json({
+      reply: "Lo siento, ha ocurrido un error al procesar tu mensaje.",
+    });
+  }
 });
 
-// Iniciar el servidor
+// Iniciar servidor
 app.listen(PORT, () => {
-  console.log(`Servidor activo en http://localhost:${PORT}`);
+  console.log(`Servidor escuchando en puerto ${PORT}`);
 });
