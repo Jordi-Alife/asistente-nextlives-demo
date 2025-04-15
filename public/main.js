@@ -28,22 +28,28 @@ function restoreChat() {
 async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
+
   addMessage(text, 'user');
   input.value = '';
 
+  // Animación de puntos escribiendo
   const typingBubble = document.createElement('div');
   typingBubble.className = 'message assistant';
   typingBubble.innerHTML = '<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>';
   messagesDiv.appendChild(typingBubble);
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
+  // Idioma del navegador
   const idiomaNavegador = navigator.language || navigator.userLanguage || "es";
 
   try {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: text, lang: idiomaNavegador })
+      body: JSON.stringify({
+        message: text,
+        lang: idiomaNavegador
+      })
     });
 
     const data = await res.json();
