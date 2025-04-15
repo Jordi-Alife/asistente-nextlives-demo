@@ -1,3 +1,21 @@
+// Botón para abrir/cerrar chat
+document.addEventListener('DOMContentLoaded', () => {
+  const launchButton = document.getElementById('launch-chat');
+  const chatWidget = document.getElementById('chat-widget');
+
+  if (launchButton && chatWidget) {
+    launchButton.addEventListener('click', () => {
+      chatWidget.classList.add('open');
+    });
+  }
+
+  const closeBtn = document.querySelector('.close-btn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      chatWidget.classList.remove('open');
+    });
+  }
+});
 const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('messageInput');
 
