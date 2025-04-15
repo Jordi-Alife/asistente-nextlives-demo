@@ -1,122 +1,144 @@
-html, body {
-  margin: 0;
-  padding: 0;
-  font-family: sans-serif;
-  background: #f2f2f2;
-  height: 100%;
-  overflow: hidden;
-}
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: sans-serif;
+    background: #f2f2f2;
+    height: 100%;
+    overflow: hidden;
+  }
 
-#chat-widget {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100dvh; /* <- Esta es la clave para evitar que se mueva al escribir en móvil */
-  display: flex;
-  flex-direction: column;
-  background: #f2f2f2;
-  z-index: 9999;
-}
+  #chat-widget {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background: #f2f2f2;
+    z-index: 9999;
+  }
 
-.chat-header {
-  background: #4A90E2;
-  color: white;
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
+  .chat-header {
+    background: #4A90E2;
+    color: white;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
 
-.chat-header .info {
-  display: flex;
-  flex-direction: column;
-}
+  .chat-header .info {
+    display: flex;
+    flex-direction: column;
+  }
 
-.chat-header h3 {
-  margin: 0;
-  font-size: 16px;
-}
+  .chat-header h3 {
+    margin: 0;
+    font-size: 16px;
+  }
 
-.chat-header span {
-  font-size: 12px;
-  opacity: 0.9;
-}
+  .chat-header span {
+    font-size: 12px;
+    opacity: 0.9;
+  }
 
-.chat-header .icon {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+  .chat-header .icon {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
 
-.chat-header img {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: white;
-}
+  .chat-header img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: white;
+  }
 
-.close-btn {
-  font-size: 20px;
-  font-weight: bold;
-  color: white;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-}
+  .close-btn {
+    font-size: 20px;
+    font-weight: bold;
+    color: white;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+  }
 
-.chat-messages {
-  flex: 1;
-  padding: 12px;
-  overflow-y: auto;
-  background: #e5ddd5;
-}
+  .chat-messages {
+    flex: 1;
+    padding: 12px;
+    overflow-y: auto;
+    background: #e5ddd5;
+  }
 
-.message {
-  margin-bottom: 10px;
-  max-width: 80%;
-  padding: 10px 14px;
-  border-radius: 18px;
-  line-height: 1.4;
-  clear: both;
-  word-wrap: break-word;
-}
+  .message {
+    margin-bottom: 10px;
+    max-width: 80%;
+    padding: 10px 14px;
+    border-radius: 18px;
+    line-height: 1.4;
+    clear: both;
+    word-wrap: break-word;
+  }
 
-.user {
-  background: #dcf8c6;
-  align-self: flex-end;
-  float: right;
-}
+  .user {
+    background: #dcf8c6;
+    align-self: flex-end;
+    float: right;
+  }
 
-.assistant {
-  background: white;
-  align-self: flex-start;
-  float: left;
-}
+  .assistant {
+    background: white;
+    align-self: flex-start;
+    float: left;
+  }
 
-.chat-input {
-  display: flex;
-  padding: 10px;
-  border-top: 1px solid #ddd;
-  background: white;
-}
+  .chat-input {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid #ddd;
+    background: white;
+  }
 
-.chat-input input {
-  flex: 1;
-  border: none;
-  border-radius: 20px;
-  padding: 10px;
-  font-size: 14px;
-  background: #f0f0f0;
-}
+  .chat-input input {
+    flex: 1;
+    border: none;
+    border-radius: 20px;
+    padding: 10px;
+    font-size: 14px;
+    background: #f0f0f0;
+  }
 
-.chat-input button {
-  margin-left: 10px;
-  background: #4A90E2;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 20px;
-  font-size: 14px;
-  cursor: pointer;
-}
+  .chat-input button {
+    margin-left: 10px;
+    background: #4A90E2;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  /* Animación de puntos */
+  .typing-dots {
+    display: inline-block;
+    font-size: 20px;
+  }
+
+  .typing-dots span {
+    animation: bounce 1.2s infinite ease-in-out;
+    display: inline-block;
+    padding: 0 2px;
+  }
+
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-6px); }
+  }
+</style>
