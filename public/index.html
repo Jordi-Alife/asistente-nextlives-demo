@@ -16,12 +16,14 @@
 
     #chat-widget {
       position: fixed;
-      inset: 0;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: calc(var(--vh, 1vh) * 100);
       display: flex;
       flex-direction: column;
       background: #f2f2f2;
       z-index: 9999;
-      height: 100dvh; /* altura que no se ve afectada por el teclado */
     }
 
     .chat-header {
@@ -127,12 +129,6 @@
     }
 
     @media (max-width: 600px) {
-      #chat-widget {
-        width: 100%;
-        height: 100dvh;
-        border-radius: 0;
-      }
-
       .chat-header h3 {
         font-size: 14px;
       }
@@ -141,10 +137,7 @@
         font-size: 11px;
       }
 
-      .chat-input input {
-        font-size: 13px;
-      }
-
+      .chat-input input,
       .chat-input button {
         font-size: 13px;
       }
@@ -155,7 +148,7 @@
   <div id="chat-widget">
     <div class="chat-header">
       <div class="icon">
-        <img src="Icon container.svg" alt="Icono" />
+        <img src="icono.svg" alt="Icono" />
         <div class="info">
           <h3>Soporte Canal Digital</h3>
           <span>Funeraria Esperanza</span>
@@ -173,5 +166,14 @@
   </div>
 
   <script src="main.js"></script>
+  <script>
+    // Ajustar altura real del viewport al cargar y al cambiar tamaño (evita scroll en móviles)
+    function ajustarAltura() {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    }
+    window.addEventListener('load', ajustarAltura);
+    window.addEventListener('resize', ajustarAltura);
+  </script>
 </body>
 </html>
