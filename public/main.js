@@ -1,25 +1,8 @@
-// Abrir/cerrar el chat al hacer clic en el botón de "Ayuda"
-document.addEventListener('DOMContentLoaded', () => {
-  const launchButton = document.getElementById('launch-chat');
-  const chatWidget = document.getElementById('chat-widget');
-
-  if (launchButton && chatWidget) {
-    launchButton.addEventListener('click', () => {
-      chatWidget.classList.add('open');
-    });
-  }
-
-  const closeBtn = document.querySelector('.close-btn');
-  if (closeBtn) {
-    closeBtn.addEventListener('click', () => {
-      chatWidget.classList.remove('open');
-    });
-  }
-});
-
 const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('messageInput');
+const fileInput = document.getElementById('fileInput');
 
+// Añadir mensajes al chat
 function addMessage(text, sender) {
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
@@ -29,10 +12,27 @@ function addMessage(text, sender) {
   saveChat();
 }
 
+// Añadir imagen subida al chat
+function addImageMessage(fileURL, sender) {
+  const msg = document.createElement('div');
+  msg.className = 'message ' + sender;
+  const img = document.createElement('img');
+  img.src = fileURL;
+  img.alt = 'Imagen enviada';
+  img.style.maxWidth = '100%';
+  img.style.borderRadius = '12px';
+  msg.appendChild(img);
+  messagesDiv.appendChild(msg);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  saveChat();
+}
+
+// Guardar conversación
 function saveChat() {
   localStorage.setItem('chatMessages', messagesDiv.innerHTML);
 }
 
+// Restaurar conversación previa
 function restoreChat() {
   const saved = localStorage.getItem('chatMessages');
   if (saved) {
@@ -44,33 +44,25 @@ function restoreChat() {
   }
 }
 
+// Enviar mensaje
 async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
-
   addMessage(text, 'user');
   input.value = '';
 
-  // Animación escribiendo
   const typingBubble = document.createElement('div');
   typingBubble.className = 'message assistant';
-  typingBubble.innerHTML = '<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>';
+  typingBubble.innerText = 'Escribiendo...';
   messagesDiv.appendChild(typingBubble);
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
-  // Idioma del navegador
-  const idiomaNavegador = navigator.language || navigator.userLanguage || "es";
 
   try {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: text,
-        lang: idiomaNavegador
-      })
+      body: JSON.stringify({ message: text })
     });
-
     const data = await res.json();
     typingBubble.remove();
     addMessage(data.reply, 'assistant');
@@ -79,5 +71,31 @@ async function sendMessage() {
     addMessage("Error al conectar con el servidor.", "assistant");
   }
 }
+
+// Cuando el usuario selecciona una imagen
+fileInput.addEventListener('change', async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const userURL = URL.createObjectURL(file);
+  addImageMessage(userURL, 'user');
+
+  try {
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData
+    });
+
+    const result = await res.json();
+    addMessage(result.reply || "Imagen enviada correctamente.", "assistant");
+  } catch (err) {
+    addMessage("Hubo un problema al subir la imagen.", "assistant");
+  }
+
+  fileInput.value = ''; // Reset del input
+});
 
 restoreChat();
