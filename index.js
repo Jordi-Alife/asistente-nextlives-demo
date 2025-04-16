@@ -5,19 +5,11 @@ import fetch from "node-fetch";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { randomUUID } from "crypto";
+import { v4 as uuidv4 } from "uuid";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(express.json());
-app.use(express.static("public"));
-app.use("/uploads", express.static("uploads"));
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-// Configurar subida de imágenes
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const dir = "./uploads";
@@ -32,96 +24,86 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// Detectar intención de ayuda humana
-function needsHuman(text) {
-  const patterns = [
-    /necesito hablar con (una )?persona/i,
-    /quiero hablar con (alguien|un humano|una persona)/i,
-    /puedo contactar con/i,
-    /quiero atención (humana|personalizada)/i,
-    /quiero ayuda real/i
-  ];
-  return patterns.some((regex) => regex.test(text));
+app.use(cors());
+app.use(express.json());
+app.use(express.static("public"));
+app.use("/uploads", express.static("uploads"));
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const userIds = new Map();
+
+function getOrCreateUserId(ip) {
+  if (!userIds.has(ip)) {
+    userIds.set(ip, uuidv4().slice(0, 8));
+  }
+  return userIds.get(ip);
 }
 
-// Slack: Enviar mensaje
-async function sendToSlack(text, userId) {
+async function sendToSlack(message, userId = null) {
   const webhook = process.env.SLACK_WEBHOOK_URL;
   if (!webhook) return;
+
+  const text = userId ? `[${userId}] ${message}` : message;
   await fetch(webhook, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: `🧾 Usuario ${userId}:\n${text}` }),
+    body: JSON.stringify({ text })
   });
 }
 
-// Generar o recuperar ID por usuario
-function getUserId(req) {
-  const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
-  const idFile = "./user-ids.json";
-
-  let userIds = {};
-  if (fs.existsSync(idFile)) {
-    userIds = JSON.parse(fs.readFileSync(idFile));
-  }
-
-  if (!userIds[ip]) {
-    userIds[ip] = randomUUID();
-    fs.writeFileSync(idFile, JSON.stringify(userIds));
-  }
-
-  return userIds[ip];
-}
-
-// Endpoint: subida de imagen
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
-  const url = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
-  const userId = getUserId(req);
-
-  await sendToSlack(`📷 Imagen recibida: ${url}`, userId);
-  res.json({ reply: "Imagen enviada correctamente." });
+  const imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+  const userId = getOrCreateUserId(req.ip);
+  await sendToSlack(`🖼️ Imagen subida por usuario [${userId}]: ${imageUrl}`);
+  res.json({ imageUrl });
 });
 
-// Endpoint: conversación
 app.post("/api/chat", async (req, res) => {
-  const { message } = req.body;
-  const userId = getUserId(req);
+  const { message, system } = req.body;
+  const userId = getOrCreateUserId(req.ip);
 
-  if (needsHuman(message)) {
-    const aviso = `⚠️ El usuario ${userId} ha solicitado ayuda humana:\n"${message}"`;
-    await sendToSlack(aviso, userId);
-    return res.json({
-      reply: "He solicitado a un miembro del equipo que se ponga en contacto contigo lo antes posible. Mientras tanto, ¿hay algo más en lo que pueda ayudarte?"
-    });
-  }
+  const messages = [
+    {
+      role: "system",
+      content: system || "Eres un asistente de soporte del canal digital funerario. Responde con claridad, precisión y empatía. Si no puedes ayudar, indica que derivarás a un humano."
+    },
+    { role: "user", content: message }
+  ];
 
   try {
-    const completion = await openai.chat.completions.create({
+    const chatResponse = await openai.chat.completions.create({
       model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: "Eres un asistente del canal digital funerario. Responde con claridad, precisión y empatía. Usa siempre un lenguaje respetuoso.",
-        },
-        { role: "user", content: message }
-      ],
+      messages
     });
 
-    const reply = completion.choices[0].message.content;
-    await sendToSlack(`👤 ${message}\n🤖 ${reply}`, userId);
+    const reply = chatResponse.choices[0].message.content;
+    await sendToSlack(`👤 [${userId}] ${message}\n🤖 ${reply}`, userId);
     res.json({ reply });
-  } catch (err) {
-    console.error("Error GPT:", err);
-    res.status(500).json({ reply: "Lo siento, ha ocurrido un error procesando tu mensaje." });
+  } catch (error) {
+    console.error("Error GPT:", error);
+    res.status(500).json({ reply: "Lo siento, ha ocurrido un error al procesar tu mensaje." });
   }
 });
 
-// Slack Event Verification
-app.post("/api/slack-response", async (req, res) => {
+// Ruta para recibir respuestas desde Slack
+app.post("/api/slack-response", express.json(), async (req, res) => {
   const { type, challenge, event } = req.body;
-  if (type === "url_verification") return res.status(200).send(challenge);
-  console.log("Slack Event:", event);
+  if (type === "url_verification") return res.send({ challenge });
+
+  if (event && event.type === "message" && !event.bot_id) {
+    const text = event.text;
+    const match = text.match(/\[(.*?)\]/);
+    const userId = match?.[1];
+    const message = text.replace(/\[.*?\]\s*/, "").trim();
+
+    if (userId && message) {
+      // Aquí puedes conectar con WebSocket o tu frontend para enviar al usuario en tiempo real
+      console.log(`📩 Mensaje desde Slack para [${userId}]: ${message}`);
+    }
+  }
+
   res.sendStatus(200);
 });
 
