@@ -45,14 +45,18 @@ async function sendToSlack(message) {
 }
 
 // Ruta para subir imágenes
-app.post("/api/upload", upload.single("imagen"), async (req, res) => {
+app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
+
   const imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
 
   // Notificar por Slack
   await sendToSlack(`🖼️ Imagen subida por usuario: ${imageUrl}`);
 
-  res.json({ imageUrl });
+  res.json({
+    imageUrl,
+    reply: "Gracias, hemos recibido tu imagen. La funeraria podrá verla desde su panel."
+  });
 });
 
 // Ruta principal del chat
