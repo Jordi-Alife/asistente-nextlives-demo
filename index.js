@@ -32,7 +32,7 @@ app.use("/uploads", express.static("uploads"));
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const userIds = new Map();
-const slackResponses = new Map(); // 🔹 Guardar respuestas desde Slack
+const slackResponses = new Map(); // 🔹 Respuestas para el chat
 
 function getOrCreateUserId(ip) {
   if (!userIds.has(ip)) {
@@ -106,15 +106,16 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// Endpoint para mensajes desde Slack
+// ✅ Endpoint para mensajes desde Slack
 app.post("/api/slack-response", express.json(), async (req, res) => {
+  console.log("📥 Evento recibido de Slack:", JSON.stringify(req.body, null, 2));
   const { type, challenge, event } = req.body;
 
   if (type === "url_verification") return res.send({ challenge });
 
-  if (event && event.type === "message" && !event.bot_id) {
-    const text = event.text;
-    const match = text.match(/\[(.*?)\]/); // [id] Mensaje
+  if (type === "event_callback" && event?.type === "message" && !event?.bot_id) {
+    const text = event.text || "";
+    const match = text.match(/\[(.*?)\]/); // Buscar [id] al inicio
     const userId = match?.[1];
     const message = text.replace(/\[.*?\]\s*/, "").trim();
 
@@ -123,7 +124,7 @@ app.post("/api/slack-response", express.json(), async (req, res) => {
         slackResponses.set(userId, []);
       }
       slackResponses.get(userId).push(message);
-      console.log(`➡️ Slack quiere enviar a usuario [${userId}]: ${message}`);
+      console.log(`💬 Slack respondió a [${userId}]: ${message}`);
     }
   }
 
