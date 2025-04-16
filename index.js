@@ -104,7 +104,9 @@ app.post("/api/chat", async (req, res) => {
 
     const reply = chatResponse.choices[0].message.content;
 
-    await sendToSlack(`👤 Usuario (${userId}): ${message}\n🤖 Asistente: ${reply}`);
+    await sendToSlack(
+  `👤 Usuario (${userId}): ${message}\n🤖 Asistente: ${reply}\n\n[RESPONDER: ${userId}] — no borrar este ID`
+);
     res.json({ reply });
   } catch (error) {
     console.error("Error GPT:", error);
