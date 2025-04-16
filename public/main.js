@@ -2,14 +2,7 @@ const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('messageInput');
 const fileInput = document.getElementById('fileInput');
 
-// Mostrar siempre el final del chat
-function scrollToBottom() {
-  setTimeout(() => {
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  }, 100);
-}
-
-// Añadir mensaje de texto
+// Función para añadir mensajes
 function addMessage(text, sender) {
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
@@ -19,7 +12,7 @@ function addMessage(text, sender) {
   saveChat();
 }
 
-// Añadir imagen al chat
+// Función para añadir imagen
 function addImageMessage(fileURL, sender) {
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
@@ -39,25 +32,34 @@ function saveChat() {
   localStorage.setItem('chatMessages', messagesDiv.innerHTML);
 }
 
-// Restaurar mensajes guardados
+// Restaurar conversación
 function restoreChat() {
   const saved = localStorage.getItem('chatMessages');
   if (saved) {
     messagesDiv.innerHTML = saved;
-    scrollToBottom();
   } else {
-    addMessage("Hola, ¿cómo puedo ayudarte?", "assistant");
+    setTimeout(() => {
+      addMessage("Hola, ¿cómo puedo ayudarte?", "assistant");
+    }, 500);
   }
+  scrollToBottom();
+}
+
+// Scroll al final
+function scrollToBottom() {
+  setTimeout(() => {
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }, 50);
 }
 
 // Enviar mensaje
 async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
-
   addMessage(text, 'user');
   input.value = '';
 
+  // Burbujita de escribiendo
   const typingBubble = document.createElement('div');
   typingBubble.className = 'message assistant typing';
   typingBubble.innerText = 'Escribiendo...';
@@ -80,7 +82,7 @@ async function sendMessage() {
   }
 }
 
-// Subir imagen
+// Subir archivo
 fileInput.addEventListener('change', async (event) => {
   const file = event.target.files[0];
   if (!file) return;
