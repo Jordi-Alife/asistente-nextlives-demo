@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from "uuid";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Configuración para subida de imágenes
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const dir = "./uploads";
@@ -24,6 +25,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
+// Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
@@ -31,8 +33,8 @@ app.use("/uploads", express.static("uploads"));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+// Generación y gestión de IDs únicos por IP
 const userIds = new Map();
-
 function getOrCreateUserId(ip) {
   if (!userIds.has(ip)) {
     userIds.set(ip, uuidv4().slice(0, 8));
@@ -40,11 +42,12 @@ function getOrCreateUserId(ip) {
   return userIds.get(ip);
 }
 
+// Envío de mensajes a Slack
 async function sendToSlack(message, userId = null) {
   const webhook = process.env.SLACK_WEBHOOK_URL;
   if (!webhook) return;
-
   const text = userId ? `[${userId}] ${message}` : message;
+
   await fetch(webhook, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -52,14 +55,18 @@ async function sendToSlack(message, userId = null) {
   });
 }
 
+// Ruta para subir imágenes
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
+
   const imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
   const userId = getOrCreateUserId(req.ip);
-  await sendToSlack(`🖼️ Imagen subida por usuario [${userId}]: ${imageUrl}`);
+
+  await sendToSlack(`🖼️ Imagen subida por usuario [${userId}]: ${imageUrl}`, userId);
   res.json({ imageUrl });
 });
 
+// Ruta principal del chat (GPT)
 app.post("/api/chat", async (req, res) => {
   const { message, system } = req.body;
   const userId = getOrCreateUserId(req.ip);
@@ -79,6 +86,7 @@ app.post("/api/chat", async (req, res) => {
     });
 
     const reply = chatResponse.choices[0].message.content;
+
     await sendToSlack(`👤 [${userId}] ${message}\n🤖 ${reply}`, userId);
     res.json({ reply });
   } catch (error) {
@@ -90,8 +98,11 @@ app.post("/api/chat", async (req, res) => {
 // Ruta para recibir respuestas desde Slack
 app.post("/api/slack-response", express.json(), async (req, res) => {
   const { type, challenge, event } = req.body;
+
+  // Verificación inicial
   if (type === "url_verification") return res.send({ challenge });
 
+  // Mensaje entrante desde canal Slack
   if (event && event.type === "message" && !event.bot_id) {
     const text = event.text;
     const match = text.match(/\[(.*?)\]/);
@@ -99,7 +110,7 @@ app.post("/api/slack-response", express.json(), async (req, res) => {
     const message = text.replace(/\[.*?\]\s*/, "").trim();
 
     if (userId && message) {
-      // Aquí puedes conectar con WebSocket o tu frontend para enviar al usuario en tiempo real
+      // Aquí lo siguiente será enviarlo al frontend (lo haremos en el próximo paso)
       console.log(`📩 Mensaje desde Slack para [${userId}]: ${message}`);
     }
   }
@@ -107,35 +118,7 @@ app.post("/api/slack-response", express.json(), async (req, res) => {
   res.sendStatus(200);
 });
 
+// Iniciar servidor
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en puerto ${PORT}`);
-});
-// Endpoint para eventos de Slack (verificación y mensajes)
-app.post("/api/slack-response", express.json(), async (req, res) => {
-  const { type, challenge, event } = req.body;
-
-  // Verificación inicial del endpoint
-  if (type === "url_verification") {
-    return res.send({ challenge });
-  }
-
-  // Si es un mensaje nuevo en el canal de Slack
-  if (type === "event_callback" && event?.type === "message" && !event?.bot_id) {
-    const text = event.text;
-    const channel = event.channel;
-
-    // Buscamos el ID del usuario al que se quiere responder (si está incluido en el mensaje)
-    const match = text.match(/\[ID:(.*?)\]/);
-    const userId = match ? match[1] : null;
-
-    if (userId) {
-      // Aquí puedes guardar el mensaje en una cola, BBDD o memoria para enviarlo al frontend
-      console.log(`➡️ Slack quiere enviar a usuario [${userId}]: ${text}`);
-      // Lo ideal sería guardar esto temporalmente, por ejemplo con Redis, o usar websockets
-    }
-
-    return res.sendStatus(200);
-  }
-
-  res.sendStatus(200);
 });
