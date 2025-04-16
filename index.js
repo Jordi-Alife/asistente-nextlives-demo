@@ -5,26 +5,20 @@ import fetch from "node-fetch";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "crypto";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.static("public"));
-app.use("/uploads", express.static("uploads"));
-
-// Generar ID único por sesión
-app.use((req, res, next) => {
+// ID persistente por usuario
+function getUserId(req) {
   if (!req.headers["x-user-id"]) {
-    req.headers["x-user-id"] = uuidv4();
+    req.headers["x-user-id"] = randomUUID(); // fallback por si no lo envía el frontend
   }
-  next();
-});
+  return req.headers["x-user-id"];
+}
 
-// Configuración de subida de imágenes
+// Configurar subida de archivos
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const dir = "./uploads";
@@ -33,18 +27,22 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     const ext = path.extname(file.originalname);
-    const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
     cb(null, filename);
   },
 });
-const upload = multer({ storage });
+const upload = multer({ storage: storage });
 
-// OpenAI setup
+app.use(cors());
+app.use(express.json());
+app.use(express.static("public"));
+app.use("/uploads", express.static("uploads"));
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Enviar texto a Slack
+// Función para enviar mensaje a Slack
 async function sendToSlack(message) {
   const webhook = process.env.SLACK_WEBHOOK_URL;
   if (!webhook) return;
@@ -55,20 +53,42 @@ async function sendToSlack(message) {
   });
 }
 
-// Endpoint para subir imagen
+// Detección básica de intención de ayuda humana
+function necesitaHumano(texto) {
+  const frases = [
+    "necesito hablar con una persona",
+    "quiero hablar con un humano",
+    "me puedes pasar con alguien",
+    "esto no lo puede resolver un robot",
+    "quiero ayuda de verdad",
+    "quiero hablar con una persona",
+    "puedo hablar con alguien",
+    "quiero asistencia humana",
+    "quiero hablar con alguien",
+    "hablar con soporte humano"
+  ];
+  return frases.some(f => texto.toLowerCase().includes(f));
+}
+
+// Ruta para subir imágenes
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
   const imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
-  const userId = req.headers["x-user-id"];
+  const userId = getUserId(req);
 
-  await sendToSlack(`🖼️ Imagen recibida de usuario *${userId}*: ${imageUrl}`);
-  res.json({ imageUrl, reply: "Gracias, hemos recibido tu imagen. Enseguida reviso la información." });
+  await sendToSlack(`📎 Imagen subida por usuario ${userId}: ${imageUrl}`);
+  res.json({ imageUrl, reply: "Imagen recibida. La hemos enviado al equipo para ayudarte mejor." });
 });
 
-// Endpoint de chat
+// Ruta principal del chat
 app.post("/api/chat", async (req, res) => {
   const { message, system } = req.body;
-  const userId = req.headers["x-user-id"] || "desconocido";
+  const userId = getUserId(req);
+
+  // 🔔 Detectar si necesita ayuda humana
+  if (necesitaHumano(message)) {
+    await sendToSlack(`🚨 *Un usuario ha pedido ayuda humana*\n🆔 ID: ${userId}\n💬 Mensaje: ${message}`);
+  }
 
   try {
     const chatResponse = await openai.chat.completions.create({
@@ -76,43 +96,15 @@ app.post("/api/chat", async (req, res) => {
       messages: [
         {
           role: "system",
-          content: system || "Eres un asistente de soporte del canal digital funerario. Responde con claridad, precisión y empatía.",
+          content: system || "Eres un asistente de soporte del canal digital funerario. Responde con claridad, precisión y empatía."
         },
-        { role: "user", content: message },
-      ],
+        { role: "user", content: message }
+      ]
     });
 
     const reply = chatResponse.choices[0].message.content;
 
-    // Enviar mensaje a Slack
-    await sendToSlack(`👤 Usuario *${userId}*:\n${message}\n🤖 Asistente:\n${reply}`);
-
-    // Detectar si GPT no puede ayudar bien
-    const lowerReply = reply.toLowerCase();
-    const triggerPhrases = [
-      "no tengo esa información",
-      "debes contactar con la funeraria",
-      "no puedo ayudarte con eso",
-      "no tengo acceso",
-      "no estoy seguro",
-      "no dispongo de esa información",
-      "te recomiendo que consultes",
-      "no tengo información precisa",
-      "lamentablemente no puedo ayudarte con eso",
-      "no tengo datos sobre eso",
-      "lamento no poder proporcionarte esa información",
-      "mi función principal es asistirte en asuntos relacionados a servicios funerarios",
-      "lamentablemente no tengo acceso a esa información",
-      "deberás contactar con el centro funerario",
-      "no tengo la capacidad de ayudarte con eso",
-      "hay muchas aplicaciones y sitios web donde puedes consultar"
-    ];
-
-    const needsHuman = triggerPhrases.some(phrase => lowerReply.includes(phrase));
-    if (needsHuman) {
-      await sendToSlack(`🚨 *Derivar a humano* para el usuario *${userId}*. La IA no pudo resolver su consulta correctamente.`);
-    }
-
+    await sendToSlack(`👤 Usuario (${userId}): ${message}\n🤖 Asistente: ${reply}`);
     res.json({ reply });
   } catch (error) {
     console.error("Error GPT:", error);
