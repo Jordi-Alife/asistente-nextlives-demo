@@ -24,17 +24,19 @@
       <button class="close-btn" onclick="cerrarChat()">×</button>
     </div>
 
+    <!-- Muestra del ID de usuario -->
+    <div style="font-size: 12px; text-align: center; padding: 4px 8px; background: #eee;" id="userIdDisplay"></div>
+
+    <!-- Mensajes del chat -->
     <div class="chat-messages" id="messages"></div>
 
+    <!-- Entrada del usuario -->
     <div class="chat-input">
       <input id="messageInput" placeholder="Escribir..." />
       <input type="file" id="fileInput" accept="image/*" hidden />
       <button onclick="document.getElementById('fileInput').click()">📎</button>
       <button onclick="sendMessage()">➤</button>
     </div>
-
-    <!-- Aquí mostramos el userId -->
-    <div id="userIdDisplay" style="font-size: 10px; text-align: center; opacity: 0.5; padding: 6px;"></div>
   </div>
 
   <script src="main.js"></script>
@@ -48,17 +50,6 @@
       document.getElementById('chat-widget').style.display = 'flex';
       document.getElementById('chat-toggle').style.display = 'none';
     }
-
-    // Mostrar el ID del usuario en la interfaz
-    function mostrarUserId() {
-      const id = localStorage.getItem("userId");
-      if (id) {
-        const el = document.getElementById("userIdDisplay");
-        if (el) el.textContent = `ID: ${id}`;
-      }
-    }
-
-    mostrarUserId();
   </script>
 </body>
 </html>
