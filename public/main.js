@@ -114,14 +114,15 @@ async function checkSlackMessages() {
     const res = await fetch(`/api/poll/${userId}`);
     const data = await res.json();
 
-    if (data && Array.isArray(data.mensajes) && data.mensajes.length > 0) {
-      console.log("📨 Mensajes nuevos desde Slack:", data.mensajes);
+    console.log("📩 Mensajes desde Slack:", data); // 🔍 DEBUG aquí
+
+    if (data && Array.isArray(data.mensajes)) {
       data.mensajes.forEach((msg) => {
         addMessage(msg, "assistant");
       });
     }
   } catch (error) {
-    console.error("❌ Error al obtener mensajes desde Slack:", error);
+    console.error("Error al obtener mensajes desde Slack:", error);
   }
 }
 
