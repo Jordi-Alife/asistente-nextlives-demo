@@ -7,6 +7,9 @@ function getUserId() {
   if (!id) {
     id = Math.random().toString(36).substring(2, 10); // 8 caracteres aleatorios
     localStorage.setItem("userId", id);
+    console.log("🆕 Generado nuevo userId:", id);
+  } else {
+    console.log("🔁 userId desde localStorage:", id);
   }
   return id;
 }
@@ -57,6 +60,7 @@ function scrollToBottom() {
 async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
+
   const userId = getUserId();
   addMessage(text, 'user');
   input.value = '';
