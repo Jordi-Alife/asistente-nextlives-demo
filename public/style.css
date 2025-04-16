@@ -1,29 +1,25 @@
-/* Fondo general y cuerpo */
 body {
   margin: 0;
-  padding: 0;
   font-family: sans-serif;
-  background-color: #f2f2f2;
-  height: 100dvh;
+  background: #f2f2f2;
+  height: 100vh;
   overflow: hidden;
 }
 
-/* Contenedor del widget de chat */
 #chat-widget {
   position: fixed;
-  top: 0;
-  left: 0;
+  bottom: 0;
+  right: 0;
   width: 100vw;
-  height: 100dvh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  z-index: 1000;
   background: #f2f2f2;
-  z-index: 9999;
 }
 
-/* Cabecera del chat */
 .chat-header {
-  background: #1e1e2f;
+  background: #242038;
   color: white;
   padding: 16px;
   display: flex;
@@ -34,6 +30,7 @@ body {
 .chat-header .info {
   display: flex;
   flex-direction: column;
+  margin-left: 10px;
 }
 
 .chat-header h3 {
@@ -44,53 +41,34 @@ body {
 
 .chat-header span {
   font-size: 12px;
-  opacity: 0.9;
-}
-
-.chat-header .icon {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  opacity: 0.85;
 }
 
 .chat-header img {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
+  background: #4caf50;
   border-radius: 50%;
-  background: white;
 }
 
-.close-btn {
-  font-size: 22px;
-  font-weight: bold;
-  color: white;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  margin-left: 10px;
-}
-
-/* Área de mensajes */
 .chat-messages {
   flex: 1;
-  padding: 12px;
   overflow-y: auto;
-  background: #e5ddd5;
+  padding: 16px;
+  background: #f2f2f2;
 }
 
-/* Burbujas */
 .message {
-  margin-bottom: 10px;
   max-width: 80%;
   padding: 10px 14px;
   border-radius: 18px;
   line-height: 1.4;
-  clear: both;
+  margin-bottom: 10px;
   word-wrap: break-word;
 }
 
 .user {
-  background: #d7f4c2;
+  background: #d9fdd3;
   align-self: flex-end;
   float: right;
 }
@@ -101,7 +79,6 @@ body {
   float: left;
 }
 
-/* Entrada de texto */
 .chat-input {
   display: flex;
   padding: 10px;
@@ -109,7 +86,7 @@ body {
   background: white;
 }
 
-.chat-input input[type="text"] {
+.chat-input input {
   flex: 1;
   border: none;
   border-radius: 20px;
@@ -120,19 +97,30 @@ body {
 
 .chat-input button {
   margin-left: 10px;
-  background: #00c56e;
+  background: #4caf50;
   color: white;
   border: none;
   padding: 10px 16px;
-  border-radius: 50%;
-  font-size: 16px;
+  border-radius: 20px;
+  font-size: 14px;
   cursor: pointer;
 }
 
-/* Estilo para botón de adjuntar archivo */
-.chat-input button:first-of-type {
-  background: transparent;
-  color: #00c56e;
-  font-size: 18px;
-  padding: 0 10px;
+#chat-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  background-color: #4caf50;
+  color: white;
+  border-radius: 50%;
+  border: none;
+  font-size: 26px;
+  cursor: pointer;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  z-index: 999;
 }
