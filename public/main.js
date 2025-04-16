@@ -1,8 +1,16 @@
+// main.js
+
+// Generar o recuperar ID de usuario único por navegador
+let userId = localStorage.getItem('userId');
+if (!userId) {
+  userId = 'usuario-' + Math.random().toString(36).substring(2, 8);
+  localStorage.setItem('userId', userId);
+}
+
 const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('messageInput');
 const fileInput = document.getElementById('fileInput');
 
-// Función para añadir mensajes
 function addMessage(text, sender) {
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
@@ -12,7 +20,6 @@ function addMessage(text, sender) {
   saveChat();
 }
 
-// Función para añadir imagen
 function addImageMessage(fileURL, sender) {
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
@@ -27,12 +34,10 @@ function addImageMessage(fileURL, sender) {
   saveChat();
 }
 
-// Guardar conversación
 function saveChat() {
   localStorage.setItem('chatMessages', messagesDiv.innerHTML);
 }
 
-// Restaurar conversación
 function restoreChat() {
   const saved = localStorage.getItem('chatMessages');
   if (saved) {
@@ -45,21 +50,18 @@ function restoreChat() {
   scrollToBottom();
 }
 
-// Scroll al final
 function scrollToBottom() {
   setTimeout(() => {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
   }, 50);
 }
 
-// Enviar mensaje
 async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
   addMessage(text, 'user');
   input.value = '';
 
-  // Burbujita de escribiendo
   const typingBubble = document.createElement('div');
   typingBubble.className = 'message assistant typing';
   typingBubble.innerText = 'Escribiendo...';
@@ -70,7 +72,7 @@ async function sendMessage() {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: text })
+      body: JSON.stringify({ message: text, userId })
     });
 
     const data = await res.json();
@@ -82,7 +84,6 @@ async function sendMessage() {
   }
 }
 
-// Subir archivo
 fileInput.addEventListener('change', async (event) => {
   const file = event.target.files[0];
   if (!file) return;
