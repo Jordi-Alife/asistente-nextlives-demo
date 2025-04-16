@@ -6,11 +6,42 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
+import { createServer } from "http";
+import { WebSocketServer } from "ws";
 
 const app = express();
+const server = createServer(app); // servidor HTTP necesario para WebSocket
+const wss = new WebSocketServer({ server });
+
 const PORT = process.env.PORT || 3000;
 
-// Configuración para subida de imágenes
+// Almacena conexiones activas: { [userId]: ws }
+const connections = {};
+
+wss.on("connection", (ws, req) => {
+  ws.on("message", (data) => {
+    try {
+      const msg = JSON.parse(data.toString());
+      if (msg.userId) {
+        connections[msg.userId] = ws;
+        console.log(`🟢 WebSocket conectado para usuario [${msg.userId}]`);
+      }
+    } catch (err) {
+      console.error("Error WebSocket:", err);
+    }
+  });
+
+  ws.on("close", () => {
+    for (const id in connections) {
+      if (connections[id] === ws) {
+        delete connections[id];
+        console.log(`🔴 WebSocket desconectado para usuario [${id}]`);
+      }
+    }
+  });
+});
+
+// Configuración de subida de imágenes
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const dir = "./uploads";
@@ -23,9 +54,8 @@ const storage = multer.diskStorage({
     cb(null, filename);
   },
 });
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
-// Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
@@ -33,7 +63,6 @@ app.use("/uploads", express.static("uploads"));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Generación y gestión de IDs únicos por IP
 const userIds = new Map();
 function getOrCreateUserId(ip) {
   if (!userIds.has(ip)) {
@@ -42,7 +71,6 @@ function getOrCreateUserId(ip) {
   return userIds.get(ip);
 }
 
-// Envío de mensajes a Slack
 async function sendToSlack(message, userId = null) {
   const webhook = process.env.SLACK_WEBHOOK_URL;
   if (!webhook) return;
@@ -55,18 +83,14 @@ async function sendToSlack(message, userId = null) {
   });
 }
 
-// Ruta para subir imágenes
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
-
   const imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
   const userId = getOrCreateUserId(req.ip);
-
   await sendToSlack(`🖼️ Imagen subida por usuario [${userId}]: ${imageUrl}`, userId);
   res.json({ imageUrl });
 });
 
-// Ruta principal del chat (GPT)
 app.post("/api/chat", async (req, res) => {
   const { message, system } = req.body;
   const userId = getOrCreateUserId(req.ip);
@@ -86,7 +110,6 @@ app.post("/api/chat", async (req, res) => {
     });
 
     const reply = chatResponse.choices[0].message.content;
-
     await sendToSlack(`👤 [${userId}] ${message}\n🤖 ${reply}`, userId);
     res.json({ reply });
   } catch (error) {
@@ -95,14 +118,12 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// Ruta para recibir respuestas desde Slack
+// Recepción de mensajes desde Slack
 app.post("/api/slack-response", express.json(), async (req, res) => {
   const { type, challenge, event } = req.body;
 
-  // Verificación inicial
   if (type === "url_verification") return res.send({ challenge });
 
-  // Mensaje entrante desde canal Slack
   if (event && event.type === "message" && !event.bot_id) {
     const text = event.text;
     const match = text.match(/\[(.*?)\]/);
@@ -110,15 +131,17 @@ app.post("/api/slack-response", express.json(), async (req, res) => {
     const message = text.replace(/\[.*?\]\s*/, "").trim();
 
     if (userId && message) {
-      // Aquí lo siguiente será enviarlo al frontend (lo haremos en el próximo paso)
-      console.log(`📩 Mensaje desde Slack para [${userId}]: ${message}`);
+      console.log(`📩 Slack -> Usuario [${userId}]: ${message}`);
+      const ws = connections[userId];
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({ sender: "assistant", text: message }));
+      }
     }
   }
 
   res.sendStatus(200);
 });
 
-// Iniciar servidor
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Servidor escuchando en puerto ${PORT}`);
 });
