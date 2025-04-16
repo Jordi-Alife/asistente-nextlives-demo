@@ -1,4 +1,4 @@
-body, html {
+html, body {
   margin: 0;
   padding: 0;
   font-family: sans-serif;
@@ -9,17 +9,13 @@ body, html {
 
 #chat-widget {
   position: fixed;
-  bottom: 80px;
-  right: 20px;
-  width: 360px;
-  max-height: 80vh;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100dvh;
   background: #f2f2f2;
-  border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  font-size: 14px;
   z-index: 9999;
 }
 
@@ -34,8 +30,8 @@ body, html {
 }
 
 .chat-header img {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: white;
 }
@@ -61,7 +57,7 @@ body, html {
   cursor: pointer;
 }
 
-/* Mensajes */
+/* Área de mensajes */
 .chat-messages {
   flex: 1;
   padding: 12px;
@@ -77,6 +73,7 @@ body, html {
   line-height: 1.4;
   clear: both;
   word-wrap: break-word;
+  font-size: 14px;
 }
 
 .user {
@@ -95,58 +92,43 @@ body, html {
 .chat-input {
   display: flex;
   padding: 10px;
-  border-top: 1px solid #ddd;
   background: white;
+  border-top: 1px solid #ddd;
+  gap: 8px;
 }
 
-.chat-input input {
+.chat-input input[type="text"] {
   flex: 1;
   border: none;
   border-radius: 20px;
-  padding: 10px;
+  padding: 10px 14px;
   font-size: 14px;
   background: #f0f0f0;
 }
 
 .chat-input button {
-  margin-left: 10px;
   background: #34c759;
-  color: white;
   border: none;
+  color: white;
   padding: 0 16px;
-  height: 40px;
-  min-width: 40px;
   border-radius: 50%;
   font-size: 16px;
   cursor: pointer;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* Botón flotante */
-#chat-button {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 48px;
-  height: 48px;
-  background-color: #2e3b59;
-  color: white;
-  border-radius: 50%;
-  font-size: 22px;
-  text-align: center;
-  line-height: 48px;
-  cursor: pointer;
-  z-index: 9999;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+/* Botón adjuntar oculto */
+.chat-input input[type="file"] {
+  display: none;
 }
 
 /* Responsive */
 @media screen and (max-width: 480px) {
   #chat-widget {
-    bottom: 0;
-    right: 0;
     width: 100vw;
     height: 100dvh;
     border-radius: 0;
