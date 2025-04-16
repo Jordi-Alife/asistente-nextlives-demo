@@ -119,3 +119,31 @@ async function pollSlackResponses() {
 setInterval(pollSlackResponses, 4000);
 
 restoreChat();
+// Obtener el ID del usuario (generado por el backend y almacenado en localStorage)
+function getUserId() {
+  let id = localStorage.getItem("chatUserId");
+  if (!id) {
+    id = Math.random().toString(36).substring(2, 10);
+    localStorage.setItem("chatUserId", id);
+  }
+  return id;
+}
+
+// Comprobar si hay nuevos mensajes desde Slack
+async function checkSlackMessages() {
+  const userId = getUserId();
+
+  try {
+    const res = await fetch(`/api/poll/${userId}`);
+    const data = await res.json();
+
+    if (data && data.message) {
+      addMessage(data.message, "assistant");
+    }
+  } catch (error) {
+    console.error("Error al obtener mensajes desde Slack:", error);
+  }
+}
+
+// Iniciar el polling cada 5 segundos
+setInterval(checkSlackMessages, 5000);
