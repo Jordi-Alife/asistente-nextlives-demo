@@ -5,12 +5,10 @@ const fileInput = document.getElementById('fileInput');
 function getUserId() {
   let id = localStorage.getItem("userId");
   if (!id) {
-    id = Math.random().toString(36).substring(2, 10); // 8 caracteres aleatorios
+    id = Math.random().toString(36).substring(2, 10); // 8 caracteres
     localStorage.setItem("userId", id);
-    console.log("🆕 Generado nuevo userId:", id);
-  } else {
-    console.log("🔁 userId desde localStorage:", id);
   }
+  document.getElementById("userIdDisplay").textContent = `ID de usuario: ${id}`;
   return id;
 }
 
@@ -60,7 +58,6 @@ function scrollToBottom() {
 async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
-
   const userId = getUserId();
   addMessage(text, 'user');
   input.value = '';
@@ -92,6 +89,7 @@ fileInput.addEventListener('change', async (event) => {
 
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("userId", getUserId());
 
   const userURL = URL.createObjectURL(file);
   addImageMessage(userURL, 'user');
@@ -130,5 +128,4 @@ async function checkSlackMessages() {
 }
 
 setInterval(checkSlackMessages, 5000);
-
 restoreChat();
