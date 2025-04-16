@@ -4,9 +4,161 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Soporte Canal Digital</title>
-  <link rel="stylesheet" href="style.css" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      background: #f2f2f2;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #chat-widget {
+      position: fixed;
+      bottom: 90px;
+      right: 20px;
+      width: 360px;
+      max-height: 80vh;
+      display: none;
+      flex-direction: column;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      z-index: 1000;
+    }
+
+    .chat-header {
+      background: #4A90E2;
+      color: white;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .chat-header .info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-header h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .chat-header span {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .chat-header .icon {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chat-header img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: white;
+    }
+
+    .close-btn {
+      font-size: 20px;
+      font-weight: bold;
+      color: white;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
+      background: #e5ddd5;
+    }
+
+    .message {
+      margin-bottom: 10px;
+      max-width: 80%;
+      padding: 10px 14px;
+      border-radius: 18px;
+      line-height: 1.4;
+      clear: both;
+      word-wrap: break-word;
+    }
+
+    .message img {
+      max-width: 100%;
+      border-radius: 10px;
+    }
+
+    .user {
+      background: #dcf8c6;
+      align-self: flex-end;
+      float: right;
+    }
+
+    .assistant {
+      background: white;
+      align-self: flex-start;
+      float: left;
+    }
+
+    .chat-input {
+      display: flex;
+      padding: 10px;
+      border-top: 1px solid #ddd;
+      background: white;
+    }
+
+    .chat-input input[type="text"] {
+      flex: 1;
+      border: none;
+      border-radius: 20px;
+      padding: 10px;
+      font-size: 14px;
+      background: #f0f0f0;
+    }
+
+    .chat-input button {
+      margin-left: 6px;
+      background: #4A90E2;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .chat-input input[type="file"] {
+      display: none;
+    }
+
+    #chat-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #4A90E2;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 56px;
+      height: 56px;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      z-index: 9999;
+    }
+  </style>
 </head>
 <body>
+  <button id="chat-toggle">💬</button>
+
   <div id="chat-widget">
     <div class="chat-header">
       <div class="icon">
@@ -16,19 +168,25 @@
           <span>Funeraria Esperanza</span>
         </div>
       </div>
-      <button class="close-btn" onclick="window.location.reload()">–</button>
+      <button class="close-btn" onclick="document.getElementById('chat-widget').style.display='none'">×</button>
     </div>
 
     <div class="chat-messages" id="messages"></div>
 
     <div class="chat-input">
-      <input id="messageInput" placeholder="Escribir..." />
-      <input type="file" id="fileInput" accept="image/*" hidden />
+      <input id="messageInput" type="text" placeholder="Escribir..." />
+      <input type="file" id="fileInput" accept="image/*" />
       <button onclick="document.getElementById('fileInput').click()">📎</button>
       <button onclick="sendMessage()">Consultar</button>
     </div>
   </div>
 
   <script src="main.js"></script>
+  <script>
+    document.getElementById('chat-toggle').addEventListener('click', () => {
+      const widget = document.getElementById('chat-widget');
+      widget.style.display = widget.style.display === 'flex' ? 'none' : 'flex';
+    });
+  </script>
 </body>
 </html>
