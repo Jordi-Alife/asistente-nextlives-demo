@@ -32,6 +32,9 @@
       <button onclick="document.getElementById('fileInput').click()">📎</button>
       <button onclick="sendMessage()">➤</button>
     </div>
+
+    <!-- Aquí mostramos el userId -->
+    <div id="userIdDisplay" style="font-size: 10px; text-align: center; opacity: 0.5; padding: 6px;"></div>
   </div>
 
   <script src="main.js"></script>
@@ -45,6 +48,17 @@
       document.getElementById('chat-widget').style.display = 'flex';
       document.getElementById('chat-toggle').style.display = 'none';
     }
+
+    // Mostrar el ID del usuario en la interfaz
+    function mostrarUserId() {
+      const id = localStorage.getItem("userId");
+      if (id) {
+        const el = document.getElementById("userIdDisplay");
+        if (el) el.textContent = `ID: ${id}`;
+      }
+    }
+
+    mostrarUserId();
   </script>
 </body>
 </html>
