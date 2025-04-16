@@ -71,7 +71,22 @@ app.post("/api/chat", async (req, res) => {
 
     const reply = chatResponse.choices[0].message.content;
 
-    await sendToSlack(`👤 *${userId || 'Usuario desconocido'}*: ${message}\n🤖 ${reply}`);
+    const slackMessage = `👤 *${userId || 'Usuario desconocido'}*: ${message}\n🤖 ${reply}`;
+    await sendToSlack(slackMessage);
+
+    // Detectar si requiere ayuda humana
+    const lowerReply = reply.toLowerCase();
+    const necesitaHumano = [
+      "no tengo esa información",
+      "debes contactar con la funeraria",
+      "no puedo ayudarte con eso",
+      "no tengo acceso",
+      "no estoy seguro"
+    ].some(frase => lowerReply.includes(frase));
+
+    if (necesitaHumano) {
+      await sendToSlack(`🔔 *ATENCIÓN HUMANA REQUERIDA* para ${userId || 'usuario desconocido'}\n🆘 Mensaje: ${message}`);
+    }
 
     res.json({ reply });
   } catch (error) {
