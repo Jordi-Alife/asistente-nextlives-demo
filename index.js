@@ -30,8 +30,9 @@ app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
 const userIds = new Map();
-const mensajesPendientes = {};
+const slackResponses = new Map(); // 🔹 Guardar respuestas desde Slack
 
 function getOrCreateUserId(ip) {
   if (!userIds.has(ip)) {
@@ -48,10 +49,23 @@ async function sendToSlack(message, userId = null) {
   await fetch(webhook, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text })
   });
 }
 
+function shouldEscalateToHuman(message) {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("hablar con una persona") ||
+    lower.includes("quiero hablar con un humano") ||
+    lower.includes("necesito ayuda humana") ||
+    lower.includes("pasame con un humano") ||
+    lower.includes("quiero hablar con alguien") ||
+    lower.includes("agente humano")
+  );
+}
+
+// Subida de archivos
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
   const imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
@@ -60,37 +74,27 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   res.json({ imageUrl });
 });
 
+// Mensaje principal del chat
 app.post("/api/chat", async (req, res) => {
   const { message, system } = req.body;
   const userId = getOrCreateUserId(req.ip);
 
-  const messages = [
-    {
-      role: "system",
-      content:
-        system || "Eres un asistente de soporte del canal digital funerario. Responde con claridad, precisión y empatía. Si no puedes ayudar, indica que derivarás a un humano.",
-    },
-    { role: "user", content: message },
-  ];
-
-  const lowerText = message.toLowerCase();
-  const quiereHumano =
-    lowerText.includes("hablar con una persona") ||
-    lowerText.includes("ayuda de un humano") ||
-    lowerText.includes("quiero un humano") ||
-    lowerText.includes("pasame con un humano");
-
-  if (quiereHumano) {
-    await sendToSlack(`⚠️ Usuario [${userId}] ha solicitado ayuda de un humano:\n> ${message}`);
-    return res.json({
-      reply: "Voy a derivar tu solicitud a un asistente humano que podrá ayudarte mejor. Por favor, espera unos momentos.",
-    });
+  if (shouldEscalateToHuman(message)) {
+    const alertMessage = `⚠️ Usuario [${userId}] ha solicitado ayuda de un humano:\n${message}`;
+    await sendToSlack(alertMessage, userId);
+    return res.json({ reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia." });
   }
 
   try {
     const chatResponse = await openai.chat.completions.create({
       model: "gpt-4",
-      messages,
+      messages: [
+        {
+          role: "system",
+          content: system || "Eres un asistente de soporte del canal digital funerario. Responde con claridad, precisión y empatía. Si no puedes ayudar, indica que derivarás a un humano."
+        },
+        { role: "user", content: message }
+      ]
     });
 
     const reply = chatResponse.choices[0].message.content;
@@ -102,33 +106,35 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
+// Endpoint para mensajes desde Slack
 app.post("/api/slack-response", express.json(), async (req, res) => {
   const { type, challenge, event } = req.body;
 
   if (type === "url_verification") return res.send({ challenge });
 
-  if (type === "event_callback" && event?.type === "message" && !event?.bot_id) {
+  if (event && event.type === "message" && !event.bot_id) {
     const text = event.text;
-    const match = text.match(/\[(.*?)\]/);
+    const match = text.match(/\[(.*?)\]/); // [id] Mensaje
     const userId = match?.[1];
     const message = text.replace(/\[.*?\]\s*/, "").trim();
 
     if (userId && message) {
-      if (!mensajesPendientes[userId]) {
-        mensajesPendientes[userId] = [];
+      if (!slackResponses.has(userId)) {
+        slackResponses.set(userId, []);
       }
-      mensajesPendientes[userId].push(message);
-      console.log(`✅ Slack envió mensaje para [${userId}]: ${message}`);
+      slackResponses.get(userId).push(message);
+      console.log(`➡️ Slack quiere enviar a usuario [${userId}]: ${message}`);
     }
   }
 
   res.sendStatus(200);
 });
 
+// Endpoint para frontend que recupera mensajes desde Slack
 app.get("/api/poll/:id", (req, res) => {
   const userId = req.params.id;
-  const mensajes = mensajesPendientes[userId] || [];
-  mensajesPendientes[userId] = [];
+  const mensajes = slackResponses.get(userId) || [];
+  slackResponses.set(userId, []); // vaciar tras enviar
   res.json({ mensajes });
 });
 
