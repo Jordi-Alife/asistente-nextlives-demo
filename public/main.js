@@ -12,7 +12,7 @@ function addMessage(text, sender) {
   saveChat();
 }
 
-// Añadir imagen subida al chat
+// Añadir imagen al chat
 function addImageMessage(fileURL, sender) {
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
@@ -27,12 +27,12 @@ function addImageMessage(fileURL, sender) {
   saveChat();
 }
 
-// Guardar conversación
+// Guardar en localStorage
 function saveChat() {
   localStorage.setItem('chatMessages', messagesDiv.innerHTML);
 }
 
-// Restaurar conversación previa
+// Restaurar conversación
 function restoreChat() {
   const saved = localStorage.getItem('chatMessages');
   if (saved) {
@@ -40,17 +40,19 @@ function restoreChat() {
   } else {
     setTimeout(() => {
       addMessage("Hola, ¿cómo puedo ayudarte?", "assistant");
-    }, 500);
+    }, 300);
   }
 }
 
-// Enviar mensaje
+// Enviar texto al backend
 async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
+
   addMessage(text, 'user');
   input.value = '';
 
+  // Añadir "escribiendo..." como asistente
   const typingBubble = document.createElement('div');
   typingBubble.className = 'message assistant';
   typingBubble.innerText = 'Escribiendo...';
@@ -63,6 +65,7 @@ async function sendMessage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: text })
     });
+
     const data = await res.json();
     typingBubble.remove();
     addMessage(data.reply, 'assistant');
@@ -72,16 +75,16 @@ async function sendMessage() {
   }
 }
 
-// Cuando el usuario selecciona una imagen
+// Adjuntar imagen
 fileInput.addEventListener('change', async (event) => {
   const file = event.target.files[0];
   if (!file) return;
 
-  const formData = new FormData();
-  formData.append("file", file);
-
   const userURL = URL.createObjectURL(file);
   addImageMessage(userURL, 'user');
+
+  const formData = new FormData();
+  formData.append("imagen", file);
 
   try {
     const res = await fetch("/api/upload", {
@@ -90,7 +93,11 @@ fileInput.addEventListener('change', async (event) => {
     });
 
     const result = await res.json();
-    addMessage(result.reply || "Imagen enviada correctamente.", "assistant");
+    if (result.imageUrl) {
+      addImageMessage(result.imageUrl, 'assistant');
+    } else {
+      addMessage("Imagen enviada correctamente.", "assistant");
+    }
   } catch (err) {
     addMessage("Hubo un problema al subir la imagen.", "assistant");
   }
