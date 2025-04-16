@@ -109,11 +109,13 @@ app.post("/api/chat", async (req, res) => {
 // ✅ Endpoint para mensajes desde Slack
 app.post("/api/slack-response", express.json(), async (req, res) => {
   console.log("📥 Evento recibido de Slack:", JSON.stringify(req.body, null, 2));
+  await sendToSlack("📩 Payload recibido en backend");
+
   const { type, challenge, event } = req.body;
 
   if (type === "url_verification") return res.send({ challenge });
 
-  if (type === "event_callback" && event?.type === "message" && !event?.bot_id) {
+  if (event) {
     const text = event.text || "";
     const match = text.match(/\[(.*?)\]/); // Buscar [id] al inicio
     const userId = match?.[1];
