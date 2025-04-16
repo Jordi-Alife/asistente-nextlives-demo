@@ -32,7 +32,7 @@ app.use("/uploads", express.static("uploads"));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Función para enviar a Slack
+// Función para enviar mensajes a Slack
 async function sendToSlack(message) {
   const webhook = process.env.SLACK_WEBHOOK_URL;
   if (!webhook) return;
@@ -74,7 +74,7 @@ app.post("/api/chat", async (req, res) => {
     const slackMessage = `👤 *${userId || 'Usuario desconocido'}*: ${message}\n🤖 ${reply}`;
     await sendToSlack(slackMessage);
 
-    // Detectar si requiere ayuda humana
+    // Detección de necesidad de asistencia humana
     const lowerReply = reply.toLowerCase();
     const necesitaHumano = [
       "no tengo esa información",
@@ -95,6 +95,7 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
+// Iniciar servidor
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en puerto ${PORT}`);
 });
