@@ -8,7 +8,8 @@ function getUserId() {
     id = Math.random().toString(36).substring(2, 10); // 8 caracteres
     localStorage.setItem("userId", id);
   }
-  document.getElementById("userIdDisplay").textContent = `ID de usuario: ${id}`;
+  const el = document.getElementById("userIdDisplay");
+  if (el) el.textContent = `ID de usuario: ${id}`;
   return id;
 }
 
