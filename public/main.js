@@ -2,7 +2,14 @@ const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('messageInput');
 const fileInput = document.getElementById('fileInput');
 
-// Añadir mensajes al chat
+// Mostrar siempre el final del chat
+function scrollToBottom() {
+  setTimeout(() => {
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }, 100);
+}
+
+// Añadir mensaje de texto
 function addMessage(text, sender) {
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
@@ -12,7 +19,7 @@ function addMessage(text, sender) {
   saveChat();
 }
 
-// Añadir imagen subida al chat
+// Añadir imagen al chat
 function addImageMessage(fileURL, sender) {
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
@@ -32,20 +39,15 @@ function saveChat() {
   localStorage.setItem('chatMessages', messagesDiv.innerHTML);
 }
 
-// Restaurar conversación previa
+// Restaurar mensajes guardados
 function restoreChat() {
   const saved = localStorage.getItem('chatMessages');
   if (saved) {
     messagesDiv.innerHTML = saved;
+    scrollToBottom();
   } else {
-    // Se añade el mensaje inicial al montar, no al final de una respuesta
-    addMessage("¡Hola! ¿Cómo puedo ayudarte hoy?", "assistant");
+    addMessage("Hola, ¿cómo puedo ayudarte?", "assistant");
   }
-}
-
-// Scroll automático
-function scrollToBottom() {
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
 // Enviar mensaje
@@ -53,13 +55,11 @@ async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
 
-  // Añade mensaje del usuario
   addMessage(text, 'user');
   input.value = '';
 
-  // Muestra burbuja de "escribiendo..."
   const typingBubble = document.createElement('div');
-  typingBubble.className = 'message assistant';
+  typingBubble.className = 'message assistant typing';
   typingBubble.innerText = 'Escribiendo...';
   messagesDiv.appendChild(typingBubble);
   scrollToBottom();
@@ -80,7 +80,7 @@ async function sendMessage() {
   }
 }
 
-// Subida de imagen
+// Subir imagen
 fileInput.addEventListener('change', async (event) => {
   const file = event.target.files[0];
   if (!file) return;
