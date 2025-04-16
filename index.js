@@ -110,3 +110,32 @@ app.post("/api/slack-response", express.json(), async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en puerto ${PORT}`);
 });
+// Endpoint para eventos de Slack (verificación y mensajes)
+app.post("/api/slack-response", express.json(), async (req, res) => {
+  const { type, challenge, event } = req.body;
+
+  // Verificación inicial del endpoint
+  if (type === "url_verification") {
+    return res.send({ challenge });
+  }
+
+  // Si es un mensaje nuevo en el canal de Slack
+  if (type === "event_callback" && event?.type === "message" && !event?.bot_id) {
+    const text = event.text;
+    const channel = event.channel;
+
+    // Buscamos el ID del usuario al que se quiere responder (si está incluido en el mensaje)
+    const match = text.match(/\[ID:(.*?)\]/);
+    const userId = match ? match[1] : null;
+
+    if (userId) {
+      // Aquí puedes guardar el mensaje en una cola, BBDD o memoria para enviarlo al frontend
+      console.log(`➡️ Slack quiere enviar a usuario [${userId}]: ${text}`);
+      // Lo ideal sería guardar esto temporalmente, por ejemplo con Redis, o usar websockets
+    }
+
+    return res.sendStatus(200);
+  }
+
+  res.sendStatus(200);
+});
