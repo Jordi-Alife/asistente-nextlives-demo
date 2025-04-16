@@ -8,11 +8,11 @@ function addMessage(text, sender) {
   msg.className = 'message ' + sender;
   msg.innerText = text;
   messagesDiv.appendChild(msg);
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  scrollToBottom();
   saveChat();
 }
 
-// Añadir imagen al chat
+// Añadir imagen subida al chat
 function addImageMessage(fileURL, sender) {
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
@@ -23,41 +23,46 @@ function addImageMessage(fileURL, sender) {
   img.style.borderRadius = '12px';
   msg.appendChild(img);
   messagesDiv.appendChild(msg);
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  scrollToBottom();
   saveChat();
 }
 
-// Guardar en localStorage
+// Guardar conversación
 function saveChat() {
   localStorage.setItem('chatMessages', messagesDiv.innerHTML);
 }
 
-// Restaurar conversación
+// Restaurar conversación previa
 function restoreChat() {
   const saved = localStorage.getItem('chatMessages');
   if (saved) {
     messagesDiv.innerHTML = saved;
   } else {
-    setTimeout(() => {
-      addMessage("Hola, ¿cómo puedo ayudarte?", "assistant");
-    }, 300);
+    // Se añade el mensaje inicial al montar, no al final de una respuesta
+    addMessage("¡Hola! ¿Cómo puedo ayudarte hoy?", "assistant");
   }
 }
 
-// Enviar texto al backend
+// Scroll automático
+function scrollToBottom() {
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+// Enviar mensaje
 async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
 
+  // Añade mensaje del usuario
   addMessage(text, 'user');
   input.value = '';
 
-  // Añadir "escribiendo..." como asistente
+  // Muestra burbuja de "escribiendo..."
   const typingBubble = document.createElement('div');
   typingBubble.className = 'message assistant';
   typingBubble.innerText = 'Escribiendo...';
   messagesDiv.appendChild(typingBubble);
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  scrollToBottom();
 
   try {
     const res = await fetch("/api/chat", {
@@ -75,16 +80,16 @@ async function sendMessage() {
   }
 }
 
-// Adjuntar imagen
+// Subida de imagen
 fileInput.addEventListener('change', async (event) => {
   const file = event.target.files[0];
   if (!file) return;
 
+  const formData = new FormData();
+  formData.append("file", file);
+
   const userURL = URL.createObjectURL(file);
   addImageMessage(userURL, 'user');
-
-  const formData = new FormData();
-  formData.append("imagen", file);
 
   try {
     const res = await fetch("/api/upload", {
@@ -93,16 +98,12 @@ fileInput.addEventListener('change', async (event) => {
     });
 
     const result = await res.json();
-    if (result.imageUrl) {
-      addImageMessage(result.imageUrl, 'assistant');
-    } else {
-      addMessage("Imagen enviada correctamente.", "assistant");
-    }
+    addMessage(result.reply || "Imagen enviada correctamente.", "assistant");
   } catch (err) {
     addMessage("Hubo un problema al subir la imagen.", "assistant");
   }
 
-  fileInput.value = ''; // Reset del input
+  fileInput.value = '';
 });
 
 restoreChat();
