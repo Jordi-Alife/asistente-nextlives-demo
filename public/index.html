@@ -7,22 +7,27 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
+  <!-- Botón flotante para abrir el chat -->
+  <button id="chat-toggle" onclick="abrirChat()">💬</button>
+
+  <!-- Contenedor del chat -->
   <div id="chat-widget">
     <div class="chat-header">
-      <div class="icon">
+      <div style="display: flex; align-items: center;">
         <img src="icono.svg" alt="Icono" />
         <div class="info">
           <h3>Soporte Canal Digital</h3>
           <span>Funeraria Esperanza</span>
         </div>
       </div>
-      <button class="close-btn" onclick="document.getElementById('chat-widget').style.display='none'">×</button>
+      <button class="close-btn" onclick="cerrarChat()">×</button>
     </div>
 
     <div class="chat-messages" id="messages"></div>
 
     <div class="chat-input">
-      <input id="messageInput" type="text" placeholder="Escribir..." />
+      <input id="messageInput" placeholder="Escribir..." />
       <input type="file" id="fileInput" accept="image/*" hidden />
       <button onclick="document.getElementById('fileInput').click()">📎</button>
       <button onclick="sendMessage()">➤</button>
@@ -30,5 +35,16 @@
   </div>
 
   <script src="main.js"></script>
+  <script>
+    function cerrarChat() {
+      document.getElementById('chat-widget').style.display = 'none';
+      document.getElementById('chat-toggle').style.display = 'flex';
+    }
+
+    function abrirChat() {
+      document.getElementById('chat-widget').style.display = 'flex';
+      document.getElementById('chat-toggle').style.display = 'none';
+    }
+  </script>
 </body>
 </html>
