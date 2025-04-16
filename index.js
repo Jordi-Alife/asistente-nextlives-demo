@@ -31,15 +31,7 @@ app.use("/uploads", express.static("uploads"));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-const userIds = new Map();
 const slackResponses = new Map();
-
-function getOrCreateUserId(ip) {
-  if (!userIds.has(ip)) {
-    userIds.set(ip, uuidv4().slice(0, 8));
-  }
-  return userIds.get(ip);
-}
 
 async function sendToSlack(message, userId = null) {
   const webhook = process.env.SLACK_WEBHOOK_URL;
@@ -69,19 +61,19 @@ function shouldEscalateToHuman(message) {
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
   const imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
-  const userId = getOrCreateUserId(req.ip);
+  const userId = req.body.userId || "desconocido";
   await sendToSlack(`🖼️ Imagen subida por usuario [${userId}]: ${imageUrl}`);
   res.json({ imageUrl });
 });
 
 // 💬 Mensaje principal del chat
 app.post("/api/chat", async (req, res) => {
-  const { message, system } = req.body;
-  const userId = getOrCreateUserId(req.ip);
+  const { message, system, userId } = req.body;
+  const finalUserId = userId || "anon";
 
   if (shouldEscalateToHuman(message)) {
-    const alertMessage = `⚠️ Usuario [${userId}] ha solicitado ayuda de un humano:\n${message}`;
-    await sendToSlack(alertMessage, userId);
+    const alertMessage = `⚠️ Usuario [${finalUserId}] ha solicitado ayuda de un humano:\n${message}`;
+    await sendToSlack(alertMessage, finalUserId);
     return res.json({ reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia." });
   }
 
@@ -98,7 +90,7 @@ app.post("/api/chat", async (req, res) => {
     });
 
     const reply = chatResponse.choices[0].message.content;
-    await sendToSlack(`👤 [${userId}] ${message}\n🤖 ${reply}`, userId);
+    await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${reply}`, finalUserId);
     res.json({ reply });
   } catch (error) {
     console.error("Error GPT:", error);
@@ -106,7 +98,7 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// 📥 Endpoint para mensajes desde Slack
+// 📥 Mensajes desde Slack
 app.post("/api/slack-response", express.json(), async (req, res) => {
   console.log("📥 Evento recibido de Slack:", JSON.stringify(req.body, null, 2));
   const { type, challenge, event } = req.body;
@@ -138,6 +130,7 @@ app.get("/api/poll/:id", (req, res) => {
   const userId = req.params.id;
   const mensajes = slackResponses.get(userId) || [];
   slackResponses.set(userId, []); // Vaciar después
+  console.log("📤 Enviando mensajes al frontend:", { userId, mensajes });
   res.json({ mensajes });
 });
 
