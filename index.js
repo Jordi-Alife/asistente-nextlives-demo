@@ -1,3 +1,4 @@
+// index.js
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
@@ -18,7 +19,7 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     const ext = path.extname(file.originalname);
-    const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+    const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
     cb(null, filename);
   },
 });
@@ -27,13 +28,11 @@ const upload = multer({ storage: storage });
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
-app.use("/uploads", express.static("uploads")); // para acceder a las imágenes
+app.use("/uploads", express.static("uploads"));
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Enviar texto a Slack
+// Función para enviar a Slack
 async function sendToSlack(message) {
   const webhook = process.env.SLACK_WEBHOOK_URL;
   if (!webhook) return;
@@ -47,21 +46,16 @@ async function sendToSlack(message) {
 // Ruta para subir imágenes
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
-
   const imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
 
-  // Notificar por Slack
   await sendToSlack(`🖼️ Imagen subida por usuario: ${imageUrl}`);
 
-  res.json({
-    imageUrl,
-    reply: "Gracias, hemos recibido tu imagen. La funeraria podrá verla desde su panel."
-  });
+  res.json({ imageUrl, reply: "Imagen subida correctamente." });
 });
 
-// Ruta principal del chat
+// Ruta del chat
 app.post("/api/chat", async (req, res) => {
-  const { message, system } = req.body;
+  const { message, userId } = req.body;
 
   try {
     const chatResponse = await openai.chat.completions.create({
@@ -69,7 +63,7 @@ app.post("/api/chat", async (req, res) => {
       messages: [
         {
           role: "system",
-          content: system || "Eres un asistente de soporte del canal digital funerario. Responde con claridad, precisión y empatía."
+          content: "Eres un asistente de soporte del canal digital funerario. Responde con claridad, precisión y empatía."
         },
         { role: "user", content: message }
       ]
@@ -77,8 +71,7 @@ app.post("/api/chat", async (req, res) => {
 
     const reply = chatResponse.choices[0].message.content;
 
-    await sendToSlack(`👤 Usuario: ${message}
-🤖 Asistente: ${reply}`);
+    await sendToSlack(`👤 *${userId || 'Usuario desconocido'}*: ${message}\n🤖 ${reply}`);
 
     res.json({ reply });
   } catch (error) {
