@@ -2,6 +2,7 @@ const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('messageInput');
 const fileInput = document.getElementById('fileInput');
 
+// Obtener o generar un ID único por usuario
 function getUserId() {
   let id = localStorage.getItem("userId");
   if (!id) {
@@ -11,6 +12,9 @@ function getUserId() {
   return id;
 }
 
+const userId = getUserId(); // Obtenerlo una sola vez
+
+// Añadir mensaje de texto
 function addMessage(text, sender) {
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
@@ -20,6 +24,7 @@ function addMessage(text, sender) {
   saveChat();
 }
 
+// Añadir mensaje de imagen
 function addImageMessage(fileURL, sender) {
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
@@ -34,10 +39,12 @@ function addImageMessage(fileURL, sender) {
   saveChat();
 }
 
+// Guardar historial en localStorage
 function saveChat() {
   localStorage.setItem('chatMessages', messagesDiv.innerHTML);
 }
 
+// Restaurar historial del chat
 function restoreChat() {
   const saved = localStorage.getItem('chatMessages');
   if (saved) {
@@ -50,14 +57,15 @@ function restoreChat() {
   scrollToBottom();
 }
 
+// Hacer scroll hacia el final del chat
 function scrollToBottom() {
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
+// Enviar mensaje al backend
 async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
-  const userId = getUserId();
   addMessage(text, 'user');
   input.value = '';
 
@@ -82,6 +90,7 @@ async function sendMessage() {
   }
 }
 
+// Subida de imagen
 fileInput.addEventListener('change', async (event) => {
   const file = event.target.files[0];
   if (!file) return;
@@ -107,24 +116,21 @@ fileInput.addEventListener('change', async (event) => {
   fileInput.value = '';
 });
 
-async function checkSlackMessages() {
-  const userId = getUserId();
-
-  try {
-    const res = await fetch(`/api/poll/${userId}`);
-    const data = await res.json();
-
-    if (data && Array.isArray(data.mensajes)) {
-      data.mensajes.forEach((msg) => {
-        addMessage(msg, "assistant");
-      });
+// Recibir mensajes desde Slack
+function startSlackPolling() {
+  setInterval(async () => {
+    try {
+      const res = await fetch(`/api/poll/${userId}`);
+      const data = await res.json();
+      if (data.mensajes && data.mensajes.length > 0) {
+        data.mensajes.forEach(msg => addMessage(msg, 'assistant'));
+      }
+    } catch (err) {
+      console.error("Error al recibir mensajes desde Slack:", err);
     }
-  } catch (error) {
-    console.error("Error al obtener mensajes desde Slack:", error);
-  }
+  }, 3000); // cada 3 segundos
 }
 
-// Inicia el polling cada 5 segundos
-setInterval(checkSlackMessages, 5000);
-
+// Iniciar
 restoreChat();
+startSlackPolling();
