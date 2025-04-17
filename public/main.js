@@ -2,19 +2,17 @@ const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('messageInput');
 const fileInput = document.getElementById('fileInput');
 
-// Obtener o crear ID de usuario
 function getUserId() {
   let id = localStorage.getItem("userId");
   if (!id) {
-    id = Math.random().toString(36).substring(2, 10); // 8 caracteres
+    id = Math.random().toString(36).substring(2, 10); // 8 caracteres aleatorios
     localStorage.setItem("userId", id);
   }
-  const idDisplay = document.getElementById("userIdDisplay");
-  if (idDisplay) idDisplay.textContent = `ID de usuario: ${id}`;
+  const el = document.getElementById("userIdDisplay");
+  if (el) el.textContent = `ID: ${id}`;
   return id;
 }
 
-// Mostrar un mensaje en el chat
 function addMessage(text, sender) {
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
@@ -24,7 +22,6 @@ function addMessage(text, sender) {
   saveChat();
 }
 
-// Mostrar una imagen en el chat
 function addImageMessage(fileURL, sender) {
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
@@ -39,12 +36,10 @@ function addImageMessage(fileURL, sender) {
   saveChat();
 }
 
-// Guardar historial
 function saveChat() {
   localStorage.setItem('chatMessages', messagesDiv.innerHTML);
 }
 
-// Restaurar historial
 function restoreChat() {
   const saved = localStorage.getItem('chatMessages');
   if (saved) {
@@ -57,14 +52,10 @@ function restoreChat() {
   scrollToBottom();
 }
 
-// Scroll hasta abajo
 function scrollToBottom() {
-  setTimeout(() => {
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  }, 100);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-// Enviar mensaje
 async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
@@ -93,7 +84,6 @@ async function sendMessage() {
   }
 }
 
-// Subir imagen
 fileInput.addEventListener('change', async (event) => {
   const file = event.target.files[0];
   if (!file) return;
@@ -120,7 +110,6 @@ fileInput.addEventListener('change', async (event) => {
   fileInput.value = '';
 });
 
-// Revisar mensajes desde Slack
 async function checkSlackMessages() {
   const userId = getUserId();
 
@@ -139,12 +128,5 @@ async function checkSlackMessages() {
   }
 }
 
-// Ajuste para teclado móvil
-window.addEventListener("resize", () => {
-  scrollToBottom();
-});
-
-// Ejecutar
 setInterval(checkSlackMessages, 5000);
-getUserId();
 restoreChat();
