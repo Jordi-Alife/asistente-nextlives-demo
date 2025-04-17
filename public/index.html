@@ -6,13 +6,30 @@
   <title>Soporte Canal Digital</title>
   <link rel="stylesheet" href="style.css" />
   <style>
-    html,
-    body {
+    html, body {
       margin: 0;
       padding: 0;
       height: 100%;
       overflow: hidden;
       -webkit-overflow-scrolling: touch;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    #chat-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 999;
+      background-color: #22c55e;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      font-size: 24px;
+      display: none;
+      justify-content: center;
+      align-items: center;
     }
 
     #chat-widget {
@@ -48,10 +65,10 @@
     }
 
     .chat-header .close-btn {
-      background: none;
+      background: transparent;
       border: none;
-      font-size: 20px;
       color: white;
+      font-size: 20px;
       cursor: pointer;
     }
 
@@ -119,6 +136,8 @@
   </style>
 </head>
 <body>
+  <button id="chat-toggle" onclick="abrirChat()">💬</button>
+
   <div id="chat-widget">
     <div class="chat-header">
       <div style="display: flex; align-items: center;">
@@ -128,7 +147,7 @@
           <span>Funeraria Esperanza</span>
         </div>
       </div>
-      <button class="close-btn" onclick="window.history.back()">&times;</button>
+      <button class="close-btn" onclick="cerrarChat()">×</button>
     </div>
 
     <div class="chat-messages" id="messages"></div>
@@ -144,5 +163,16 @@
   </div>
 
   <script src="main.js"></script>
+  <script>
+    function cerrarChat() {
+      document.getElementById("chat-widget").style.display = "none";
+      document.getElementById("chat-toggle").style.display = "flex";
+    }
+
+    function abrirChat() {
+      document.getElementById("chat-widget").style.display = "flex";
+      document.getElementById("chat-toggle").style.display = "none";
+    }
+  </script>
 </body>
 </html>
