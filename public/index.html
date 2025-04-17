@@ -2,16 +2,115 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Soporte Canal Digital</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #chat-widget {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: #f2f2f2;
+    }
+
+    .chat-header {
+      background-color: #1c192b;
+      color: white;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .chat-header img {
+      width: 36px;
+      height: 36px;
+      margin-right: 10px;
+    }
+
+    .chat-header .info h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .chat-header .info span {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      box-sizing: border-box;
+    }
+
+    .message {
+      max-width: 80%;
+      padding: 10px;
+      margin: 6px 0;
+      border-radius: 12px;
+      word-wrap: break-word;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background-color: #d3f8cf;
+      color: #000;
+    }
+
+    .message.assistant {
+      align-self: flex-start;
+      background-color: #fff;
+      color: #000;
+    }
+
+    .chat-input {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      background: #fff;
+      border-top: 1px solid #ccc;
+    }
+
+    .chat-input input[type="text"] {
+      flex: 1;
+      padding: 10px;
+      border-radius: 24px;
+      border: 1px solid #ccc;
+      outline: none;
+      font-size: 14px;
+      margin-right: 8px;
+    }
+
+    .chat-input button {
+      background-color: #22c55e;
+      color: white;
+      border: none;
+      border-radius: 999px;
+      width: 40px;
+      height: 40px;
+      font-size: 16px;
+    }
+
+    #userIdDisplay {
+      font-size: 11px;
+      text-align: center;
+      opacity: 0.5;
+      padding-bottom: 5px;
+    }
+  </style>
 </head>
 <body>
-
-  <!-- Botón flotante para abrir el chat -->
-  <button id="chat-toggle" onclick="abrirChat()">💬</button>
-
-  <!-- Contenedor del chat -->
   <div id="chat-widget">
     <div class="chat-header">
       <div style="display: flex; align-items: center;">
@@ -21,43 +120,20 @@
           <span>Funeraria Esperanza</span>
         </div>
       </div>
-      <button class="close-btn" onclick="cerrarChat()">×</button>
     </div>
 
     <div class="chat-messages" id="messages"></div>
 
+    <div id="userIdDisplay"></div>
+
     <div class="chat-input">
-      <input id="messageInput" placeholder="Escribir..." />
+      <input id="messageInput" type="text" placeholder="Escribir..." />
       <input type="file" id="fileInput" accept="image/*" hidden />
       <button onclick="document.getElementById('fileInput').click()">📎</button>
       <button onclick="sendMessage()">➤</button>
     </div>
-
-    <!-- Mostrar el ID del usuario -->
-    <div id="userIdDisplay" class="user-id"></div>
   </div>
 
   <script src="main.js"></script>
-  <script>
-    function cerrarChat() {
-      document.getElementById('chat-widget').style.display = 'none';
-      document.getElementById('chat-toggle').style.display = 'flex';
-    }
-
-    function abrirChat() {
-      document.getElementById('chat-widget').style.display = 'flex';
-      document.getElementById('chat-toggle').style.display = 'none';
-    }
-
-    function mostrarUserId() {
-      const id = localStorage.getItem("userId");
-      if (id) {
-        const el = document.getElementById("userIdDisplay");
-        if (el) el.textContent = `ID de usuario: ${id}`;
-      }
-    }
-
-    mostrarUserId();
-  </script>
 </body>
 </html>
