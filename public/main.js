@@ -5,11 +5,10 @@ const fileInput = document.getElementById('fileInput');
 function getUserId() {
   let id = localStorage.getItem("userId");
   if (!id) {
-    id = Math.random().toString(36).substring(2, 10); // 8 caracteres aleatorios
+    id = Math.random().toString(36).substring(2, 10); // 8 caracteres
     localStorage.setItem("userId", id);
   }
-  const el = document.getElementById("userIdDisplay");
-  if (el) el.textContent = `ID: ${id}`;
+  document.getElementById("userIdDisplay").textContent = `ID de usuario: ${id}`;
   return id;
 }
 
@@ -130,3 +129,8 @@ async function checkSlackMessages() {
 
 setInterval(checkSlackMessages, 5000);
 restoreChat();
+
+// ➤ Añadido: scroll automático cuando cambia el tamaño (por teclado)
+window.visualViewport?.addEventListener('resize', () => {
+  scrollToBottom();
+});
