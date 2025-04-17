@@ -47,6 +47,14 @@
       opacity: 0.8;
     }
 
+    .chat-header .close-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: white;
+      cursor: pointer;
+    }
+
     .chat-messages {
       flex: 1;
       overflow-y: auto;
@@ -120,6 +128,7 @@
           <span>Funeraria Esperanza</span>
         </div>
       </div>
+      <button class="close-btn" onclick="window.history.back()">&times;</button>
     </div>
 
     <div class="chat-messages" id="messages"></div>
