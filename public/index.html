@@ -1,9 +1,8 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Soporte Canal Digital</title>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -31,11 +30,11 @@
       <input id="messageInput" placeholder="Escribir..." />
       <input type="file" id="fileInput" accept="image/*" hidden />
       <button onclick="document.getElementById('fileInput').click()">📎</button>
-      <button onclick="sendMessage()">➔</button>
+      <button onclick="sendMessage()">➤</button>
     </div>
 
-    <!-- ID del usuario -->
-    <div id="userIdDisplay" style="font-size: 10px; text-align: center; opacity: 0.5; padding: 6px;"></div>
+    <!-- Mostrar el ID del usuario -->
+    <div id="userIdDisplay" class="user-id"></div>
   </div>
 
   <script src="main.js"></script>
@@ -59,14 +58,6 @@
     }
 
     mostrarUserId();
-
-    // Ajuste scroll cuando aparece teclado
-    window.addEventListener("resize", () => {
-      setTimeout(() => {
-        const msgContainer = document.getElementById("messages");
-        msgContainer.scrollTop = msgContainer.scrollHeight;
-      }, 200);
-    });
   </script>
 </body>
 </html>
