@@ -74,6 +74,7 @@ app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
   const finalUserId = userId || "anon";
 
+  // Guardar mensaje para el panel
   const entrada = {
     userId: finalUserId,
     lastInteraction: new Date().toISOString(),
