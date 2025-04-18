@@ -142,7 +142,7 @@ app.get("/api/poll/:id", (req, res) => {
   res.json({ mensajes });
 });
 
-// ✅ Ver historial desde el panel
+// ✅ Ver historial desde el panel (últimos mensajes únicos por usuario)
 app.get("/api/conversaciones", (req, res) => {
   res.json(conversaciones);
 });
@@ -162,6 +162,13 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
   slackResponses.get(userId).push(message);
   console.log(`📨 Mensaje enviado desde el panel a [${userId}]: ${message}`);
   res.json({ ok: true });
+});
+
+// ✅ NUEVO: Obtener todos los mensajes de un usuario
+app.get("/api/conversaciones/:userId", (req, res) => {
+  const { userId } = req.params;
+  const mensajes = conversaciones.filter(m => m.userId === userId);
+  res.json(mensajes);
 });
 
 app.listen(PORT, () => {
