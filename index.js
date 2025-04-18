@@ -10,7 +10,8 @@ import { v4 as uuidv4 } from "uuid";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const conversaciones = []; // NUEVO: almacena mensajes para el panel
+const conversaciones = []; // Guarda mensajes para el panel
+const slackResponses = new Map();
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -32,8 +33,6 @@ app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-const slackResponses = new Map();
 
 async function sendToSlack(message, userId = null) {
   const webhook = process.env.SLACK_WEBHOOK_URL;
@@ -68,18 +67,17 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   res.json({ imageUrl });
 });
 
-// 💬 Mensaje principal del chat
+// 💬 Mensaje del chat (usuario escribe)
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
   const finalUserId = userId || "anon";
 
-  // NUEVO: guardar el mensaje para el panel
-  const entrada = {
+  // Guardar en historial para el panel
+  conversaciones.push({
     userId: finalUserId,
     lastInteraction: new Date().toISOString(),
     message
-  };
-  conversaciones.push(entrada);
+  });
 
   if (shouldEscalateToHuman(message)) {
     const alertMessage = `⚠️ Usuario [${finalUserId}] ha solicitado ayuda de un humano:\n${message}`;
@@ -135,18 +133,35 @@ app.post("/api/slack-response", express.json(), async (req, res) => {
   res.sendStatus(200);
 });
 
-// 🔁 Polling desde frontend
+// 🔁 Polling del chat
 app.get("/api/poll/:id", (req, res) => {
   const userId = req.params.id;
   const mensajes = slackResponses.get(userId) || [];
-  slackResponses.set(userId, []); // Vaciar después
+  slackResponses.set(userId, []); // vaciar tras enviar
   console.log("📤 Enviando mensajes al frontend:", { userId, mensajes });
   res.json({ mensajes });
 });
 
-// ✅ NUEVO: Ruta para leer mensajes desde el panel
+// ✅ Ver historial desde el panel
 app.get("/api/conversaciones", (req, res) => {
   res.json(conversaciones);
+});
+
+// ✅ NUEVO: Enviar mensaje desde el panel
+app.post("/api/send-to-user", express.json(), async (req, res) => {
+  const { userId, message } = req.body;
+
+  if (!userId || !message) {
+    return res.status(400).json({ error: "Faltan userId o message" });
+  }
+
+  if (!slackResponses.has(userId)) {
+    slackResponses.set(userId, []);
+  }
+
+  slackResponses.get(userId).push(message);
+  console.log(`📨 Mensaje enviado desde el panel a [${userId}]: ${message}`);
+  res.json({ ok: true });
 });
 
 app.listen(PORT, () => {
