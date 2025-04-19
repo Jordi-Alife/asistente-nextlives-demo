@@ -10,22 +10,17 @@ import { v4 as uuidv4 } from "uuid";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
 const HISTORIAL_PATH = "./historial.json";
 
 let conversaciones = [];
 let vistas = {};
-let intervenidas = {}; // NUEVO
+let intervenidas = {};
 
 if (fs.existsSync(HISTORIAL_PATH)) {
   const data = JSON.parse(fs.readFileSync(HISTORIAL_PATH, "utf8"));
-  if (Array.isArray(data)) {
-    conversaciones = data;
-  } else {
-    conversaciones = data.conversaciones || [];
-    vistas = data.vistas || {};
-    intervenidas = data.intervenidas || {};
-  }
+  conversaciones = data.conversaciones || [];
+  vistas = data.vistas || {};
+  intervenidas = data.intervenidas || {};
 }
 
 function guardarConversaciones() {
@@ -36,27 +31,25 @@ function guardarConversaciones() {
 }
 
 const slackResponses = new Map();
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
+  destination: (req, file, cb) => {
     const dir = "./uploads";
     if (!fs.existsSync(dir)) fs.mkdirSync(dir);
     cb(null, dir);
   },
-  filename: function (req, file, cb) {
+  filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-    cb(null, filename);
+    cb(null, `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`);
   },
 });
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 async function sendToSlack(message, userId = null) {
   const webhook = process.env.SLACK_WEBHOOK_URL;
@@ -66,20 +59,30 @@ async function sendToSlack(message, userId = null) {
   await fetch(webhook, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text })
+    body: JSON.stringify({ text }),
   });
 }
 
 function shouldEscalateToHuman(message) {
   const lower = message.toLowerCase();
-  return (
-    lower.includes("hablar con una persona") ||
-    lower.includes("quiero hablar con un humano") ||
-    lower.includes("necesito ayuda humana") ||
-    lower.includes("pasame con un humano") ||
-    lower.includes("quiero hablar con alguien") ||
-    lower.includes("agente humano")
-  );
+  return [
+    "hablar con una persona",
+    "quiero hablar con un humano",
+    "necesito ayuda humana",
+    "pasame con un humano",
+    "quiero hablar con alguien",
+    "agente humano",
+  ].some((phrase) => lower.includes(phrase));
+}
+
+// Función de traducción con OpenAI
+async function translateTo(text, targetLang = "es") {
+  const prompt = `Traduce este mensaje al ${targetLang} sin explicaciones ni comillas:\n\n${text}`;
+  const response = await openai.chat.completions.create({
+    model: "gpt-4",
+    messages: [{ role: "user", content: prompt }],
+  });
+  return response.choices[0].message.content.trim();
 }
 
 app.post("/api/upload", upload.single("file"), async (req, res) => {
@@ -94,17 +97,20 @@ app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
   const finalUserId = userId || "anon";
 
+  const mensajeTraducido = await translateTo(message, "es");
+
   conversaciones.push({
     userId: finalUserId,
     lastInteraction: new Date().toISOString(),
-    message,
+    message: mensajeTraducido,
+    original: message,
     from: "usuario"
   });
   guardarConversaciones();
 
   if (shouldEscalateToHuman(message)) {
-    const alertMessage = `⚠️ Usuario [${finalUserId}] ha solicitado ayuda de un humano:\n${message}`;
-    await sendToSlack(alertMessage, finalUserId);
+    const alert = `⚠️ Usuario [${finalUserId}] ha solicitado ayuda humana:\n${message}`;
+    await sendToSlack(alert, finalUserId);
     return res.json({ reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia." });
   }
 
@@ -121,7 +127,7 @@ app.post("/api/chat", async (req, res) => {
           role: "system",
           content: system || "Eres un asistente de soporte del canal digital funerario. Responde con claridad, precisión y empatía."
         },
-        { role: "user", content: message }
+        { role: "user", content: mensajeTraducido }
       ]
     });
 
@@ -144,37 +150,37 @@ app.post("/api/chat", async (req, res) => {
 });
 
 app.post("/api/send-to-user", express.json(), async (req, res) => {
-  const { userId, message } = req.body;
+  const { userId, message, targetLang = "es" } = req.body;
   if (!userId || !message) {
     return res.status(400).json({ error: "Faltan userId o message" });
   }
 
+  const traducido = await translateTo(message, targetLang);
+
   conversaciones.push({
     userId,
-    message,
+    message: traducido,
+    original: message,
     lastInteraction: new Date().toISOString(),
     from: "asistente",
-    manual: true // NUEVO: marca que fue enviado por humano
+    manual: true
   });
 
   intervenidas[userId] = true;
   guardarConversaciones();
 
   if (!slackResponses.has(userId)) slackResponses.set(userId, []);
-  slackResponses.get(userId).push(message);
+  slackResponses.get(userId).push(traducido);
 
-  console.log(`📨 Mensaje enviado desde el panel a [${userId}]`);
+  console.log(`📨 Mensaje manual enviado a [${userId}]`);
   res.json({ ok: true });
 });
 
 app.post("/api/marcar-visto", (req, res) => {
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: "Falta userId" });
-
   vistas[userId] = new Date().toISOString();
   guardarConversaciones();
-
-  console.log(`✅ Conversación vista marcada para [${userId}]`);
   res.json({ ok: true });
 });
 
@@ -196,14 +202,8 @@ app.get("/api/vistas", (req, res) => {
 
 app.get("/api/poll/:userId", (req, res) => {
   const { userId } = req.params;
-
-  if (!userId) {
-    return res.status(400).json({ error: "Falta userId" });
-  }
-
   const mensajes = slackResponses.get(userId) || [];
   slackResponses.set(userId, []);
-
   res.json({ mensajes });
 });
 
