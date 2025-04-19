@@ -1,3 +1,4 @@
+// index.js
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
@@ -10,7 +11,20 @@ import { v4 as uuidv4 } from "uuid";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const conversaciones = []; // Historial de mensajes para panel
+const HISTORIAL_PATH = "./historial.json";
+
+// Leer historial al iniciar
+let conversaciones = [];
+if (fs.existsSync(HISTORIAL_PATH)) {
+  const data = fs.readFileSync(HISTORIAL_PATH, "utf8");
+  conversaciones = JSON.parse(data);
+}
+
+// Guardar historial
+function guardarConversaciones() {
+  fs.writeFileSync(HISTORIAL_PATH, JSON.stringify(conversaciones, null, 2));
+}
+
 const slackResponses = new Map();
 
 const storage = multer.diskStorage({
@@ -72,13 +86,13 @@ app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
   const finalUserId = userId || "anon";
 
-  // Guardar mensaje en el array
   conversaciones.push({
     userId: finalUserId,
     lastInteraction: new Date().toISOString(),
     message,
     from: "usuario"
   });
+  guardarConversaciones();
 
   if (shouldEscalateToHuman(message)) {
     const alertMessage = `⚠️ Usuario [${finalUserId}] ha solicitado ayuda de un humano:\n${message}`;
@@ -100,13 +114,13 @@ app.post("/api/chat", async (req, res) => {
 
     const reply = chatResponse.choices[0].message.content;
 
-    // Guardar respuesta del asistente también
     conversaciones.push({
       userId: finalUserId,
       lastInteraction: new Date().toISOString(),
       message: reply,
       from: "asistente"
     });
+    guardarConversaciones();
 
     await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${reply}`, finalUserId);
     res.json({ reply });
@@ -129,6 +143,7 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
     lastInteraction: new Date().toISOString(),
     from: "asistente"
   });
+  guardarConversaciones();
 
   if (!slackResponses.has(userId)) slackResponses.set(userId, []);
   slackResponses.get(userId).push(message);
@@ -146,7 +161,6 @@ app.get("/api/conversaciones", (req, res) => {
 app.get("/api/conversaciones/:userId", (req, res) => {
   const { userId } = req.params;
   const mensajes = conversaciones.filter(m => m.userId === userId);
-  console.log(`📂 Mensajes para [${userId}]:`, mensajes.length);
   res.json(mensajes);
 });
 
