@@ -1,3 +1,4 @@
+// Detalle.jsx
 import { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
@@ -71,9 +72,7 @@ export default function Detalle() {
   };
 
   const esURLImagen = (texto) => {
-    return typeof texto === 'string' &&
-      (texto.startsWith("http://") || texto.startsWith("https://")) &&
-      texto.match(/\.(jpeg|jpg|png|gif|webp)$/i);
+    return typeof texto === 'string' && texto.match(/\.(jpeg|jpg|png|gif|webp)$/i);
   };
 
   return (
