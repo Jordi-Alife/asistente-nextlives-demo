@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from "uuid";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const conversaciones = []; // Mensajes con 'from': 'usuario' o 'asistente'
+const conversaciones = []; // Guarda mensajes para el panel
 const slackResponses = new Map();
 
 const storage = multer.diskStorage({
@@ -64,10 +64,16 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   const imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
   const userId = req.body.userId || "desconocido";
   await sendToSlack(`🖼️ Imagen subida por usuario [${userId}]: ${imageUrl}`);
+  conversaciones.push({
+    userId,
+    lastInteraction: new Date().toISOString(),
+    message: imageUrl,
+    from: "usuario"
+  });
   res.json({ imageUrl });
 });
 
-// Chat: mensaje desde el usuario
+// Chat del usuario
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
   const finalUserId = userId || "anon";
@@ -82,7 +88,14 @@ app.post("/api/chat", async (req, res) => {
   if (shouldEscalateToHuman(message)) {
     const alertMessage = `⚠️ Usuario [${finalUserId}] ha solicitado ayuda de un humano:\n${message}`;
     await sendToSlack(alertMessage, finalUserId);
-    return res.json({ reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia." });
+    const reply = "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia.";
+    conversaciones.push({
+      userId: finalUserId,
+      lastInteraction: new Date().toISOString(),
+      message: reply,
+      from: "asistente"
+    });
+    return res.json({ reply });
   }
 
   try {
@@ -98,6 +111,7 @@ app.post("/api/chat", async (req, res) => {
     });
 
     const reply = chatResponse.choices[0].message.content;
+    await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${reply}`, finalUserId);
 
     conversaciones.push({
       userId: finalUserId,
@@ -106,18 +120,23 @@ app.post("/api/chat", async (req, res) => {
       from: "asistente"
     });
 
-    await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${reply}`, finalUserId);
     res.json({ reply });
   } catch (error) {
     console.error("Error GPT:", error);
-    res.status(500).json({ reply: "Lo siento, ha ocurrido un error al procesar tu mensaje." });
+    const errorMsg = "Lo siento, ha ocurrido un error al procesar tu mensaje.";
+    conversaciones.push({
+      userId: finalUserId,
+      lastInteraction: new Date().toISOString(),
+      message: errorMsg,
+      from: "asistente"
+    });
+    res.status(500).json({ reply: errorMsg });
   }
 });
 
 // Desde Slack
 app.post("/api/slack-response", express.json(), async (req, res) => {
   const { type, challenge, event } = req.body;
-
   if (type === "url_verification") return res.send({ challenge });
 
   if (type === "event_callback" && event?.type === "message" && !event?.bot_id) {
@@ -127,15 +146,13 @@ app.post("/api/slack-response", express.json(), async (req, res) => {
     const message = text.replace(/\[.*?\]\s*/, "").trim();
 
     if (userId && message) {
-      if (!slackResponses.has(userId)) {
-        slackResponses.set(userId, []);
-      }
+      if (!slackResponses.has(userId)) slackResponses.set(userId, []);
       slackResponses.get(userId).push(message);
 
       conversaciones.push({
         userId,
-        message,
         lastInteraction: new Date().toISOString(),
+        message,
         from: "asistente"
       });
     }
@@ -144,7 +161,7 @@ app.post("/api/slack-response", express.json(), async (req, res) => {
   res.sendStatus(200);
 });
 
-// Polling para frontend
+// Polling frontend
 app.get("/api/poll/:id", (req, res) => {
   const userId = req.params.id;
   const mensajes = slackResponses.get(userId) || [];
@@ -152,47 +169,50 @@ app.get("/api/poll/:id", (req, res) => {
   res.json({ mensajes });
 });
 
-// Lista de usuarios con último mensaje
+// Historial resumen para panel
 app.get("/api/conversaciones", (req, res) => {
-  const agrupadas = {};
-  for (let i = conversaciones.length - 1; i >= 0; i--) {
-    const conv = conversaciones[i];
-    if (!agrupadas[conv.userId]) {
-      agrupadas[conv.userId] = conv;
+  const resumen = {};
+  conversaciones.forEach(msg => {
+    if (!resumen[msg.userId]) {
+      resumen[msg.userId] = {
+        userId: msg.userId,
+        lastInteraction: msg.lastInteraction,
+        message: msg.message
+      };
+    } else {
+      const dateA = new Date(resumen[msg.userId].lastInteraction);
+      const dateB = new Date(msg.lastInteraction);
+      if (dateB > dateA) {
+        resumen[msg.userId].lastInteraction = msg.lastInteraction;
+        resumen[msg.userId].message = msg.message;
+      }
     }
-  }
-  const lista = Object.values(agrupadas).sort((a, b) =>
-    new Date(b.lastInteraction) - new Date(a.lastInteraction)
-  );
-  res.json(lista);
+  });
+  res.json(Object.values(resumen));
 });
 
-// Mensajes completos por usuario
+// Historial detallado por usuario
 app.get("/api/conversaciones/:userId", (req, res) => {
   const { userId } = req.params;
   const mensajes = conversaciones.filter(m => m.userId === userId);
   res.json(mensajes);
 });
 
-// Enviar mensaje desde panel
+// Desde el panel
 app.post("/api/send-to-user", express.json(), async (req, res) => {
   const { userId, message } = req.body;
-  if (!userId || !message) {
-    return res.status(400).json({ error: "Faltan userId o message" });
-  }
+  if (!userId || !message) return res.status(400).json({ error: "Faltan userId o message" });
 
   conversaciones.push({
     userId,
-    message,
     lastInteraction: new Date().toISOString(),
+    message,
     from: "asistente"
   });
 
-  if (!slackResponses.has(userId)) {
-    slackResponses.set(userId, []);
-  }
-
+  if (!slackResponses.has(userId)) slackResponses.set(userId, []);
   slackResponses.get(userId).push(message);
+
   res.json({ ok: true });
 });
 
