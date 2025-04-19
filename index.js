@@ -15,14 +15,24 @@ const HISTORIAL_PATH = "./historial.json";
 
 // Leer historial al iniciar
 let conversaciones = [];
+let vistas = {}; // Marca de última vista por userId
+
 if (fs.existsSync(HISTORIAL_PATH)) {
-  const data = fs.readFileSync(HISTORIAL_PATH, "utf8");
-  conversaciones = JSON.parse(data);
+  const data = JSON.parse(fs.readFileSync(HISTORIAL_PATH, "utf8"));
+  if (Array.isArray(data)) {
+    conversaciones = data;
+  } else {
+    conversaciones = data.conversaciones || [];
+    vistas = data.vistas || {};
+  }
 }
 
-// Guardar historial
+// Guardar historial y marcas de vista
 function guardarConversaciones() {
-  fs.writeFileSync(HISTORIAL_PATH, JSON.stringify(conversaciones, null, 2));
+  fs.writeFileSync(
+    HISTORIAL_PATH,
+    JSON.stringify({ conversaciones, vistas }, null, 2)
+  );
 }
 
 const slackResponses = new Map();
@@ -152,6 +162,18 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
   res.json({ ok: true });
 });
 
+// Marca la conversación como vista por el operador
+app.post("/api/marcar-visto", (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: "Falta userId" });
+
+  vistas[userId] = new Date().toISOString();
+  guardarConversaciones();
+
+  console.log(`✅ Conversación vista marcada para [${userId}]`);
+  res.json({ ok: true });
+});
+
 // Historial completo
 app.get("/api/conversaciones", (req, res) => {
   res.json(conversaciones);
@@ -160,18 +182,15 @@ app.get("/api/conversaciones", (req, res) => {
 // Historial por usuario
 app.get("/api/conversaciones/:userId", (req, res) => {
   const { userId } = req.params;
-
   const mensajes = conversaciones.filter(m =>
     String(m.userId).trim().toLowerCase() === String(userId).trim().toLowerCase()
   );
-
-  console.log(`🕵️ Buscando mensajes para userId = "${userId}"`);
-  console.log(`✅ Total encontrados: ${mensajes.length}`);
-  mensajes.forEach((msg, i) => {
-    console.log(`${i + 1}. [${msg.from}] ${msg.message}`);
-  });
-
   res.json(mensajes);
+});
+
+// Devuelve la última marca de vista
+app.get("/api/vistas", (req, res) => {
+  res.json(vistas);
 });
 
 // Endpoint para que el chat reciba los mensajes nuevos
@@ -183,11 +202,6 @@ app.get("/api/poll/:userId", (req, res) => {
   }
 
   const mensajes = slackResponses.get(userId) || [];
-
-  console.log(`📬 Poll request recibido para userId: ${userId}`);
-  console.log("🧾 Mensajes pendientes:", mensajes);
-
-  // Limpiar los mensajes una vez enviados
   slackResponses.set(userId, []);
 
   res.json({ mensajes });
