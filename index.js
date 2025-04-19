@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from "uuid";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const conversaciones = []; // Guarda mensajes para el panel
+const conversaciones = []; // Historial completo
 const slackResponses = new Map();
 
 const storage = multer.diskStorage({
@@ -58,7 +58,7 @@ function shouldEscalateToHuman(message) {
   );
 }
 
-// 📤 Subida de archivos
+// Subida de archivos
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
   const imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
@@ -67,16 +67,16 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   res.json({ imageUrl });
 });
 
-// 💬 Mensaje del chat (usuario escribe)
+// Usuario escribe
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
   const finalUserId = userId || "anon";
 
-  // Guardar en historial para el panel
   conversaciones.push({
     userId: finalUserId,
     lastInteraction: new Date().toISOString(),
-    message
+    message,
+    sender: "user"
   });
 
   if (shouldEscalateToHuman(message)) {
@@ -98,6 +98,14 @@ app.post("/api/chat", async (req, res) => {
     });
 
     const reply = chatResponse.choices[0].message.content;
+
+    conversaciones.push({
+      userId: finalUserId,
+      lastInteraction: new Date().toISOString(),
+      message: reply,
+      sender: "assistant"
+    });
+
     await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${reply}`, finalUserId);
     res.json({ reply });
   } catch (error) {
@@ -106,9 +114,8 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// 📥 Mensajes desde Slack
+// Slack responde
 app.post("/api/slack-response", express.json(), async (req, res) => {
-  console.log("📥 Evento recibido de Slack:", JSON.stringify(req.body, null, 2));
   const { type, challenge, event } = req.body;
 
   if (type === "url_verification") return res.send({ challenge });
@@ -119,35 +126,51 @@ app.post("/api/slack-response", express.json(), async (req, res) => {
     const userId = match?.[1];
     const message = text.replace(/\[.*?\]\s*/, "").trim();
 
-    console.log("💡 Evento procesado:", { userId, message });
-
     if (userId && message) {
+      conversaciones.push({
+        userId,
+        lastInteraction: new Date().toISOString(),
+        message,
+        sender: "human"
+      });
+
       if (!slackResponses.has(userId)) {
         slackResponses.set(userId, []);
       }
       slackResponses.get(userId).push(message);
-      console.log(`💬 Slack respondió a [${userId}]: ${message}`);
     }
   }
 
   res.sendStatus(200);
 });
 
-// 🔁 Polling del chat
+// Polling desde frontend
 app.get("/api/poll/:id", (req, res) => {
   const userId = req.params.id;
   const mensajes = slackResponses.get(userId) || [];
-  slackResponses.set(userId, []); // vaciar tras enviar
-  console.log("📤 Enviando mensajes al frontend:", { userId, mensajes });
+  slackResponses.set(userId, []);
   res.json({ mensajes });
 });
 
-// ✅ Ver historial desde el panel (últimos mensajes únicos por usuario)
+// Obtener conversaciones (último mensaje por usuario)
 app.get("/api/conversaciones", (req, res) => {
-  res.json(conversaciones);
+  const ultimaPorUsuario = {};
+
+  for (let i = conversaciones.length - 1; i >= 0; i--) {
+    const conv = conversaciones[i];
+    if (!ultimaPorUsuario[conv.userId]) {
+      ultimaPorUsuario[conv.userId] = conv;
+    }
+  }
+
+  const resultado = Object.values(ultimaPorUsuario).sort(
+    (a, b) => new Date(b.lastInteraction) - new Date(a.lastInteraction)
+  );
+
+  res.json(resultado);
 });
 
-// ✅ NUEVO: Enviar mensaje desde el panel
+// Enviar mensaje desde el panel
 app.post("/api/send-to-user", express.json(), async (req, res) => {
   const { userId, message } = req.body;
 
@@ -155,16 +178,22 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
     return res.status(400).json({ error: "Faltan userId o message" });
   }
 
+  conversaciones.push({
+    userId,
+    lastInteraction: new Date().toISOString(),
+    message,
+    sender: "admin"
+  });
+
   if (!slackResponses.has(userId)) {
     slackResponses.set(userId, []);
   }
 
   slackResponses.get(userId).push(message);
-  console.log(`📨 Mensaje enviado desde el panel a [${userId}]: ${message}`);
   res.json({ ok: true });
 });
 
-// ✅ NUEVO: Obtener todos los mensajes de un usuario
+// Obtener todos los mensajes de un usuario
 app.get("/api/conversaciones/:userId", (req, res) => {
   const { userId } = req.params;
   const mensajes = conversaciones.filter(m => m.userId === userId);
