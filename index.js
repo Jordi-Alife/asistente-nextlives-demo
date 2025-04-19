@@ -13,10 +13,9 @@ const PORT = process.env.PORT || 3000;
 
 const HISTORIAL_PATH = "./historial.json";
 
-// Leer historial al iniciar
 let conversaciones = [];
-let vistas = {}; // Marca de última vista por userId
-let intervenidas = {}; // NUEVO: Marca si un humano ha intervenido
+let vistas = {};
+let intervenidas = {}; // NUEVO
 
 if (fs.existsSync(HISTORIAL_PATH)) {
   const data = JSON.parse(fs.readFileSync(HISTORIAL_PATH, "utf8"));
@@ -29,7 +28,6 @@ if (fs.existsSync(HISTORIAL_PATH)) {
   }
 }
 
-// Guardar historial y marcas de vista/intervención
 function guardarConversaciones() {
   fs.writeFileSync(
     HISTORIAL_PATH,
@@ -84,7 +82,6 @@ function shouldEscalateToHuman(message) {
   );
 }
 
-// Subida de archivos
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
   const imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
@@ -93,7 +90,6 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   res.json({ imageUrl });
 });
 
-// Chat: guarda conversación
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
   const finalUserId = userId || "anon";
@@ -147,7 +143,6 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// Enviar mensaje desde el panel
 app.post("/api/send-to-user", express.json(), async (req, res) => {
   const { userId, message } = req.body;
   if (!userId || !message) {
@@ -158,10 +153,11 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
     userId,
     message,
     lastInteraction: new Date().toISOString(),
-    from: "asistente"
+    from: "asistente",
+    manual: true // NUEVO: marca que fue enviado por humano
   });
 
-  intervenidas[userId] = true; // Marcar como intervenido
+  intervenidas[userId] = true;
   guardarConversaciones();
 
   if (!slackResponses.has(userId)) slackResponses.set(userId, []);
@@ -171,7 +167,6 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
   res.json({ ok: true });
 });
 
-// Marca la conversación como vista por el operador
 app.post("/api/marcar-visto", (req, res) => {
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: "Falta userId" });
@@ -183,12 +178,10 @@ app.post("/api/marcar-visto", (req, res) => {
   res.json({ ok: true });
 });
 
-// Historial completo
 app.get("/api/conversaciones", (req, res) => {
   res.json(conversaciones);
 });
 
-// Historial por usuario
 app.get("/api/conversaciones/:userId", (req, res) => {
   const { userId } = req.params;
   const mensajes = conversaciones.filter(m =>
@@ -197,12 +190,10 @@ app.get("/api/conversaciones/:userId", (req, res) => {
   res.json(mensajes);
 });
 
-// Devuelve la última marca de vista
 app.get("/api/vistas", (req, res) => {
   res.json(vistas);
 });
 
-// Endpoint para que el chat reciba los mensajes nuevos
 app.get("/api/poll/:userId", (req, res) => {
   const { userId } = req.params;
 
