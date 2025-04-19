@@ -157,11 +157,13 @@ app.get("/api/conversaciones", (req, res) => {
   res.json(conversaciones);
 });
 
-// Historial por usuario con debug y comparación explícita
+// Historial por usuario con comparación robusta
 app.get("/api/conversaciones/:userId", (req, res) => {
   const { userId } = req.params;
 
-  const mensajes = conversaciones.filter(m => String(m.userId).trim() === String(userId).trim());
+  const mensajes = conversaciones.filter(m =>
+    String(m.userId).trim().toLowerCase() === String(userId).trim().toLowerCase()
+  );
 
   console.log(`🕵️ Buscando mensajes para userId = "${userId}"`);
   console.log(`✅ Total encontrados: ${mensajes.length}`);
