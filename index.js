@@ -16,6 +16,7 @@ const HISTORIAL_PATH = "./historial.json";
 // Leer historial al iniciar
 let conversaciones = [];
 let vistas = {}; // Marca de última vista por userId
+let intervenidas = {}; // NUEVO: Marca si un humano ha intervenido
 
 if (fs.existsSync(HISTORIAL_PATH)) {
   const data = JSON.parse(fs.readFileSync(HISTORIAL_PATH, "utf8"));
@@ -24,14 +25,15 @@ if (fs.existsSync(HISTORIAL_PATH)) {
   } else {
     conversaciones = data.conversaciones || [];
     vistas = data.vistas || {};
+    intervenidas = data.intervenidas || {};
   }
 }
 
-// Guardar historial y marcas de vista
+// Guardar historial y marcas de vista/intervención
 function guardarConversaciones() {
   fs.writeFileSync(
     HISTORIAL_PATH,
-    JSON.stringify({ conversaciones, vistas }, null, 2)
+    JSON.stringify({ conversaciones, vistas, intervenidas }, null, 2)
   );
 }
 
@@ -110,6 +112,11 @@ app.post("/api/chat", async (req, res) => {
     return res.json({ reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia." });
   }
 
+  if (intervenidas[finalUserId]) {
+    console.log(`⛔ GPT no responde a [${finalUserId}] porque ya ha intervenido un humano.`);
+    return res.json({ reply: null });
+  }
+
   try {
     const chatResponse = await openai.chat.completions.create({
       model: "gpt-4",
@@ -153,12 +160,14 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
     lastInteraction: new Date().toISOString(),
     from: "asistente"
   });
+
+  intervenidas[userId] = true; // Marcar como intervenido
   guardarConversaciones();
 
   if (!slackResponses.has(userId)) slackResponses.set(userId, []);
   slackResponses.get(userId).push(message);
 
-  console.log(`📨 Mensaje enviado desde el panel a [${userId}]: ${message}`);
+  console.log(`📨 Mensaje enviado desde el panel a [${userId}]`);
   res.json({ ok: true });
 });
 
