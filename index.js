@@ -157,7 +157,7 @@ app.get("/api/conversaciones", (req, res) => {
   res.json(conversaciones);
 });
 
-// Historial por usuario con comparación robusta
+// Historial por usuario
 app.get("/api/conversaciones/:userId", (req, res) => {
   const { userId } = req.params;
 
@@ -172,6 +172,25 @@ app.get("/api/conversaciones/:userId", (req, res) => {
   });
 
   res.json(mensajes);
+});
+
+// Endpoint para que el chat reciba los mensajes nuevos
+app.get("/api/poll/:userId", (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId) {
+    return res.status(400).json({ error: "Falta userId" });
+  }
+
+  const mensajes = slackResponses.get(userId) || [];
+
+  console.log(`📬 Poll request recibido para userId: ${userId}`);
+  console.log("🧾 Mensajes pendientes:", mensajes);
+
+  // Limpiar los mensajes una vez enviados
+  slackResponses.set(userId, []);
+
+  res.json({ mensajes });
 });
 
 app.listen(PORT, () => {
