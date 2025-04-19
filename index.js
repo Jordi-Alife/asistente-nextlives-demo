@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from "uuid";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const conversaciones = []; // Historial completo
+const conversaciones = []; // Mensajes con 'from': 'usuario' o 'asistente'
 const slackResponses = new Map();
 
 const storage = multer.diskStorage({
@@ -67,7 +67,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   res.json({ imageUrl });
 });
 
-// Usuario escribe
+// Chat: mensaje desde el usuario
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
   const finalUserId = userId || "anon";
@@ -76,7 +76,7 @@ app.post("/api/chat", async (req, res) => {
     userId: finalUserId,
     lastInteraction: new Date().toISOString(),
     message,
-    sender: "user"
+    from: "usuario"
   });
 
   if (shouldEscalateToHuman(message)) {
@@ -103,7 +103,7 @@ app.post("/api/chat", async (req, res) => {
       userId: finalUserId,
       lastInteraction: new Date().toISOString(),
       message: reply,
-      sender: "assistant"
+      from: "asistente"
     });
 
     await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${reply}`, finalUserId);
@@ -114,7 +114,7 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// Slack responde
+// Desde Slack
 app.post("/api/slack-response", express.json(), async (req, res) => {
   const { type, challenge, event } = req.body;
 
@@ -127,24 +127,24 @@ app.post("/api/slack-response", express.json(), async (req, res) => {
     const message = text.replace(/\[.*?\]\s*/, "").trim();
 
     if (userId && message) {
-      conversaciones.push({
-        userId,
-        lastInteraction: new Date().toISOString(),
-        message,
-        sender: "human"
-      });
-
       if (!slackResponses.has(userId)) {
         slackResponses.set(userId, []);
       }
       slackResponses.get(userId).push(message);
+
+      conversaciones.push({
+        userId,
+        message,
+        lastInteraction: new Date().toISOString(),
+        from: "asistente"
+      });
     }
   }
 
   res.sendStatus(200);
 });
 
-// Polling desde frontend
+// Polling para frontend
 app.get("/api/poll/:id", (req, res) => {
   const userId = req.params.id;
   const mensajes = slackResponses.get(userId) || [];
@@ -152,37 +152,40 @@ app.get("/api/poll/:id", (req, res) => {
   res.json({ mensajes });
 });
 
-// Obtener conversaciones (último mensaje por usuario)
+// Lista de usuarios con último mensaje
 app.get("/api/conversaciones", (req, res) => {
-  const ultimaPorUsuario = {};
-
+  const agrupadas = {};
   for (let i = conversaciones.length - 1; i >= 0; i--) {
     const conv = conversaciones[i];
-    if (!ultimaPorUsuario[conv.userId]) {
-      ultimaPorUsuario[conv.userId] = conv;
+    if (!agrupadas[conv.userId]) {
+      agrupadas[conv.userId] = conv;
     }
   }
-
-  const resultado = Object.values(ultimaPorUsuario).sort(
-    (a, b) => new Date(b.lastInteraction) - new Date(a.lastInteraction)
+  const lista = Object.values(agrupadas).sort((a, b) =>
+    new Date(b.lastInteraction) - new Date(a.lastInteraction)
   );
-
-  res.json(resultado);
+  res.json(lista);
 });
 
-// Enviar mensaje desde el panel
+// Mensajes completos por usuario
+app.get("/api/conversaciones/:userId", (req, res) => {
+  const { userId } = req.params;
+  const mensajes = conversaciones.filter(m => m.userId === userId);
+  res.json(mensajes);
+});
+
+// Enviar mensaje desde panel
 app.post("/api/send-to-user", express.json(), async (req, res) => {
   const { userId, message } = req.body;
-
   if (!userId || !message) {
     return res.status(400).json({ error: "Faltan userId o message" });
   }
 
   conversaciones.push({
     userId,
-    lastInteraction: new Date().toISOString(),
     message,
-    sender: "admin"
+    lastInteraction: new Date().toISOString(),
+    from: "asistente"
   });
 
   if (!slackResponses.has(userId)) {
@@ -191,13 +194,6 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
 
   slackResponses.get(userId).push(message);
   res.json({ ok: true });
-});
-
-// Obtener todos los mensajes de un usuario
-app.get("/api/conversaciones/:userId", (req, res) => {
-  const { userId } = req.params;
-  const mensajes = conversaciones.filter(m => m.userId === userId);
-  res.json(mensajes);
 });
 
 app.listen(PORT, () => {
