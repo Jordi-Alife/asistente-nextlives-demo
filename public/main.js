@@ -118,11 +118,12 @@ async function checkSlackMessages() {
     const data = await res.json();
 
     if (data && Array.isArray(data.mensajes)) {
-      data.mensajes.forEach((msg) => {
-        console.log("📨 Mensaje desde Slack recibido en el navegador:", msg);
-        addMessage(msg, "assistant");
-      });
-    }
+  data.mensajes.forEach((msg) => {
+    console.log("📨 Mensaje desde Slack recibido en el navegador:", msg);
+    addMessage(msg, "assistant");
+    saveChat(); // guarda el mensaje en el localStorage también
+  });
+}
   } catch (error) {
     console.error("Error al obtener mensajes desde Slack:", error);
   }
