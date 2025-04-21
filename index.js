@@ -1,4 +1,3 @@
-// index.js
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
@@ -71,6 +70,7 @@ function detectarIdioma(texto) {
   if (/[\u3040-\u30ff]/.test(texto)) return "ja";
   if (/[\u4e00-\u9fa5]/.test(texto)) return "zh";
   if (/\b(the|you|and|hello|please|thank)\b/i.test(texto)) return "en";
+  if (/\b(bonjour|merci|avec|vous|fleurs)\b/i.test(texto)) return "fr";
   if (/[а-яА-ЯёЁ]/.test(texto)) return "ru";
   return "es";
 }
@@ -114,18 +114,17 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   res.json({ imageUrl });
 });
 
-// Chat principal
+// Chat
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
   const finalUserId = userId || "anon";
   const idioma = detectarIdioma(message);
-
-  const traduccionUsuario = await traducir(message, "es");
+  const traducido = await traducir(message, "es");
 
   conversaciones.push({
     userId: finalUserId,
     lastInteraction: new Date().toISOString(),
-    message: traduccionUsuario,
+    message: traducido,
     original: message,
     from: "usuario"
   });
@@ -147,24 +146,24 @@ app.post("/api/chat", async (req, res) => {
       messages: [
         {
           role: "system",
-          content: system || `Eres un asistente de soporte funerario. Responde exactamente en el mismo idioma que el mensaje del usuario.`,
+          content:
+            system ||
+            `Eres un asistente del canal digital funerario. Responde con claridad, precisión y empatía en el mismo idioma que el usuario: ${idioma}.`,
         },
         { role: "user", content: message },
       ],
     });
 
     const reply = response.choices[0].message.content;
-
-    const traduccionRespuesta = await traducir(reply, "es");
+    const traducidoReply = await traducir(reply, "es");
 
     conversaciones.push({
       userId: finalUserId,
       lastInteraction: new Date().toISOString(),
-      message: traduccionRespuesta,
+      message: traducidoReply,
       original: reply,
-      from: "asistente"
+      from: "asistente",
     });
-
     guardarConversaciones();
     await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${reply}`, finalUserId);
     res.json({ reply });
@@ -179,10 +178,13 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
   const { userId, message } = req.body;
   if (!userId || !message) return res.status(400).json({ error: "Faltan datos" });
 
-  const ultimos = [...conversaciones].reverse().filter(m => m.userId === userId && m.from === "usuario");
-  const ultimoIdioma = ultimos.length ? detectarIdioma(ultimos[0].original || ultimos[0].message) : "es";
+  const ultimos = conversaciones
+    .filter(m => m.userId === userId && m.from === "usuario")
+    .sort((a, b) => new Date(b.lastInteraction) - new Date(a.lastInteraction));
 
-  const traduccion = await traducir(message, ultimoIdioma);
+  const idiomaUltimoUsuario = ultimos.length > 0 ? detectarIdioma(ultimos[0].original || ultimos[0].message) : "es";
+
+  const traduccion = await traducir(message, idiomaUltimoUsuario);
 
   conversaciones.push({
     userId,
@@ -190,7 +192,7 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
     message: traduccion,
     original: message,
     from: "asistente",
-    manual: true,
+    manual: true
   });
 
   intervenidas[userId] = true;
