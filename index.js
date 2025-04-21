@@ -70,6 +70,8 @@ function detectarIdioma(texto) {
   if (/[\u3040-\u30ff]/.test(texto)) return "ja";
   if (/[\u4e00-\u9fa5]/.test(texto)) return "zh";
   if (/\b(the|you|and|hello|please|thank)\b/i.test(texto)) return "en";
+  if (/\b(bonjour|merci|avec|vous|fleurs)\b/i.test(texto)) return "fr";
+  if (/[а-яА-ЯёЁ]/.test(texto)) return "ru";
   return "es";
 }
 
@@ -145,26 +147,26 @@ app.post("/api/chat", async (req, res) => {
         {
           role: "system",
           content:
-            (system || "Eres un asistente de soporte del canal digital funerario. Responde con claridad, precisión y empatía.") +
-            ` Responde al usuario en el mismo idioma en que se ha escrito el mensaje.`,
+            system ||
+            `Eres un asistente del canal digital funerario. Responde con claridad, precisión y empatía en el mismo idioma que el usuario: ${idioma}.`,
         },
-        { role: "user", content: traducido },
+        { role: "user", content: message },
       ],
     });
 
-    const replyOriginal = response.choices[0].message.content;
-    const replyTraducido = idioma !== "es" ? await traducir(replyOriginal, "es") : replyOriginal;
+    const reply = response.choices[0].message.content;
+    const traducidoReply = await traducir(reply, "es");
 
     conversaciones.push({
       userId: finalUserId,
       lastInteraction: new Date().toISOString(),
-      message: replyTraducido,
-      original: replyOriginal,
+      message: traducidoReply,
+      original: reply,
       from: "asistente",
     });
     guardarConversaciones();
-    await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${replyOriginal}`, finalUserId);
-    res.json({ reply: replyOriginal });
+    await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${reply}`, finalUserId);
+    res.json({ reply });
   } catch (err) {
     console.error("Error GPT:", err);
     res.status(500).json({ reply: "Lo siento, ha ocurrido un error al procesar tu mensaje." });
@@ -176,11 +178,13 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
   const { userId, message } = req.body;
   if (!userId || !message) return res.status(400).json({ error: "Faltan datos" });
 
-  const mensajesPrevios = conversaciones.filter(m => m.userId === userId && m.from === "usuario");
-  const ultimoMensaje = mensajesPrevios[mensajesPrevios.length - 1];
-  const idiomaDestino = ultimoMensaje ? detectarIdioma(ultimoMensaje.original || ultimoMensaje.message) : "es";
+  const ultimos = conversaciones
+    .filter(m => m.userId === userId && m.from === "usuario")
+    .sort((a, b) => new Date(b.lastInteraction) - new Date(a.lastInteraction));
 
-  const traduccion = await traducir(message, idiomaDestino);
+  const idiomaUltimoUsuario = ultimos.length > 0 ? detectarIdioma(ultimos[0].original || ultimos[0].message) : "es";
+
+  const traduccion = await traducir(message, idiomaUltimoUsuario);
 
   conversaciones.push({
     userId,
@@ -188,7 +192,7 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
     message: traduccion,
     original: message,
     from: "asistente",
-    manual: true,
+    manual: true
   });
 
   intervenidas[userId] = true;
