@@ -70,6 +70,7 @@ function detectarIdioma(texto) {
   if (/[\u3040-\u30ff]/.test(texto)) return "ja";
   if (/[\u4e00-\u9fa5]/.test(texto)) return "zh";
   if (/\b(the|you|and|hello|please|thank|how)\b/i.test(texto)) return "en";
+  if (/[а-яё]/i.test(texto)) return "ru";
   return "es";
 }
 
@@ -112,7 +113,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   res.json({ imageUrl });
 });
 
-// Chat
+// Chat - ACTUALIZADO
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
   const finalUserId = userId || "anon";
@@ -152,19 +153,20 @@ app.post("/api/chat", async (req, res) => {
       ],
     });
 
-    const reply = response.choices[0].message.content;
-    const traduccionAlEspañol = idioma !== "es" ? await traducir(reply, "es") : reply;
+    const replyOriginal = response.choices[0].message.content;
+    const replyTraducido = idioma !== "es" ? await traducir(replyOriginal, "es") : replyOriginal;
 
     conversaciones.push({
       userId: finalUserId,
       lastInteraction: new Date().toISOString(),
-      message: traduccionAlEspañol,
-      original: reply,
+      message: replyTraducido,
+      original: replyOriginal,
       from: "asistente",
     });
     guardarConversaciones();
-    await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${reply}`, finalUserId);
-    res.json({ reply });
+
+    await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${replyOriginal}`, finalUserId);
+    res.json({ reply: replyOriginal });
   } catch (err) {
     console.error("Error GPT:", err);
     res.status(500).json({ reply: "Lo siento, ha ocurrido un error al procesar tu mensaje." });
@@ -176,13 +178,9 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
   const { userId, message } = req.body;
   if (!userId || !message) return res.status(400).json({ error: "Faltan datos" });
 
-  const ultimoMensajeUsuario = [...conversaciones]
-    .reverse()
-    .find(m => m.userId === userId && m.from === "usuario");
-
-  const idiomaDestino = ultimoMensajeUsuario
-    ? detectarIdioma(ultimoMensajeUsuario.original || ultimoMensajeUsuario.message)
-    : "es";
+  const mensajesPrevios = conversaciones.filter(m => m.userId === userId && m.from === "usuario");
+  const ultimoMensaje = mensajesPrevios[mensajesPrevios.length - 1];
+  const idiomaDestino = ultimoMensaje ? detectarIdioma(ultimoMensaje.original || ultimoMensaje.message) : "es";
 
   const traduccion = await traducir(message, idiomaDestino);
 
@@ -201,7 +199,7 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
   if (!slackResponses.has(userId)) slackResponses.set(userId, []);
   slackResponses.get(userId).push(traduccion);
 
-  console.log(`📨 Mensaje enviado desde el panel a [${userId}] (${idiomaDestino}): ${traduccion}`);
+  console.log(`📨 Mensaje enviado desde el panel a [${userId}]: ${traduccion}`);
   res.json({ ok: true });
 });
 
