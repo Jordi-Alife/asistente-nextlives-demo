@@ -116,9 +116,11 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
   const finalUserId = userId || "anon";
-  const idioma = detectarIdioma(message);
+
+  const idiomaUsuario = detectarIdioma(message);
   const traducido = await traducir(message, "es");
 
+  // Guardar mensaje del usuario (español + original)
   conversaciones.push({
     userId: finalUserId,
     lastInteraction: new Date().toISOString(),
@@ -139,6 +141,7 @@ app.post("/api/chat", async (req, res) => {
   }
 
   try {
+    // GPT responde en el idioma original
     const response = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
@@ -150,28 +153,38 @@ app.post("/api/chat", async (req, res) => {
       ],
     });
 
-    const reply = response.choices[0].message.content;
+    const respuestaGPT = response.choices[0].message.content;
+    const traduccionParaPanel = await traducir(respuestaGPT, "es");
+
     conversaciones.push({
       userId: finalUserId,
       lastInteraction: new Date().toISOString(),
-      message: reply,
-      from: "asistente",
+      message: traduccionParaPanel,
+      original: respuestaGPT,
+      from: "asistente"
     });
+
     guardarConversaciones();
-    await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${reply}`, finalUserId);
-    res.json({ reply });
+    await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${respuestaGPT}`, finalUserId);
+    res.json({ reply: respuestaGPT });
   } catch (err) {
     console.error("Error GPT:", err);
     res.status(500).json({ reply: "Lo siento, ha ocurrido un error al procesar tu mensaje." });
   }
 });
 
-// Panel: enviar respuesta
+// Panel: enviar respuesta manual
 app.post("/api/send-to-user", express.json(), async (req, res) => {
   const { userId, message } = req.body;
   if (!userId || !message) return res.status(400).json({ error: "Faltan datos" });
 
-  const idiomaDestino = detectarIdioma(message);
+  // Buscar idioma del último mensaje del usuario
+  const mensajesUsuario = conversaciones.filter(m => m.userId === userId && m.from === "usuario");
+  const ultimoMensaje = mensajesUsuario[mensajesUsuario.length - 1];
+  const idiomaDestino = ultimoMensaje
+    ? detectarIdioma(ultimoMensaje.original || ultimoMensaje.message)
+    : "es";
+
   const traduccion = await traducir(message, idiomaDestino);
 
   conversaciones.push({
@@ -179,8 +192,9 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
     lastInteraction: new Date().toISOString(),
     message: traduccion,
     original: message,
+    enviado: idiomaDestino,
     from: "asistente",
-    manual: true,
+    manual: true
   });
 
   intervenidas[userId] = true;
@@ -189,7 +203,7 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
   if (!slackResponses.has(userId)) slackResponses.set(userId, []);
   slackResponses.get(userId).push(traduccion);
 
-  console.log(`📨 Mensaje enviado desde el panel a [${userId}]: ${traduccion}`);
+  console.log(`📨 Mensaje enviado desde el panel a [${userId}] en ${idiomaDestino}: ${traduccion}`);
   res.json({ ok: true });
 });
 
