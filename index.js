@@ -70,6 +70,7 @@ function detectarIdioma(texto) {
   if (/[\u3040-\u30ff]/.test(texto)) return "ja";
   if (/[\u4e00-\u9fa5]/.test(texto)) return "zh";
   if (/\b(the|you|and|hello|please|thank)\b/i.test(texto)) return "en";
+  if (/[а-яё]/i.test(texto)) return "ru";
   return "es";
 }
 
@@ -116,7 +117,8 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
   const finalUserId = userId || "anon";
-  const idioma = detectarIdioma(message);
+
+  const idiomaUsuario = detectarIdioma(message);
   const traducido = await traducir(message, "es");
 
   conversaciones.push({
@@ -139,32 +141,37 @@ app.post("/api/chat", async (req, res) => {
   }
 
   try {
+    const promptIdioma = idiomaUsuario === "es"
+      ? ""
+      : `Responde directamente en ${idiomaUsuario}, sin mencionar que el mensaje ha sido traducido.`;
+
     const response = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
         {
           role: "system",
           content:
-            (system || "Eres un asistente de soporte del canal digital funerario. Responde con claridad, precisión y empatía.") +
-            ` Responde al usuario en el mismo idioma en que se ha escrito el mensaje.`,
+            system ||
+            `Eres un asistente de soporte del canal digital funerario. Responde con claridad, precisión y empatía. ${promptIdioma}`,
         },
         { role: "user", content: traducido },
       ],
     });
 
-    const replyOriginal = response.choices[0].message.content;
-    const replyTraducido = idioma !== "es" ? await traducir(replyOriginal, "es") : replyOriginal;
+    const respuestaGPT = response.choices[0].message.content;
+    const traduccionParaPanel = await traducir(respuestaGPT, "es");
 
     conversaciones.push({
       userId: finalUserId,
       lastInteraction: new Date().toISOString(),
-      message: replyTraducido,
-      original: replyOriginal,
-      from: "asistente",
+      message: traduccionParaPanel,
+      original: respuestaGPT,
+      from: "asistente"
     });
+
     guardarConversaciones();
-    await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${replyOriginal}`, finalUserId);
-    res.json({ reply: replyOriginal });
+    await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${respuestaGPT}`, finalUserId);
+    res.json({ reply: respuestaGPT });
   } catch (err) {
     console.error("Error GPT:", err);
     res.status(500).json({ reply: "Lo siento, ha ocurrido un error al procesar tu mensaje." });
@@ -176,11 +183,13 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
   const { userId, message } = req.body;
   if (!userId || !message) return res.status(400).json({ error: "Faltan datos" });
 
-  const mensajesPrevios = conversaciones.filter(m => m.userId === userId && m.from === "usuario");
-  const ultimoMensaje = mensajesPrevios[mensajesPrevios.length - 1];
-  const idiomaDestino = ultimoMensaje ? detectarIdioma(ultimoMensaje.original || ultimoMensaje.message) : "es";
+  // Buscar último mensaje del usuario
+  const ultimos = [...conversaciones]
+    .filter(m => m.userId === userId && m.from === "usuario")
+    .sort((a, b) => new Date(b.lastInteraction) - new Date(a.lastInteraction));
+  const ultimoIdioma = ultimos.length > 0 ? detectarIdioma(ultimos[0].original || ultimos[0].message) : "es";
 
-  const traduccion = await traducir(message, idiomaDestino);
+  const traduccion = await traducir(message, ultimoIdioma);
 
   conversaciones.push({
     userId,
