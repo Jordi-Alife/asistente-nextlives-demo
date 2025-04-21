@@ -120,7 +120,6 @@ app.post("/api/chat", async (req, res) => {
   const idiomaUsuario = detectarIdioma(message);
   const traducido = await traducir(message, "es");
 
-  // Guardar mensaje del usuario
   conversaciones.push({
     userId: finalUserId,
     lastInteraction: new Date().toISOString(),
@@ -141,7 +140,6 @@ app.post("/api/chat", async (req, res) => {
   }
 
   try {
-    // GPT responde en el idioma original del usuario
     const response = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
@@ -149,7 +147,7 @@ app.post("/api/chat", async (req, res) => {
           role: "system",
           content:
             system ||
-            `Eres un asistente de soporte del canal digital funerario. Responde con claridad, precisión y empatía. Responde en el mismo idioma que el usuario ha usado: "${idiomaUsuario}".`,
+            `Eres un asistente de soporte del canal digital funerario. Responde con claridad, precisión y empatía. Muy importante: responde en el mismo idioma que el mensaje del usuario, que ha sido: "${idiomaUsuario}".`,
         },
         { role: "user", content: traducido },
       ],
