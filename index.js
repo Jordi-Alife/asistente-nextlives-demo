@@ -120,7 +120,7 @@ app.post("/api/chat", async (req, res) => {
   const idiomaUsuario = detectarIdioma(message);
   const traducido = await traducir(message, "es");
 
-  // Guardar mensaje del usuario (español + original)
+  // Guardar mensaje del usuario
   conversaciones.push({
     userId: finalUserId,
     lastInteraction: new Date().toISOString(),
@@ -141,13 +141,15 @@ app.post("/api/chat", async (req, res) => {
   }
 
   try {
-    // GPT responde en el idioma original
+    // GPT responde en el idioma original del usuario
     const response = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
         {
           role: "system",
-          content: system || "Eres un asistente de soporte del canal digital funerario. Responde con claridad, precisión y empatía.",
+          content:
+            system ||
+            `Eres un asistente de soporte del canal digital funerario. Responde con claridad, precisión y empatía. Responde en el mismo idioma que el usuario ha usado: "${idiomaUsuario}".`,
         },
         { role: "user", content: traducido },
       ],
@@ -173,12 +175,11 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// Panel: enviar respuesta manual
+// Panel: enviar respuesta
 app.post("/api/send-to-user", express.json(), async (req, res) => {
   const { userId, message } = req.body;
   if (!userId || !message) return res.status(400).json({ error: "Faltan datos" });
 
-  // Buscar idioma del último mensaje del usuario
   const mensajesUsuario = conversaciones.filter(m => m.userId === userId && m.from === "usuario");
   const ultimoMensaje = mensajesUsuario[mensajesUsuario.length - 1];
   const idiomaDestino = ultimoMensaje
