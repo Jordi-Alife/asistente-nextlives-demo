@@ -16,7 +16,7 @@ body {
   background: #f2f2f2;
 }
 
-/* CABECERA CON EFECTO GLASS */
+/* CABECERA CON GLASS */
 .chat-header {
   position: sticky;
   top: 0;
@@ -30,10 +30,12 @@ body {
   box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 
+/* BURBUJA INTERNA TAMBIÉN TRANSPARENTE */
 .chat-header-info {
   display: flex;
   align-items: center;
-  background: white;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
   border-radius: 16px;
   padding: 6px 12px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
@@ -173,7 +175,6 @@ body {
   padding-bottom: 5px;
 }
 
-/* BOTÓN FLOTANTE ⬇️ */
 #scrollToBottomBtn {
   position: fixed;
   bottom: 80px;
@@ -198,7 +199,6 @@ body {
   transform: scale(1.05);
 }
 
-/* ANIMACIÓN DE "ESCRIBIENDO..." */
 .typing-indicator {
   display: inline-block;
   width: 24px;
