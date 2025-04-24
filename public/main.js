@@ -152,3 +152,11 @@ async function checkSlackMessages() {
 setInterval(checkSlackMessages, 5000);
 restoreChat();
 getUserId();
+
+// Mostrar u ocultar botón flotante "⬇️" según scroll
+const scrollBtn = document.getElementById('scrollToBottomBtn');
+messagesDiv.addEventListener('scroll', () => {
+  const threshold = 150;
+  const isNearBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop - messagesDiv.clientHeight < threshold;
+  scrollBtn.style.display = isNearBottom ? 'none' : 'flex';
+});
