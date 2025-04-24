@@ -13,13 +13,18 @@ function getUserId() {
   return id;
 }
 
-function addMessage(text, sender) {
+function addMessage(text, sender, tempId = null) {
+  if (!text.trim()) return null; // Evitar mensajes vacíos
+
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
   msg.innerText = text;
+  if (tempId) msg.dataset.tempId = tempId;
+
   messagesDiv.appendChild(msg);
   scrollToBottom();
   saveChat();
+  return tempId || null;
 }
 
 function addImageMessage(fileURL, sender) {
@@ -34,6 +39,12 @@ function addImageMessage(fileURL, sender) {
   messagesDiv.appendChild(msg);
   scrollToBottom();
   saveChat();
+}
+
+function removeMessageByTempId(tempId) {
+  if (!tempId) return;
+  const temp = document.querySelector(`[data-temp-id="${tempId}"]`);
+  if (temp) temp.remove();
 }
 
 function saveChat() {
@@ -59,15 +70,14 @@ function scrollToBottom() {
 async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
+
   const userId = getUserId();
   addMessage(text, 'user');
   input.value = '';
 
-  const typingBubble = document.createElement('div');
-  typingBubble.className = 'message assistant';
-  typingBubble.innerText = 'Escribiendo...';
-  messagesDiv.appendChild(typingBubble);
-  scrollToBottom();
+  // Añadir burbuja temporal "Escribiendo..."
+  const tempId = `typing-${Date.now()}`;
+  addMessage("Escribiendo...", "assistant", tempId);
 
   try {
     const res = await fetch("/api/chat", {
@@ -75,11 +85,12 @@ async function sendMessage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: text, userId })
     });
+
     const data = await res.json();
-    typingBubble.remove();
+    removeMessageByTempId(tempId);
     addMessage(data.reply, 'assistant');
   } catch (err) {
-    typingBubble.remove();
+    removeMessageByTempId(tempId);
     addMessage("Error al conectar con el servidor.", "assistant");
   }
 }
@@ -118,12 +129,12 @@ async function checkSlackMessages() {
     const data = await res.json();
 
     if (data && Array.isArray(data.mensajes)) {
-  data.mensajes.forEach((msg) => {
-    console.log("📨 Mensaje desde Slack recibido en el navegador:", msg);
-    addMessage(msg, "assistant");
-    saveChat(); // guarda el mensaje en el localStorage también
-  });
-}
+      data.mensajes.forEach((msg) => {
+        console.log("📨 Mensaje desde Slack recibido en el navegador:", msg);
+        addMessage(msg, "assistant");
+        saveChat();
+      });
+    }
   } catch (error) {
     console.error("Error al obtener mensajes desde Slack:", error);
   }
@@ -131,4 +142,4 @@ async function checkSlackMessages() {
 
 setInterval(checkSlackMessages, 5000);
 restoreChat();
-getUserId(); // Asegura que el ID y su visualización estén listos al cargar
+getUserId();
