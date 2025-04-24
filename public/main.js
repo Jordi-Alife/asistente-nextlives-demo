@@ -14,17 +14,31 @@ function getUserId() {
 }
 
 function addMessage(text, sender, tempId = null) {
-  if (!text.trim()) return null; // Evita burbujas vacías
+  if (!text.trim()) return null;
 
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
-  msg.innerText = text;
+
   if (tempId) msg.dataset.tempId = tempId;
 
+  msg.innerText = text;
   messagesDiv.appendChild(msg);
   scrollToBottom();
   saveChat();
   return tempId || null;
+}
+
+function addTypingBubble(tempId) {
+  const msg = document.createElement('div');
+  msg.className = 'message assistant';
+  msg.dataset.tempId = tempId;
+  msg.innerHTML = `
+    <div class="typing-indicator">
+      <span></span><span></span><span></span>
+    </div>
+  `;
+  messagesDiv.appendChild(msg);
+  scrollToBottom();
 }
 
 function addImageMessage(fileURL, sender) {
@@ -56,7 +70,6 @@ function restoreChat() {
   if (saved) {
     messagesDiv.innerHTML = saved;
 
-    // Eliminar burbujas vacías
     const allMessages = messagesDiv.querySelectorAll('.message');
     allMessages.forEach(msg => {
       const isEmpty = !msg.textContent.trim() && msg.children.length === 0;
@@ -86,7 +99,7 @@ async function sendMessage() {
   input.value = '';
 
   const tempId = `typing-${Date.now()}`;
-  addMessage("Escribiendo...", "assistant", tempId);
+  addTypingBubble(tempId);
 
   try {
     const res = await fetch("/api/chat", {
@@ -153,7 +166,6 @@ setInterval(checkSlackMessages, 5000);
 restoreChat();
 getUserId();
 
-// Mostrar u ocultar botón flotante "⬇️" según scroll
 const scrollBtn = document.getElementById('scrollToBottomBtn');
 messagesDiv.addEventListener('scroll', () => {
   const threshold = 150;
