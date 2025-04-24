@@ -16,7 +16,7 @@ body {
   background: #f2f2f2;
 }
 
-/* CABECERA con glass effect */
+/* CABECERA CON EFECTO GLASS */
 .chat-header {
   position: sticky;
   top: 0;
@@ -92,7 +92,6 @@ body {
   color: #333;
 }
 
-/* ÁREA DE MENSAJES */
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -127,7 +126,6 @@ body {
   border-bottom-left-radius: 4px;
 }
 
-/* INPUT DE MENSAJES */
 .chat-input {
   display: flex;
   align-items: center;
@@ -175,7 +173,7 @@ body {
   padding-bottom: 5px;
 }
 
-/* BOTÓN FLOTANTE “⬇️” */
+/* BOTÓN FLOTANTE ⬇️ */
 #scrollToBottomBtn {
   position: fixed;
   bottom: 80px;
@@ -200,7 +198,7 @@ body {
   transform: scale(1.05);
 }
 
-/* ANIMACIÓN “ESCRIBIENDO...” */
+/* ANIMACIÓN DE "ESCRIBIENDO..." */
 .typing-indicator {
   display: inline-block;
   width: 24px;
