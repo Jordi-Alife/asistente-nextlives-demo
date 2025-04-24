@@ -40,36 +40,74 @@
     }
 
     .chat-header {
-      background-color: #1c192b;
-      color: white;
-      padding: 12px;
+      background-color: #f8f8f8;
+      padding: 12px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
     }
 
-    .chat-header img {
+    .chat-header-info {
+      display: flex;
+      align-items: center;
+      background: white;
+      border-radius: 16px;
+      padding: 6px 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      gap: 10px;
+    }
+
+    .chat-avatar-wrapper {
+      position: relative;
       width: 36px;
       height: 36px;
-      margin-right: 10px;
     }
 
-    .chat-header .info h3 {
-      margin: 0;
-      font-size: 16px;
+    .chat-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
     }
 
-    .chat-header .info span {
+    .chat-status-dot {
+      position: absolute;
+      right: -2px;
+      top: -2px;
+      width: 10px;
+      height: 10px;
+      background-color: #2ecc71;
+      border-radius: 50%;
+      border: 2px solid white;
+    }
+
+    .chat-header-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.2;
+    }
+
+    .chat-header-text strong {
+      font-size: 14px;
+      color: #000;
+    }
+
+    .chat-header-text span {
       font-size: 12px;
-      opacity: 0.8;
+      color: #888;
     }
 
-    .chat-header .close-btn {
+    .chat-header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .chat-header button {
       background: transparent;
       border: none;
-      color: white;
-      font-size: 20px;
+      font-size: 18px;
       cursor: pointer;
+      color: #333;
     }
 
     .chat-messages {
@@ -96,7 +134,6 @@
       align-self: flex-end;
       background-color: #000;
       color: #fff;
-      border-radius: 18px;
       border-bottom-right-radius: 4px;
     }
 
@@ -104,7 +141,6 @@
       align-self: flex-start;
       background-color: #ffffff;
       color: #000;
-      border-radius: 18px;
       border-bottom-left-radius: 4px;
     }
 
@@ -185,14 +221,20 @@
 
   <div id="chat-widget">
     <div class="chat-header">
-      <div style="display: flex; align-items: center;">
-        <img src="icono.svg" alt="Icono" />
-        <div class="info">
-          <h3>Soporte Canal Digital</h3>
+      <div class="chat-header-info">
+        <div class="chat-avatar-wrapper">
+          <img src="icono.svg" alt="Avatar" class="chat-avatar" />
+          <span class="chat-status-dot"></span>
+        </div>
+        <div class="chat-header-text">
+          <strong>Soporte Canal Digital</strong>
           <span>Funeraria Esperanza</span>
         </div>
       </div>
-      <button class="close-btn" onclick="cerrarChat()">×</button>
+      <div class="chat-header-actions">
+        <button onclick="minimizarChat()">–</button>
+        <button onclick="cerrarChat()">×</button>
+      </div>
     </div>
 
     <div class="chat-messages" id="messages"></div>
@@ -227,6 +269,12 @@
   <script src="main.js"></script>
   <script>
     function cerrarChat() {
+      localStorage.removeItem('chatMessages');
+      document.getElementById("chat-widget").style.display = "none";
+      document.getElementById("chat-toggle").style.display = "flex";
+    }
+
+    function minimizarChat() {
       document.getElementById("chat-widget").style.display = "none";
       document.getElementById("chat-toggle").style.display = "flex";
     }
