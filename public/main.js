@@ -14,7 +14,7 @@ function getUserId() {
 }
 
 function addMessage(text, sender, tempId = null) {
-  if (!text.trim()) return null; // Evitar mensajes vacíos
+  if (!text.trim()) return null; // Evita burbujas vacías
 
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
@@ -55,16 +55,26 @@ function restoreChat() {
   const saved = localStorage.getItem('chatMessages');
   if (saved) {
     messagesDiv.innerHTML = saved;
+
+    // Eliminar burbujas vacías
+    const allMessages = messagesDiv.querySelectorAll('.message');
+    allMessages.forEach(msg => {
+      const isEmpty = !msg.textContent.trim() && msg.children.length === 0;
+      if (isEmpty) msg.remove();
+    });
   } else {
     setTimeout(() => {
       addMessage("Hola, ¿cómo puedo ayudarte?", "assistant");
     }, 500);
   }
-  scrollToBottom();
+  scrollToBottom(false);
 }
 
-function scrollToBottom() {
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+function scrollToBottom(smooth = true) {
+  messagesDiv.scrollTo({
+    top: messagesDiv.scrollHeight,
+    behavior: smooth ? 'smooth' : 'auto'
+  });
 }
 
 async function sendMessage() {
@@ -75,7 +85,6 @@ async function sendMessage() {
   addMessage(text, 'user');
   input.value = '';
 
-  // Añadir burbuja temporal "Escribiendo..."
   const tempId = `typing-${Date.now()}`;
   addMessage("Escribiendo...", "assistant", tempId);
 
@@ -130,7 +139,7 @@ async function checkSlackMessages() {
 
     if (data && Array.isArray(data.mensajes)) {
       data.mensajes.forEach((msg) => {
-        console.log("📨 Mensaje desde Slack recibido en el navegador:", msg);
+        console.log("📨 Mensaje desde Slack recibido:", msg);
         addMessage(msg, "assistant");
         saveChat();
       });
