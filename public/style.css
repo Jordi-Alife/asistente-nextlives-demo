@@ -95,7 +95,6 @@ body {
   color: #333;
 }
 
-/* MENSAJES AJUSTADOS PARA EFECTO GLASS */
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -119,11 +118,13 @@ body {
   font-size: 15px;
 }
 
+/* SOMBRAS SUTILES EN BURBUJAS */
 .message.user {
   align-self: flex-end;
   background-color: #000;
   color: #fff;
   border-bottom-right-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .message.assistant {
@@ -131,9 +132,9 @@ body {
   background-color: #ffffff;
   color: #000;
   border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
-/* ENTRADA DE MENSAJES */
 .chat-input {
   display: flex;
   align-items: center;
@@ -170,13 +171,11 @@ body {
   transition: all 0.3s ease;
 }
 
-/* ESTILO BASE DEL ICONO DE ENVIAR */
 .send-button svg {
   stroke: #bbb;
   transition: stroke 0.3s, background-color 0.3s;
 }
 
-/* ESTILO ACTIVO (cuando hay texto) */
 .send-button.active {
   background: #000;
   border-radius: 12px;
