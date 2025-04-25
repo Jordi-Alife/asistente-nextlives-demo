@@ -39,27 +39,29 @@
       background: #f2f2f2;
     }
 
-    /* CABECERA con efecto transparente y blur */
     .chat-header {
       position: sticky;
       top: 0;
       z-index: 10;
-      background-color: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(12px);
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.1));
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
       padding: 12px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
 
     .chat-header-info {
       display: flex;
       align-items: center;
-      background: white;
+      background: transparent;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
       border-radius: 16px;
       padding: 6px 12px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      box-shadow: none;
       gap: 10px;
     }
 
