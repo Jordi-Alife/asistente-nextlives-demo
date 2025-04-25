@@ -1,6 +1,7 @@
 const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('messageInput');
 const fileInput = document.getElementById('fileInput');
+const sendBtn = document.querySelector('.send-button'); // nuevo
 
 function getUserId() {
   let id = localStorage.getItem("userId");
@@ -97,6 +98,7 @@ async function sendMessage() {
   const userId = getUserId();
   addMessage(text, 'user');
   input.value = '';
+  sendBtn.classList.remove('active'); // nuevo: quita la clase tras enviar
 
   const tempId = `typing-${Date.now()}`;
   addTypingBubble(tempId);
@@ -171,4 +173,13 @@ messagesDiv.addEventListener('scroll', () => {
   const threshold = 150;
   const isNearBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop - messagesDiv.clientHeight < threshold;
   scrollBtn.style.display = isNearBottom ? 'none' : 'flex';
+});
+
+/* NUEVO: activar/desactivar botón de enviar */
+input.addEventListener('input', () => {
+  if (input.value.trim() !== "") {
+    sendBtn.classList.add('active');
+  } else {
+    sendBtn.classList.remove('active');
+  }
 });
