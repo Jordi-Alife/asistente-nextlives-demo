@@ -47,22 +47,19 @@ body {
 /* AVATAR + ICONO NEGRO CENTRADO */
 .chat-avatar-wrapper {
   position: relative;
-  width: 40px;
-  height: 40px;
-  background: #000;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1px;
-  box-sizing: border-box;
+  width: 36px;
+  height: 36px;
 }
 
 .chat-avatar {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-  display: block;
+  width: 36px;
+  height: 36px;
+  background-color: #000;
+  background-image: url('/chat-icon.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 20px 20px;
+  border-radius: 50%;
 }
 
 .chat-status-dot {
