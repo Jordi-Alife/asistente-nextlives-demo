@@ -75,6 +75,15 @@
       width: 36px;
       height: 36px;
       border-radius: 50%;
+      background-color: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .chat-avatar img {
+      width: 20px;
+      height: 20px;
     }
 
     .chat-status-dot {
@@ -230,7 +239,9 @@
     <div class="chat-header">
       <div class="chat-header-info">
         <div class="chat-avatar-wrapper">
-          <img src="icono.svg" alt="Avatar" class="chat-avatar" />
+          <div class="chat-avatar">
+            <img src="/chat-icon.svg" alt="Chat Icon" />
+          </div>
           <span class="chat-status-dot"></span>
         </div>
         <div class="chat-header-text">
@@ -279,13 +290,13 @@
       localStorage.removeItem('chatMessages');
       document.getElementById("chat-widget").style.display = "none";
       document.getElementById("chat-toggle").style.display = "flex";
-      document.getElementById("scrollToBottomBtn").style.display = "none"; // oculta el botón al cerrar
+      document.getElementById("scrollToBottomBtn").style.display = "none";
     }
 
     function minimizarChat() {
       document.getElementById("chat-widget").style.display = "none";
       document.getElementById("chat-toggle").style.display = "flex";
-      document.getElementById("scrollToBottomBtn").style.display = "none"; // oculta el botón al minimizar
+      document.getElementById("scrollToBottomBtn").style.display = "none";
     }
 
     function abrirChat() {
