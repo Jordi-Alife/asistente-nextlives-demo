@@ -183,3 +183,8 @@ input.addEventListener('input', () => {
     sendBtn.classList.remove('active');
   }
 });
+
+/* NUEVO: forzar scroll cuando se enfoca el input (móvil) */
+input.addEventListener('focus', () => {
+  setTimeout(() => scrollToBottom(), 300);
+});
