@@ -46,14 +46,19 @@ body {
 
 .chat-avatar-wrapper {
   position: relative;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
+  background: #000;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .chat-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
 }
 
 .chat-status-dot {
