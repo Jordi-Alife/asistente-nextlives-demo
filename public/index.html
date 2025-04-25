@@ -279,11 +279,13 @@
       localStorage.removeItem('chatMessages');
       document.getElementById("chat-widget").style.display = "none";
       document.getElementById("chat-toggle").style.display = "flex";
+      document.getElementById("scrollToBottomBtn").style.display = "none"; // oculta el botón al cerrar
     }
 
     function minimizarChat() {
       document.getElementById("chat-widget").style.display = "none";
       document.getElementById("chat-toggle").style.display = "flex";
+      document.getElementById("scrollToBottomBtn").style.display = "none"; // oculta el botón al minimizar
     }
 
     function abrirChat() {
