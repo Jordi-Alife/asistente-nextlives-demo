@@ -23,7 +23,7 @@ body {
   z-index: 10;
   background-color: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px); /* para Safari */
+  -webkit-backdrop-filter: blur(12px);
   padding: 12px 16px;
   display: flex;
   align-items: center;
@@ -31,7 +31,6 @@ body {
   box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 
-/* BURBUJA INTERNA TAMBIÉN TRANSPARENTE */
 .chat-header-info {
   display: flex;
   align-items: center;
@@ -100,8 +99,8 @@ body {
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 12px 12px 12px; /* más espacio arriba */
-  margin-top: -12px; /* empuja hacia arriba */
+  padding: 24px 12px 12px 12px;
+  margin-top: -12px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -134,6 +133,7 @@ body {
   border-bottom-left-radius: 4px;
 }
 
+/* ENTRADA DE MENSAJES */
 .chat-input {
   display: flex;
   align-items: center;
@@ -167,6 +167,24 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.3s ease;
+}
+
+/* ESTILO BASE DEL ICONO DE ENVIAR */
+.send-button svg {
+  stroke: #bbb;
+  transition: stroke 0.3s, background-color 0.3s;
+}
+
+/* ESTILO ACTIVO (cuando hay texto) */
+.send-button.active {
+  background: #000;
+  border-radius: 12px;
+  padding: 6px;
+}
+
+.send-button.active svg {
+  stroke: #fff;
 }
 
 .file-button:hover,
