@@ -146,7 +146,6 @@ app.post("/api/chat", async (req, res) => {
   } catch (error) {
     console.error("❌ Error guardando usuario en Firestore:", error);
   }
-  // >>>>>>>> FIN guardar usuario
 
   // >>>>>>>> Guardar conversación en Firestore
   try {
@@ -165,7 +164,19 @@ app.post("/api/chat", async (req, res) => {
   } catch (error) {
     console.error("❌ Error guardando conversación en Firestore:", error);
   }
-  // >>>>>>>> FIN guardar conversación
+
+  // >>>>>>>> Guardar mensaje recibido (usuario) en Firestore
+  try {
+    await db.collection('mensajes').add({
+      idConversacion: finalUserId,
+      rol: "usuario",
+      mensaje: message,
+      timestamp: new Date().toISOString()
+    });
+    console.log(`✅ Mensaje de usuario guardado: ${finalUserId}`);
+  } catch (error) {
+    console.error("❌ Error guardando mensaje de usuario:", error);
+  }
 
   const traduccionUsuario = await traducir(message, "es");
 
@@ -201,6 +212,19 @@ app.post("/api/chat", async (req, res) => {
     });
 
     const reply = response.choices[0].message.content;
+
+    // >>>>>>>> Guardar mensaje enviado (asistente) en Firestore
+    try {
+      await db.collection('mensajes').add({
+        idConversacion: finalUserId,
+        rol: "asistente",
+        mensaje: reply,
+        timestamp: new Date().toISOString()
+      });
+      console.log(`✅ Mensaje de asistente guardado: ${finalUserId}`);
+    } catch (error) {
+      console.error("❌ Error guardando mensaje de asistente:", error);
+    }
 
     const traduccionRespuesta = await traducir(reply, "es");
 
