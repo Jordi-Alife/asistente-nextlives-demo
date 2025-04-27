@@ -6,14 +6,14 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
-import admin from "firebase-admin"; // <<<<<< NUEVO
-import serviceAccount from "./serviceAccountKey.json" assert { type: "json" }; // <<<<<< NUEVO
+import admin from "firebase-admin";
+import serviceAccount from "./serviceAccountKey.json" assert { type: "json" };
 
 // Inicializar Firebase
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
-const db = admin.firestore(); // <<<<<< NUEVO
+const db = admin.firestore();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -126,6 +126,29 @@ app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
   const finalUserId = userId || "anon";
   const idioma = detectarIdioma(message);
+
+  // >>>>>>>> Guardar usuario en Firestore
+  try {
+    const refUsuario = db.collection('usuarios_chat').doc(finalUserId);
+    const docUsuario = await refUsuario.get();
+
+    if (!docUsuario.exists) {
+      await refUsuario.set({
+        nombre: "Invitado",
+        idioma: idioma || "es",
+        ultimaConexion: new Date().toISOString()
+      });
+      console.log(`✅ Nuevo usuario creado: ${finalUserId}`);
+    } else {
+      await refUsuario.update({
+        ultimaConexion: new Date().toISOString()
+      });
+      console.log(`✅ Usuario actualizado: ${finalUserId}`);
+    }
+  } catch (error) {
+    console.error("❌ Error guardando usuario en Firestore:", error);
+  }
+  // >>>>>>>> FIN guardar usuario
 
   const traduccionUsuario = await traducir(message, "es");
 
