@@ -303,7 +303,8 @@ app.post("/api/marcar-visto", (req, res) => {
   res.json({ ok: true });
 });
 
-// Nueva versión /api/conversaciones: obtenemos también message
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// Corrección: /api/conversaciones
 app.get("/api/conversaciones", async (req, res) => {
   try {
     const snapshot = await db.collection('conversaciones').get();
@@ -311,43 +312,53 @@ app.get("/api/conversaciones", async (req, res) => {
 
     for (const doc of snapshot.docs) {
       const data = doc.data();
-      const userId = data.idUsuario;
-      let lastInteraction = data.fechaInicio;
-      let lastMessage = "";
-
-      const mensajesSnapshot = await db.collection('mensajes')
-        .where('idConversacion', '==', userId)
-        .orderBy('timestamp', 'desc')
-        .limit(1)
-        .get();
-
-      if (!mensajesSnapshot.empty) {
-        const ultimoMensaje = mensajesSnapshot.docs[0].data();
-        lastInteraction = ultimoMensaje.timestamp;
-        lastMessage = ultimoMensaje.mensaje || "";
-      }
-
       conversaciones.push({
-        userId,
-        lastInteraction,
+        userId: data.idUsuario,
+        lastInteraction: data.fechaInicio,
         estado: data.estado || "abierta",
-        message: lastMessage
+        message: ""
       });
     }
 
     res.json(conversaciones);
   } catch (error) {
-    console.error("❌ Error obteniendo conversaciones de Firestore:", error);
+    console.error("❌ Error obteniendo conversaciones:", error);
     res.status(500).json({ error: "Error obteniendo conversaciones" });
   }
 });
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-// Obtener mensajes históricos
-app.get("/api/conversaciones/:userId", (req, res) => {
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// Corrección: /api/conversaciones/:userId
+app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
-  const mensajes = conversaciones.filter(m => String(m.userId).toLowerCase() === String(userId).toLowerCase());
-  res.json(mensajes);
+
+  try {
+    const mensajesSnapshot = await db.collection('mensajes')
+      .where('idConversacion', '==', userId)
+      .orderBy('timestamp')
+      .get();
+
+    const mensajes = mensajesSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        userId,
+        lastInteraction: data.timestamp,
+        message: data.mensaje,
+        from: data.rol,
+        tipo: data.tipo || "texto"
+      };
+    });
+
+    res.json(mensajes);
+  } catch (error) {
+    console.error("❌ Error obteniendo mensajes:", error);
+    res.status(500).json({ error: "Error obteniendo mensajes" });
+  }
 });
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
 
 app.get("/api/vistas", (req, res) => res.json(vistas));
 
