@@ -19,21 +19,19 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const HISTORIAL_PATH = "./historial.json";
 
-let conversaciones = [];
 let vistas = {};
 let intervenidas = {};
 
 if (fs.existsSync(HISTORIAL_PATH)) {
   const data = JSON.parse(fs.readFileSync(HISTORIAL_PATH, "utf8"));
-  conversaciones = data.conversaciones || [];
   vistas = data.vistas || {};
   intervenidas = data.intervenidas || {};
 }
 
-function guardarConversaciones() {
+function guardarVistas() {
   fs.writeFileSync(
     HISTORIAL_PATH,
-    JSON.stringify({ conversaciones, vistas, intervenidas }, null, 2)
+    JSON.stringify({ vistas, intervenidas }, null, 2)
   );
 }
 
@@ -96,12 +94,13 @@ function shouldEscalateToHuman(message) {
     lower.includes("hablar con una persona") ||
     lower.includes("quiero hablar con un humano") ||
     lower.includes("necesito ayuda humana") ||
-    lower.includes("pásame con un humano") ||
+    lower.includes("pasame con un humano") ||
+    lower.includes("quiero hablar con alguien") ||
     lower.includes("agente humano")
   );
 }
 
-// >>> SUBIDA DE ARCHIVOS
+// >>> Subida de archivos
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
@@ -116,6 +115,8 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
       .toFile(optimizedPath);
 
     const imageUrl = `${req.protocol}://${req.get("host")}/${optimizedPath}`;
+
+    await sendToSlack(`🖼️ Imagen subida por usuario [${userId}]: ${imageUrl}`);
 
     await db.collection('mensajes').add({
       idConversacion: userId,
@@ -132,7 +133,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-// >>> CHAT PRINCIPAL
+// >>> Chat principal
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
   const finalUserId = userId || "anon";
@@ -220,8 +221,8 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// >>> ENVIAR MENSAJE MANUAL DESDE PANEL
-app.post("/api/send-to-user", express.json(), async (req, res) => {
+// >>> Enviar desde panel
+app.post("/api/send-to-user", async (req, res) => {
   const { userId, message } = req.body;
   if (!userId || !message) return res.status(400).json({ error: "Faltan datos" });
 
@@ -234,6 +235,7 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
   });
 
   intervenidas[userId] = true;
+  guardarVistas();
 
   if (!slackResponses.has(userId)) slackResponses.set(userId, []);
   slackResponses.get(userId).push(message);
@@ -242,16 +244,16 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
   res.json({ ok: true });
 });
 
-// >>> MARCAR CONVERSACIÓN COMO VISTA
+// >>> Marcar como visto
 app.post("/api/marcar-visto", (req, res) => {
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: "Falta userId" });
   vistas[userId] = new Date().toISOString();
-  guardarConversaciones();
+  guardarVistas();
   res.json({ ok: true });
 });
 
-// >>> OBTENER TODAS LAS CONVERSACIONES
+// >>> Obtener todas las conversaciones
 app.get("/api/conversaciones", async (req, res) => {
   try {
     const snapshot = await db.collection('conversaciones').get();
@@ -261,7 +263,7 @@ app.get("/api/conversaciones", async (req, res) => {
       const data = doc.data();
       conversaciones.push({
         userId: data.idUsuario,
-        lastInteraction: data.fechaInicio || new Date().toISOString(),
+        lastInteraction: data.fechaInicio,
         estado: data.estado || "abierta",
         message: ""
       });
@@ -274,14 +276,14 @@ app.get("/api/conversaciones", async (req, res) => {
   }
 });
 
-// >>> OBTENER MENSAJES DE UNA CONVERSACIÓN
+// >>> Obtener mensajes de una conversación
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
 
   try {
     const mensajesSnapshot = await db.collection('mensajes')
       .where('idConversacion', '==', userId)
-      .orderBy('timestamp', 'asc')
+      .orderBy('timestamp')
       .get();
 
     const mensajes = mensajesSnapshot.docs.map(doc => {
@@ -289,8 +291,8 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
       return {
         userId,
         lastInteraction: data.timestamp,
-        message: data.mensaje || "",
-        from: data.rol || "usuario",
+        message: data.mensaje,
+        from: data.rol,
         tipo: data.tipo || "texto"
       };
     });
@@ -302,16 +304,16 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
   }
 });
 
-// >>> OBTENER VISTAS Y POLL
+// >>> Obtener vistas
 app.get("/api/vistas", (req, res) => res.json(vistas));
 
+// >>> Polling de Slack
 app.get("/api/poll/:userId", (req, res) => {
   const mensajes = slackResponses.get(req.params.userId) || [];
   slackResponses.set(req.params.userId, []);
   res.json({ mensajes });
 });
 
-// >>> INICIAR SERVIDOR
 app.listen(PORT, () => {
   console.log(`🚀 Servidor asistente escuchando en puerto ${PORT}`);
 });
