@@ -8,6 +8,7 @@ import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
 import admin from "firebase-admin";
 import serviceAccount from "./serviceAccountKey.json" assert { type: "json" };
+import sharp from "sharp"; // <<<<< NUEVO
 
 // Inicializar Firebase
 admin.initializeApp({
@@ -105,20 +106,52 @@ function shouldEscalateToHuman(message) {
   );
 }
 
-// Subida de archivos
+// Subida de archivos (actualizado con sharp)
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
-  const imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+
+  const imagePath = req.file.path;
+  const optimizedPath = `uploads/optimized-${req.file.filename}`;
   const userId = req.body.userId || "desconocido";
-  await sendToSlack(`🖼️ Imagen subida por usuario [${userId}]: ${imageUrl}`);
-  conversaciones.push({
-    userId,
-    lastInteraction: new Date().toISOString(),
-    message: imageUrl,
-    from: "usuario"
-  });
-  guardarConversaciones();
-  res.json({ imageUrl });
+
+  try {
+    // Redimensionar imagen con sharp
+    await sharp(imagePath)
+      .resize({ width: 800 })
+      .jpeg({ quality: 80 })
+      .toFile(optimizedPath);
+
+    const imageUrl = `${req.protocol}://${req.get("host")}/${optimizedPath}`;
+
+    await sendToSlack(`🖼️ Imagen subida por usuario [${userId}]: ${imageUrl}`);
+
+    conversaciones.push({
+      userId,
+      lastInteraction: new Date().toISOString(),
+      message: imageUrl,
+      from: "usuario"
+    });
+    guardarConversaciones();
+
+    // Guardar mensaje tipo imagen en Firestore
+    try {
+      await db.collection('mensajes').add({
+        idConversacion: userId,
+        rol: "usuario",
+        mensaje: imageUrl,
+        tipo: "imagen",
+        timestamp: new Date().toISOString()
+      });
+      console.log(`✅ Imagen subida y mensaje guardado: ${userId}`);
+    } catch (error) {
+      console.error("❌ Error guardando imagen en Firestore:", error);
+    }
+
+    res.json({ imageUrl });
+  } catch (error) {
+    console.error("❌ Error procesando imagen:", error);
+    res.status(500).json({ error: "Error procesando la imagen" });
+  }
 });// Chat principal
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
@@ -171,6 +204,7 @@ app.post("/api/chat", async (req, res) => {
       idConversacion: finalUserId,
       rol: "usuario",
       mensaje: message,
+      tipo: "texto",
       timestamp: new Date().toISOString()
     });
     console.log(`✅ Mensaje de usuario guardado: ${finalUserId}`);
@@ -219,6 +253,7 @@ app.post("/api/chat", async (req, res) => {
         idConversacion: finalUserId,
         rol: "asistente",
         mensaje: reply,
+        tipo: "texto",
         timestamp: new Date().toISOString()
       });
       console.log(`✅ Mensaje de asistente guardado: ${finalUserId}`);
