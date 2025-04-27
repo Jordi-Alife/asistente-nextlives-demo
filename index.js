@@ -1,3 +1,5 @@
+// >>> INICIO DEL ARCHIVO
+
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
@@ -186,15 +188,13 @@ app.post("/api/chat", async (req, res) => {
     console.error("❌ Error guardando mensaje:", error);
   }
 
-  const traduccionUsuario = await traducir(message, "es");
-
   if (shouldEscalateToHuman(message)) {
     await sendToSlack(`⚠️ [${finalUserId}] pide ayuda humana:\n${message}`, finalUserId);
-    return res.json({ reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia." });
+    return res.json({ reply: "OK_INTERVENIDO" });
   }
 
   if (intervenidas[finalUserId]) {
-    return res.json({ reply: null });
+    return res.json({ reply: "OK_INTERVENIDO" });
   }
 
   try {
@@ -238,10 +238,10 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
     timestamp: new Date().toISOString()
   });
 
+  intervenidas[userId] = true;
+
   if (!slackResponses.has(userId)) slackResponses.set(userId, []);
   slackResponses.get(userId).push(message);
-
-  intervenidas[userId] = true;
 
   console.log(`📨 Mensaje manual enviado a [${userId}]`);
   res.json({ ok: true });
@@ -295,7 +295,7 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
         userId,
         lastInteraction: data.timestamp,
         message: data.mensaje,
-        from: data.rol,
+        from: data.rol || "usuario",
         tipo: data.tipo || "texto"
       };
     });
@@ -318,3 +318,5 @@ app.get("/api/poll/:userId", (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Servidor asistente escuchando en puerto ${PORT}`);
 });
+
+// >>> FIN DEL ARCHIVO
