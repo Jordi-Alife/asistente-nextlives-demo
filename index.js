@@ -119,9 +119,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   });
   guardarConversaciones();
   res.json({ imageUrl });
-});
-
-// Chat principal
+});// Chat principal
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
   const finalUserId = userId || "anon";
@@ -149,6 +147,25 @@ app.post("/api/chat", async (req, res) => {
     console.error("❌ Error guardando usuario en Firestore:", error);
   }
   // >>>>>>>> FIN guardar usuario
+
+  // >>>>>>>> Guardar conversación en Firestore
+  try {
+    const refConversacion = db.collection('conversaciones').doc(finalUserId);
+    const docConversacion = await refConversacion.get();
+
+    if (!docConversacion.exists) {
+      await refConversacion.set({
+        idUsuario: finalUserId,
+        fechaInicio: new Date().toISOString(),
+        estado: "abierta",
+        idioma: idioma || "es"
+      });
+      console.log(`✅ Nueva conversación creada para: ${finalUserId}`);
+    }
+  } catch (error) {
+    console.error("❌ Error guardando conversación en Firestore:", error);
+  }
+  // >>>>>>>> FIN guardar conversación
 
   const traduccionUsuario = await traducir(message, "es");
 
