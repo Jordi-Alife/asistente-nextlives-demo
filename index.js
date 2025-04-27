@@ -19,11 +19,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const HISTORIAL_PATH = "./historial.json";
 
+let conversaciones = [];
 let vistas = {};
 let intervenidas = {};
 
 if (fs.existsSync(HISTORIAL_PATH)) {
   const data = JSON.parse(fs.readFileSync(HISTORIAL_PATH, "utf8"));
+  conversaciones = data.conversaciones || [];
   vistas = data.vistas || {};
   intervenidas = data.intervenidas || {};
 }
@@ -31,7 +33,7 @@ if (fs.existsSync(HISTORIAL_PATH)) {
 function guardarConversaciones() {
   fs.writeFileSync(
     HISTORIAL_PATH,
-    JSON.stringify({ vistas, intervenidas }, null, 2)
+    JSON.stringify({ conversaciones, vistas, intervenidas }, null, 2)
   );
 }
 
@@ -94,8 +96,7 @@ function shouldEscalateToHuman(message) {
     lower.includes("hablar con una persona") ||
     lower.includes("quiero hablar con un humano") ||
     lower.includes("necesito ayuda humana") ||
-    lower.includes("pasame con un humano") ||
-    lower.includes("quiero hablar con alguien") ||
+    lower.includes("pásame con un humano") ||
     lower.includes("agente humano")
   );
 }
@@ -115,8 +116,6 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
       .toFile(optimizedPath);
 
     const imageUrl = `${req.protocol}://${req.get("host")}/${optimizedPath}`;
-
-    await sendToSlack(`🖼️ Imagen subida por usuario [${userId}]: ${imageUrl}`);
 
     await db.collection('mensajes').add({
       idConversacion: userId,
@@ -181,7 +180,7 @@ app.post("/api/chat", async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error("❌ Error guardando mensaje usuario:", error);
+    console.error("❌ Error guardando mensaje:", error);
   }
 
   if (shouldEscalateToHuman(message)) {
@@ -204,17 +203,13 @@ app.post("/api/chat", async (req, res) => {
 
     const reply = response.choices[0].message.content;
 
-    try {
-      await db.collection('mensajes').add({
-        idConversacion: finalUserId,
-        rol: "asistente",
-        mensaje: reply,
-        tipo: "texto",
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error("❌ Error guardando respuesta IA:", error);
-    }
+    await db.collection('mensajes').add({
+      idConversacion: finalUserId,
+      rol: "asistente",
+      mensaje: reply,
+      tipo: "texto",
+      timestamp: new Date().toISOString()
+    });
 
     await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${reply}`, finalUserId);
 
@@ -225,7 +220,7 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// >>> ENVIAR DESDE PANEL
+// >>> ENVIAR MENSAJE MANUAL DESDE PANEL
 app.post("/api/send-to-user", express.json(), async (req, res) => {
   const { userId, message } = req.body;
   if (!userId || !message) return res.status(400).json({ error: "Faltan datos" });
@@ -239,7 +234,6 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
   });
 
   intervenidas[userId] = true;
-  guardarConversaciones();
 
   if (!slackResponses.has(userId)) slackResponses.set(userId, []);
   slackResponses.get(userId).push(message);
@@ -248,7 +242,7 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
   res.json({ ok: true });
 });
 
-// >>> MARCAR COMO VISTO
+// >>> MARCAR CONVERSACIÓN COMO VISTA
 app.post("/api/marcar-visto", (req, res) => {
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: "Falta userId" });
@@ -257,19 +251,21 @@ app.post("/api/marcar-visto", (req, res) => {
   res.json({ ok: true });
 });
 
-// >>> OBTENER CONVERSACIONES
+// >>> OBTENER TODAS LAS CONVERSACIONES
 app.get("/api/conversaciones", async (req, res) => {
   try {
     const snapshot = await db.collection('conversaciones').get();
-    const conversaciones = snapshot.docs.map(doc => {
+    const conversaciones = [];
+
+    for (const doc of snapshot.docs) {
       const data = doc.data();
-      return {
+      conversaciones.push({
         userId: data.idUsuario,
-        lastInteraction: data.fechaInicio,
+        lastInteraction: data.fechaInicio || new Date().toISOString(),
         estado: data.estado || "abierta",
         message: ""
-      };
-    });
+      });
+    }
 
     res.json(conversaciones);
   } catch (error) {
@@ -278,24 +274,24 @@ app.get("/api/conversaciones", async (req, res) => {
   }
 });
 
-// >>> OBTENER MENSAJES POR CONVERSACIÓN
+// >>> OBTENER MENSAJES DE UNA CONVERSACIÓN
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
 
   try {
     const mensajesSnapshot = await db.collection('mensajes')
       .where('idConversacion', '==', userId)
-      .orderBy('timestamp')
+      .orderBy('timestamp', 'asc')
       .get();
 
     const mensajes = mensajesSnapshot.docs.map(doc => {
       const data = doc.data();
       return {
-        userId: userId,
-        lastInteraction: data.timestamp || new Date().toISOString(),
-        message: data.mensaje || '',
-        from: data.rol || 'usuario',
-        tipo: data.tipo || 'texto'
+        userId,
+        lastInteraction: data.timestamp,
+        message: data.mensaje || "",
+        from: data.rol || "usuario",
+        tipo: data.tipo || "texto"
       };
     });
 
@@ -306,14 +302,7 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
   }
 });
 
-    res.json(mensajes);
-  } catch (error) {
-    console.error("❌ Error obteniendo mensajes:", error);
-    res.status(500).json({ error: "Error obteniendo mensajes" });
-  }
-});
-
-// Otros servicios
+// >>> OBTENER VISTAS Y POLL
 app.get("/api/vistas", (req, res) => res.json(vistas));
 
 app.get("/api/poll/:userId", (req, res) => {
@@ -322,7 +311,7 @@ app.get("/api/poll/:userId", (req, res) => {
   res.json({ mensajes });
 });
 
-// Lanzar servidor
+// >>> INICIAR SERVIDOR
 app.listen(PORT, () => {
   console.log(`🚀 Servidor asistente escuchando en puerto ${PORT}`);
 });
