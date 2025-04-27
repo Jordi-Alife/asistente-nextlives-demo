@@ -8,9 +8,8 @@ import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
 import admin from "firebase-admin";
 import serviceAccount from "./serviceAccountKey.json" assert { type: "json" };
-import sharp from "sharp"; // <<<<< NUEVO
+import sharp from "sharp";
 
-// Inicializar Firebase
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
@@ -106,7 +105,7 @@ function shouldEscalateToHuman(message) {
   );
 }
 
-// Subida de archivos (actualizado con sharp)
+// Subida de archivos
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
@@ -115,7 +114,6 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   const userId = req.body.userId || "desconocido";
 
   try {
-    // Redimensionar imagen con sharp
     await sharp(imagePath)
       .resize({ width: 800 })
       .jpeg({ quality: 80 })
@@ -133,32 +131,27 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     });
     guardarConversaciones();
 
-    // Guardar mensaje tipo imagen en Firestore
-    try {
-      await db.collection('mensajes').add({
-        idConversacion: userId,
-        rol: "usuario",
-        mensaje: imageUrl,
-        tipo: "imagen",
-        timestamp: new Date().toISOString()
-      });
-      console.log(`✅ Imagen subida y mensaje guardado: ${userId}`);
-    } catch (error) {
-      console.error("❌ Error guardando imagen en Firestore:", error);
-    }
+    await db.collection('mensajes').add({
+      idConversacion: userId,
+      rol: "usuario",
+      mensaje: imageUrl,
+      tipo: "imagen",
+      timestamp: new Date().toISOString()
+    });
 
     res.json({ imageUrl });
   } catch (error) {
     console.error("❌ Error procesando imagen:", error);
     res.status(500).json({ error: "Error procesando la imagen" });
   }
-});// Chat principal
+});
+
+// Chat principal
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
   const finalUserId = userId || "anon";
   const idioma = detectarIdioma(message);
 
-  // >>>>>>>> Guardar usuario en Firestore
   try {
     const refUsuario = db.collection('usuarios_chat').doc(finalUserId);
     const docUsuario = await refUsuario.get();
@@ -169,18 +162,15 @@ app.post("/api/chat", async (req, res) => {
         idioma: idioma || "es",
         ultimaConexion: new Date().toISOString()
       });
-      console.log(`✅ Nuevo usuario creado: ${finalUserId}`);
     } else {
       await refUsuario.update({
         ultimaConexion: new Date().toISOString()
       });
-      console.log(`✅ Usuario actualizado: ${finalUserId}`);
     }
   } catch (error) {
-    console.error("❌ Error guardando usuario en Firestore:", error);
+    console.error("❌ Error guardando usuario:", error);
   }
 
-  // >>>>>>>> Guardar conversación en Firestore
   try {
     const refConversacion = db.collection('conversaciones').doc(finalUserId);
     const docConversacion = await refConversacion.get();
@@ -192,13 +182,11 @@ app.post("/api/chat", async (req, res) => {
         estado: "abierta",
         idioma: idioma || "es"
       });
-      console.log(`✅ Nueva conversación creada para: ${finalUserId}`);
     }
   } catch (error) {
-    console.error("❌ Error guardando conversación en Firestore:", error);
+    console.error("❌ Error guardando conversación:", error);
   }
 
-  // >>>>>>>> Guardar mensaje recibido (usuario) en Firestore
   try {
     await db.collection('mensajes').add({
       idConversacion: finalUserId,
@@ -207,9 +195,8 @@ app.post("/api/chat", async (req, res) => {
       tipo: "texto",
       timestamp: new Date().toISOString()
     });
-    console.log(`✅ Mensaje de usuario guardado: ${finalUserId}`);
   } catch (error) {
-    console.error("❌ Error guardando mensaje de usuario:", error);
+    console.error("❌ Error guardando mensaje:", error);
   }
 
   const traduccionUsuario = await traducir(message, "es");
@@ -229,7 +216,6 @@ app.post("/api/chat", async (req, res) => {
   }
 
   if (intervenidas[finalUserId]) {
-    console.log(`⛔ GPT no responde a [${finalUserId}] porque ya ha intervenido un humano.`);
     return res.json({ reply: null });
   }
 
@@ -239,7 +225,7 @@ app.post("/api/chat", async (req, res) => {
       messages: [
         {
           role: "system",
-          content: system || `Eres un asistente de soporte funerario. Responde exactamente en el mismo idioma que el mensaje del usuario.`,
+          content: system || `Eres un asistente de soporte funerario. Responde en el mismo idioma que el usuario.`,
         },
         { role: "user", content: message },
       ],
@@ -247,7 +233,6 @@ app.post("/api/chat", async (req, res) => {
 
     const reply = response.choices[0].message.content;
 
-    // >>>>>>>> Guardar mensaje enviado (asistente) en Firestore
     try {
       await db.collection('mensajes').add({
         idConversacion: finalUserId,
@@ -256,9 +241,8 @@ app.post("/api/chat", async (req, res) => {
         tipo: "texto",
         timestamp: new Date().toISOString()
       });
-      console.log(`✅ Mensaje de asistente guardado: ${finalUserId}`);
     } catch (error) {
-      console.error("❌ Error guardando mensaje de asistente:", error);
+      console.error("❌ Error guardando respuesta:", error);
     }
 
     const traduccionRespuesta = await traducir(reply, "es");
@@ -270,13 +254,14 @@ app.post("/api/chat", async (req, res) => {
       original: reply,
       from: "asistente"
     });
-
     guardarConversaciones();
+
     await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${reply}`, finalUserId);
+
     res.json({ reply });
   } catch (err) {
     console.error("Error GPT:", err);
-    res.status(500).json({ reply: "Lo siento, ha ocurrido un error al procesar tu mensaje." });
+    res.status(500).json({ reply: "Lo siento, ocurrió un error al procesar tu mensaje." });
   }
 });
 
@@ -305,7 +290,7 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
   if (!slackResponses.has(userId)) slackResponses.set(userId, []);
   slackResponses.get(userId).push(traduccion);
 
-  console.log(`📨 Mensaje enviado desde el panel a [${userId}]: ${traduccion}`);
+  console.log(`📨 Mensaje manual enviado a [${userId}]`);
   res.json({ ok: true });
 });
 
@@ -318,9 +303,25 @@ app.post("/api/marcar-visto", (req, res) => {
   res.json({ ok: true });
 });
 
-// Historial y polling
-app.get("/api/conversaciones", (req, res) => res.json(conversaciones));
+// >>>>>>>>>>>> AQUÍ EL CAMBIO IMPORTANTE <<<<<<<<<<<<<
+// Leer las conversaciones directamente desde Firestore
+app.get("/api/conversaciones", async (req, res) => {
+  try {
+    const snapshot = await db.collection('conversaciones').get();
+    const conversacionesFirestore = snapshot.docs.map(doc => ({
+      userId: doc.data().idUsuario,
+      lastInteraction: doc.data().fechaInicio,
+      estado: doc.data().estado || "abierta"
+    }));
+    res.json(conversacionesFirestore);
+  } catch (error) {
+    console.error("❌ Error obteniendo conversaciones de Firestore:", error);
+    res.status(500).json({ error: "Error obteniendo conversaciones" });
+  }
+});
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
+// Historial de mensajes por usuario
 app.get("/api/conversaciones/:userId", (req, res) => {
   const { userId } = req.params;
   const mensajes = conversaciones.filter(m => String(m.userId).toLowerCase() === String(userId).toLowerCase());
