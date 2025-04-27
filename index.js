@@ -1,4 +1,3 @@
-// index.js
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
@@ -7,6 +6,14 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
+import admin from "firebase-admin"; // <<<<<< NUEVO
+import serviceAccount from "./serviceAccountKey.json" assert { type: "json" }; // <<<<<< NUEVO
+
+// Inicializar Firebase
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+const db = admin.firestore(); // <<<<<< NUEVO
 
 const app = express();
 const PORT = process.env.PORT || 3000;
