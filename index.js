@@ -122,14 +122,6 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
 
     await sendToSlack(`🖼️ Imagen subida por usuario [${userId}]: ${imageUrl}`);
 
-    conversaciones.push({
-      userId,
-      lastInteraction: new Date().toISOString(),
-      message: imageUrl,
-      from: "usuario"
-    });
-    guardarConversaciones();
-
     await db.collection('mensajes').add({
       idConversacion: userId,
       rol: "usuario",
@@ -198,15 +190,6 @@ app.post("/api/chat", async (req, res) => {
 
   const traduccionUsuario = await traducir(message, "es");
 
-  conversaciones.push({
-    userId: finalUserId,
-    lastInteraction: new Date().toISOString(),
-    message: traduccionUsuario,
-    original: message,
-    from: "usuario"
-  });
-  guardarConversaciones();
-
   if (shouldEscalateToHuman(message)) {
     await sendToSlack(`⚠️ [${finalUserId}] pide ayuda humana:\n${message}`, finalUserId);
     return res.json({ reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia." });
@@ -227,28 +210,13 @@ app.post("/api/chat", async (req, res) => {
 
     const reply = response.choices[0].message.content;
 
-    try {
-      await db.collection('mensajes').add({
-        idConversacion: finalUserId,
-        rol: "asistente",
-        mensaje: reply,
-        tipo: "texto",
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error("❌ Error guardando respuesta:", error);
-    }
-
-    const traduccionRespuesta = await traducir(reply, "es");
-
-    conversaciones.push({
-      userId: finalUserId,
-      lastInteraction: new Date().toISOString(),
-      message: traduccionRespuesta,
-      original: reply,
-      from: "asistente"
+    await db.collection('mensajes').add({
+      idConversacion: finalUserId,
+      rol: "asistente",
+      mensaje: reply,
+      tipo: "texto",
+      timestamp: new Date().toISOString()
     });
-    guardarConversaciones();
 
     await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${reply}`, finalUserId);
 
@@ -264,25 +232,18 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
   const { userId, message } = req.body;
   if (!userId || !message) return res.status(400).json({ error: "Faltan datos" });
 
-  const ultimos = [...conversaciones].reverse().filter(m => m.userId === userId && m.from === "usuario");
-  const ultimoIdioma = ultimos.length ? detectarIdioma(ultimos[0].original || ultimos[0].message) : "es";
-
-  const traduccion = await traducir(message, ultimoIdioma);
-
-  conversaciones.push({
-    userId,
-    lastInteraction: new Date().toISOString(),
-    message: traduccion,
-    original: message,
-    from: "asistente",
-    manual: true,
+  await db.collection('mensajes').add({
+    idConversacion: userId,
+    rol: "asistente",
+    mensaje: message,
+    tipo: "texto",
+    timestamp: new Date().toISOString()
   });
 
   intervenidas[userId] = true;
-  guardarConversaciones();
 
   if (!slackResponses.has(userId)) slackResponses.set(userId, []);
-  slackResponses.get(userId).push(traduccion);
+  slackResponses.get(userId).push(message);
 
   console.log(`📨 Mensaje manual enviado a [${userId}]`);
   res.json({ ok: true });
@@ -297,7 +258,7 @@ app.post("/api/marcar-visto", (req, res) => {
   res.json({ ok: true });
 });
 
-// >>>>>> CORREGIDO API CONVERSACIONES
+// >>>>>> CORRECTO API CONVERSACIONES
 app.get("/api/conversaciones", async (req, res) => {
   try {
     const snapshot = await db.collection('conversaciones').get();
@@ -320,7 +281,7 @@ app.get("/api/conversaciones", async (req, res) => {
   }
 });
 
-// >>>>>> CORREGIDO API MENSAJES POR USUARIO
+// >>>>>> CORRECTO API MENSAJES POR USUARIO
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
 
@@ -348,7 +309,6 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
   }
 });
 
-// API vistas y poll
 app.get("/api/vistas", (req, res) => res.json(vistas));
 
 app.get("/api/poll/:userId", (req, res) => {
