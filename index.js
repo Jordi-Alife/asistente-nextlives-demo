@@ -1,3 +1,5 @@
+// >>> INICIO DEL ARCHIVO
+
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
@@ -63,10 +65,7 @@ async function traducir(texto, target = "es") {
   const res = await openai.chat.completions.create({
     model: "gpt-4",
     messages: [
-      {
-        role: "system",
-        content: `Traduce el siguiente texto al idioma "${target}" sin explicar nada, solo la traducción.`,
-      },
+      { role: "system", content: `Traduce el siguiente texto al idioma "${target}" sin explicar nada, solo la traducción.` },
       { role: "user", content: texto },
     ],
   });
@@ -105,7 +104,7 @@ function shouldEscalateToHuman(message) {
   );
 }
 
-// Subida de archivos
+// >>> SUBIDA DE ARCHIVOS
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
@@ -146,7 +145,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-// Chat principal
+// >>> CHAT PRINCIPAL
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
   const finalUserId = userId || "anon";
@@ -155,7 +154,6 @@ app.post("/api/chat", async (req, res) => {
   try {
     const refUsuario = db.collection('usuarios_chat').doc(finalUserId);
     const docUsuario = await refUsuario.get();
-
     if (!docUsuario.exists) {
       await refUsuario.set({
         nombre: "Invitado",
@@ -174,7 +172,6 @@ app.post("/api/chat", async (req, res) => {
   try {
     const refConversacion = db.collection('conversaciones').doc(finalUserId);
     const docConversacion = await refConversacion.get();
-
     if (!docConversacion.exists) {
       await refConversacion.set({
         idUsuario: finalUserId,
@@ -223,10 +220,7 @@ app.post("/api/chat", async (req, res) => {
     const response = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
-        {
-          role: "system",
-          content: system || `Eres un asistente de soporte funerario. Responde en el mismo idioma que el usuario.`,
-        },
+        { role: "system", content: system || `Eres un asistente de soporte funerario. Responde en el mismo idioma que el usuario.` },
         { role: "user", content: message },
       ],
     });
@@ -265,7 +259,7 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// Panel: enviar respuesta
+// >>> ENVIAR DESDE PANEL
 app.post("/api/send-to-user", express.json(), async (req, res) => {
   const { userId, message } = req.body;
   if (!userId || !message) return res.status(400).json({ error: "Faltan datos" });
@@ -294,7 +288,7 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
   res.json({ ok: true });
 });
 
-// Marcar como visto
+// >>> MARCAR COMO VISTO
 app.post("/api/marcar-visto", (req, res) => {
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: "Falta userId" });
@@ -303,8 +297,7 @@ app.post("/api/marcar-visto", (req, res) => {
   res.json({ ok: true });
 });
 
-// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-// Corrección: /api/conversaciones
+// >>>>>> CORREGIDO API CONVERSACIONES
 app.get("/api/conversaciones", async (req, res) => {
   try {
     const snapshot = await db.collection('conversaciones').get();
@@ -326,11 +319,8 @@ app.get("/api/conversaciones", async (req, res) => {
     res.status(500).json({ error: "Error obteniendo conversaciones" });
   }
 });
-// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-
-// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-// Corrección: /api/conversaciones/:userId
+// >>>>>> CORREGIDO API MENSAJES POR USUARIO
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
 
@@ -357,9 +347,8 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
     res.status(500).json({ error: "Error obteniendo mensajes" });
   }
 });
-// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-
+// API vistas y poll
 app.get("/api/vistas", (req, res) => res.json(vistas));
 
 app.get("/api/poll/:userId", (req, res) => {
@@ -371,3 +360,5 @@ app.get("/api/poll/:userId", (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Servidor asistente escuchando en puerto ${PORT}`);
 });
+
+// >>> FIN DEL ARCHIVO
