@@ -303,25 +303,43 @@ app.post("/api/marcar-visto", (req, res) => {
   res.json({ ok: true });
 });
 
-// >>>>>>>>>>>> AQUÍ EL CAMBIO IMPORTANTE <<<<<<<<<<<<<
-// Leer las conversaciones directamente desde Firestore
+// Nueva versión: Leer conversaciones desde Firestore (con última interacción real)
 app.get("/api/conversaciones", async (req, res) => {
   try {
     const snapshot = await db.collection('conversaciones').get();
-    const conversacionesFirestore = snapshot.docs.map(doc => ({
-      userId: doc.data().idUsuario,
-      lastInteraction: doc.data().fechaInicio,
-      estado: doc.data().estado || "abierta"
-    }));
-    res.json(conversacionesFirestore);
+    const conversaciones = [];
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      const userId = data.idUsuario;
+      let lastInteraction = data.fechaInicio;
+
+      const mensajesSnapshot = await db.collection('mensajes')
+        .where('idConversacion', '==', userId)
+        .orderBy('timestamp', 'desc')
+        .limit(1)
+        .get();
+
+      if (!mensajesSnapshot.empty) {
+        const ultimoMensaje = mensajesSnapshot.docs[0].data();
+        lastInteraction = ultimoMensaje.timestamp;
+      }
+
+      conversaciones.push({
+        userId,
+        lastInteraction,
+        estado: data.estado || "abierta"
+      });
+    }
+
+    res.json(conversaciones);
   } catch (error) {
     console.error("❌ Error obteniendo conversaciones de Firestore:", error);
     res.status(500).json({ error: "Error obteniendo conversaciones" });
   }
 });
-// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-// Historial de mensajes por usuario
+// Obtener mensajes históricos por usuario
 app.get("/api/conversaciones/:userId", (req, res) => {
   const { userId } = req.params;
   const mensajes = conversaciones.filter(m => String(m.userId).toLowerCase() === String(userId).toLowerCase());
