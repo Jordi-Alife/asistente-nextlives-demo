@@ -11,12 +11,31 @@ import serviceAccount from "./serviceAccountKey.json" assert { type: "json" };
 import sharp from "sharp";
 
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+  credential: admin.credential.cert(serviceAccount)
 });
 const db = admin.firestore();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HISTORIAL_PATH = "./historial.json";
+
+let conversaciones = [];
+let vistas = {};
+let intervenidas = {};
+
+if (fs.existsSync(HISTORIAL_PATH)) {
+  const data = JSON.parse(fs.readFileSync(HISTORIAL_PATH, "utf8"));
+  conversaciones = data.conversaciones || [];
+  vistas = data.vistas || {};
+  intervenidas = data.intervenidas || {};
+}
+
+function guardarConversaciones() {
+  fs.writeFileSync(
+    HISTORIAL_PATH,
+    JSON.stringify({ conversaciones, vistas, intervenidas }, null, 2)
+  );
+}
 
 const slackResponses = new Map();
 
@@ -167,12 +186,14 @@ app.post("/api/chat", async (req, res) => {
     console.error("❌ Error guardando mensaje:", error);
   }
 
+  const traduccionUsuario = await traducir(message, "es");
+
   if (shouldEscalateToHuman(message)) {
     await sendToSlack(`⚠️ [${finalUserId}] pide ayuda humana:\n${message}`, finalUserId);
     return res.json({ reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia." });
   }
 
-  if (slackResponses.has(finalUserId)) {
+  if (intervenidas[finalUserId]) {
     return res.json({ reply: null });
   }
 
@@ -199,7 +220,7 @@ app.post("/api/chat", async (req, res) => {
 
     res.json({ reply });
   } catch (err) {
-    console.error("❌ Error procesando respuesta GPT:", err);
+    console.error("Error GPT:", err);
     res.status(500).json({ reply: "Lo siento, ocurrió un error al procesar tu mensaje." });
   }
 });
@@ -220,6 +241,8 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
   if (!slackResponses.has(userId)) slackResponses.set(userId, []);
   slackResponses.get(userId).push(message);
 
+  intervenidas[userId] = true;
+
   console.log(`📨 Mensaje manual enviado a [${userId}]`);
   res.json({ ok: true });
 });
@@ -228,10 +251,12 @@ app.post("/api/send-to-user", express.json(), async (req, res) => {
 app.post("/api/marcar-visto", (req, res) => {
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: "Falta userId" });
+  vistas[userId] = new Date().toISOString();
+  guardarConversaciones();
   res.json({ ok: true });
 });
 
-// >>> API CONVERSACIONES
+// >>>>>> API CONVERSACIONES
 app.get("/api/conversaciones", async (req, res) => {
   try {
     const snapshot = await db.collection('conversaciones').get();
@@ -254,7 +279,7 @@ app.get("/api/conversaciones", async (req, res) => {
   }
 });
 
-// >>> API MENSAJES POR USUARIO
+// >>>>>> API MENSAJES POR USUARIO
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
 
@@ -280,6 +305,14 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
     console.error("❌ Error obteniendo mensajes:", error);
     res.status(500).json({ error: "Error obteniendo mensajes" });
   }
+});
+
+app.get("/api/vistas", (req, res) => res.json(vistas));
+
+app.get("/api/poll/:userId", (req, res) => {
+  const mensajes = slackResponses.get(req.params.userId) || [];
+  slackResponses.set(req.params.userId, []);
+  res.json({ mensajes });
 });
 
 app.listen(PORT, () => {
