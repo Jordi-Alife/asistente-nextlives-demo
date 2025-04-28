@@ -1,4 +1,4 @@
-// index.js corregido y completo
+// index.js COMPLETO corregido
 
 import express from "express";
 import cors from "cors";
@@ -73,11 +73,11 @@ async function traducir(texto, target = "es") {
 }
 
 function detectarIdioma(texto) {
-  if (/[áéíóúñü]/i.test(texto)) return "es";
+  if (/[\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1\u00fc]/i.test(texto)) return "es";
   if (/[\u3040-\u30ff]/.test(texto)) return "ja";
   if (/[\u4e00-\u9fa5]/.test(texto)) return "zh";
   if (/\b(the|you|and|hello|please|thank)\b/i.test(texto)) return "en";
-  if (/[а-яА-ЯёЁ]/.test(texto)) return "ru";
+  if (/[\u0430-\u044f\u0410-\u042f]/.test(texto)) return "ru";
   return "es";
 }
 
@@ -251,7 +251,7 @@ app.get("/api/conversaciones", async (req, res) => {
   }
 });
 
-// Obtener mensajes de una conversación
+// Obtener mensajes de una conversación (CORREGIDO)
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
 
@@ -261,36 +261,25 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
       .orderBy('timestamp')
       .get();
 
-    const mensajes = mensajesSnapshot.docs
-      .map(doc => {
-        const data = doc.data();
-        if (!data || !data.timestamp || !data.mensaje || !data.rol) {
-          return null;
-        }
-        return {
-          userId,
-          lastInteraction: data.timestamp,
-          message: data.mensaje,
-          from: data.rol,
-          tipo: data.tipo || "texto"
-        };
-      })
-      .filter(msg => msg !== null);
+    const mensajes = mensajesSnapshot.docs.map(doc => {
+      const data = doc.data();
+      if (!data || !data.timestamp || !data.mensaje || !data.rol) {
+        console.error("⚠️ Mensaje inválido detectado:", doc.id, data);
+        return null;
+      }
+      return {
+        userId,
+        lastInteraction: data.timestamp,
+        message: data.mensaje,
+        from: data.rol,
+        tipo: data.tipo || "texto"
+      };
+    }).filter(msg => msg !== null);
 
     res.json(mensajes);
   } catch (error) {
-    console.error("❌ Error obteniendo mensajes:", error);
-    res.status(500).json({ error: "Error obteniendo mensajes" });
-  }
-});
-
-// Obtener vistas
-app.get("/api/vistas", (req, res) => {
-  try {
-    res.json(vistas || {});
-  } catch (error) {
-    console.error("❌ Error obteniendo vistas:", error);
-    res.status(500).json({ error: "Error obteniendo vistas" });
+    console.error("❌ Error crítico obteniendo mensajes:", error);
+    res.status(500).json({ error: "Error crítico obteniendo mensajes" });
   }
 });
 
@@ -302,5 +291,5 @@ app.get("/api/poll/:userId", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor asistente escuchando en puerto ${PORT}`);
+  console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
 });
