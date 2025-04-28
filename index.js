@@ -286,16 +286,29 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
       .orderBy('timestamp')
       .get();
 
+    if (mensajesSnapshot.empty) {
+      // Si no hay mensajes, devolvemos un array vacío
+      return res.json([]);
+    }
+
     const mensajes = mensajesSnapshot.docs.map(doc => {
       const data = doc.data();
       return {
         userId,
-        lastInteraction: data.timestamp,
-        message: data.mensaje,
-        from: data.rol,
+        lastInteraction: data.timestamp || new Date().toISOString(),
+        message: data.mensaje || "",
+        from: data.rol || "usuario",
         tipo: data.tipo || "texto"
       };
     });
+
+    res.json(mensajes);
+  } catch (error) {
+    console.error("❌ Error obteniendo mensajes:", error);
+    // Devolver siempre array vacío si falla
+    res.json([]);
+  }
+});
 
     res.json(mensajes);
   } catch (error) {
