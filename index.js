@@ -251,7 +251,7 @@ app.get("/api/conversaciones", async (req, res) => {
   }
 });
 
-// Obtener mensajes
+// >>> Obtener mensajes de una conversación
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
 
@@ -261,13 +261,19 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
       .orderBy('timestamp')
       .get();
 
-    const mensajes = mensajesSnapshot.docs.map(doc => ({
-      userId,
-      lastInteraction: doc.data().timestamp,
-      message: doc.data().mensaje,
-      from: doc.data().rol,
-      tipo: doc.data().tipo || "texto"
-    }));
+    const mensajes = [];
+
+    mensajesSnapshot.forEach((doc) => {
+      const data = doc.data();
+      mensajes.push({
+        id: doc.id,
+        userId: userId,
+        lastInteraction: data.timestamp || new Date().toISOString(),
+        message: data.mensaje || "",
+        from: data.rol || "usuario",
+        tipo: data.tipo || "texto"
+      });
+    });
 
     res.json(mensajes);
   } catch (error) {
