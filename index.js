@@ -1,4 +1,4 @@
-// index.js completo actualizado
+// index.js actualizado COMPLETO
 
 import express from "express";
 import cors from "cors";
@@ -65,7 +65,7 @@ async function traducir(texto, target = "es") {
   const res = await openai.chat.completions.create({
     model: "gpt-4",
     messages: [
-      { role: "system", content: `Traduce al idioma \"${target}\" sin explicar nada.` },
+      { role: "system", content: `Traduce el siguiente texto al idioma \"${target}\" sin explicar nada.` },
       { role: "user", content: texto },
     ],
   });
@@ -73,7 +73,7 @@ async function traducir(texto, target = "es") {
 }
 
 function detectarIdioma(texto) {
-  if (/[áéíóúñü]/i.test(texto)) return "es";
+  if (/[\u00C0-\u017F]/.test(texto)) return "es";
   if (/\b(the|you|and|hello|please|thank)\b/i.test(texto)) return "en";
   return "es";
 }
@@ -91,102 +91,129 @@ async function sendToSlack(message, userId = null) {
 
 function shouldEscalateToHuman(message) {
   const lower = message.toLowerCase();
-  return lower.includes("humano") || lower.includes("persona");
+  return lower.includes("hablar con una persona") ||
+         lower.includes("quiero hablar con un humano") ||
+         lower.includes("necesito ayuda humana") ||
+         lower.includes("pasame con un humano") ||
+         lower.includes("quiero hablar con alguien") ||
+         lower.includes("agente humano");
 }
 
-// >>> SUBIDA DE ARCHIVOS
+// SUBIDA DE ARCHIVOS
 app.post("/api/upload", upload.single("file"), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "No se subió imagen" });
+  if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
+
   const imagePath = req.file.path;
   const optimizedPath = `uploads/optimized-${req.file.filename}`;
   const userId = req.body.userId || "desconocido";
+
   try {
-    await sharp(imagePath).resize({ width: 800 }).jpeg({ quality: 80 }).toFile(optimizedPath);
+    await sharp(imagePath)
+      .resize({ width: 800 })
+      .jpeg({ quality: 80 })
+      .toFile(optimizedPath);
+
     const imageUrl = `${req.protocol}://${req.get("host")}/${optimizedPath}`;
-    await db.collection('mensajes').add({
+
+    await db.collection("mensajes").add({
       idConversacion: userId,
       rol: "usuario",
       mensaje: imageUrl,
       tipo: "imagen",
       timestamp: new Date().toISOString()
     });
+
     res.json({ imageUrl });
   } catch (error) {
-    console.error("Error subiendo imagen:", error);
-    res.status(500).json({ error: "Error procesando imagen" });
+    console.error("Error procesando imagen:", error);
+    res.status(500).json({ error: "Error procesando la imagen" });
   }
 });
 
-// >>> CHAT PRINCIPAL
+// CHAT PRINCIPAL
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
   const finalUserId = userId || "anon";
   const idioma = detectarIdioma(message);
 
-  await db.collection('usuarios_chat').doc(finalUserId).set({
-    nombre: "Invitado",
-    idioma,
-    ultimaConexion: new Date().toISOString()
-  }, { merge: true });
+  try {
+    const refUsuario = db.collection("usuarios_chat").doc(finalUserId);
+    const docUsuario = await refUsuario.get();
+    if (!docUsuario.exists) {
+      await refUsuario.set({ nombre: "Invitado", idioma: idioma, ultimaConexion: new Date().toISOString() });
+    } else {
+      await refUsuario.update({ ultimaConexion: new Date().toISOString() });
+    }
 
-  await db.collection('conversaciones').doc(finalUserId).set({
-    idUsuario: finalUserId,
-    fechaInicio: new Date().toISOString(),
-    estado: "abierta",
-    idioma
-  }, { merge: true });
+    const refConversacion = db.collection("conversaciones").doc(finalUserId);
+    const docConversacion = await refConversacion.get();
+    if (!docConversacion.exists) {
+      await refConversacion.set({ idUsuario: finalUserId, fechaInicio: new Date().toISOString(), estado: "abierta", idioma });
+    }
 
-  await db.collection('mensajes').add({
-    idConversacion: finalUserId,
-    rol: "usuario",
-    mensaje: message,
-    tipo: "texto",
-    timestamp: new Date().toISOString()
-  });
+    await db.collection("mensajes").add({
+      idConversacion: finalUserId,
+      rol: "usuario",
+      mensaje: message,
+      tipo: "texto",
+      timestamp: new Date().toISOString()
+    });
 
-  if (shouldEscalateToHuman(message)) {
-    await sendToSlack(`⚠️ [${finalUserId}] pide ayuda humana.`, finalUserId);
-    return res.json({ reply: "Te paso con un agente humano." });
+    if (shouldEscalateToHuman(message)) {
+      await sendToSlack(`⚠️ [${finalUserId}] pide ayuda humana:\n${message}`, finalUserId);
+      return res.json({ reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera." });
+    }
+
+    if (intervenidas[finalUserId]) {
+      return res.json({ reply: null });
+    }
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        { role: "system", content: system || "Eres un asistente de soporte funerario." },
+        { role: "user", content: message },
+      ],
+    });
+
+    const reply = response.choices[0].message.content;
+
+    await db.collection("mensajes").add({
+      idConversacion: finalUserId,
+      rol: "asistente",
+      mensaje: reply,
+      tipo: "texto",
+      timestamp: new Date().toISOString()
+    });
+
+    await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${reply}`, finalUserId);
+
+    res.json({ reply });
+
+  } catch (err) {
+    console.error("Error en chat:", err);
+    res.status(500).json({ reply: "Lo siento, ocurrió un error." });
   }
-
-  const respuesta = await openai.chat.completions.create({
-    model: "gpt-4",
-    messages: [
-      { role: "system", content: system || "Eres asistente de soporte." },
-      { role: "user", content: message },
-    ],
-  });
-  const reply = respuesta.choices[0].message.content;
-
-  await db.collection('mensajes').add({
-    idConversacion: finalUserId,
-    rol: "asistente",
-    mensaje: reply,
-    tipo: "texto",
-    timestamp: new Date().toISOString()
-  });
-
-  await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${reply}`, finalUserId);
-
-  res.json({ reply });
 });
 
-// >>> ENVIAR DESDE PANEL
+// ENVIAR DESDE PANEL
 app.post("/api/send-to-user", async (req, res) => {
   const { userId, message } = req.body;
   if (!userId || !message) return res.status(400).json({ error: "Faltan datos" });
-  await db.collection('mensajes').add({
+
+  await db.collection("mensajes").add({
     idConversacion: userId,
     rol: "asistente",
     mensaje: message,
     tipo: "texto",
     timestamp: new Date().toISOString()
   });
+
   intervenidas[userId] = true;
   res.json({ ok: true });
 });
 
-// >>> MARCAR COMO VISTO
+// MARCAR VISTO
 app.post("/api/marcar-visto", (req, res) => {
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: "Falta userId" });
@@ -195,66 +222,54 @@ app.post("/api/marcar-visto", (req, res) => {
   res.json({ ok: true });
 });
 
-// >>> GET CONVERSACIONES
+// API CONVERSACIONES
 app.get("/api/conversaciones", async (req, res) => {
   try {
-    const snapshot = await db.collection('conversaciones').get();
-    const conversaciones = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        userId: data.idUsuario,
-        lastInteraction: data.fechaInicio,
-        estado: data.estado || "abierta",
-        message: ""
-      };
-    });
+    const snapshot = await db.collection("conversaciones").get();
+    const data = snapshot.docs.map(doc => doc.data());
+    const conversaciones = data.map(d => ({
+      userId: d.idUsuario,
+      lastInteraction: d.fechaInicio,
+      estado: d.estado || "abierta",
+      message: ""
+    }));
     res.json(conversaciones);
   } catch (error) {
-    console.error("Error conversaciones:", error);
-    res.status(500).json({ error: "Error conversaciones" });
+    console.error("Error en conversaciones:", error);
+    res.status(500).json({ error: "Error al cargar conversaciones" });
   }
 });
 
-// >>> GET MENSAJES POR USUARIO CON DEBUG
+// API MENSAJES
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
   try {
-    const mensajesSnapshot = await db.collection('mensajes')
-      .where('idConversacion', '==', userId)
-      .orderBy('timestamp')
+    const snapshot = await db.collection("mensajes")
+      .where("idConversacion", "==", userId)
+      .orderBy("timestamp")
       .get();
-
-    if (mensajesSnapshot.empty) {
-      console.log(`No hay mensajes para ${userId}`);
-      return res.json([]);
-    }
-
-    const mensajes = mensajesSnapshot.docs.map(doc => {
-      const data = doc.data();
-      console.log("Mensaje recuperado:", data);
+    const mensajes = snapshot.docs.map(doc => {
+      const d = doc.data();
       return {
         userId,
-        lastInteraction: data.timestamp,
-        message: data.mensaje,
-        from: data.rol,
-        tipo: data.tipo || "texto"
+        lastInteraction: d.timestamp,
+        message: d.mensaje,
+        from: d.rol,
+        tipo: d.tipo || "texto"
       };
     });
-
     res.json(mensajes);
   } catch (error) {
-    console.error("Error obteniendo mensajes:", error);
-    res.status(500).json({ error: "Error obteniendo mensajes" });
+    console.error("Error en mensajes:", error);
+    res.status(500).json({ error: "Error al cargar mensajes" });
   }
 });
 
-// >>> POLL
-app.get("/api/poll/:userId", (req, res) => {
-  const mensajes = slackResponses.get(req.params.userId) || [];
-  slackResponses.set(req.params.userId, []);
-  res.json({ mensajes });
+// API VISTAS
+app.get("/api/vistas", (req, res) => {
+  res.json(vistas);
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor escuchando en puerto ${PORT}`);
+  console.log(`🚀 Servidor asistente escuchando en puerto ${PORT}`);
 });
