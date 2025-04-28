@@ -261,19 +261,21 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
       .orderBy('timestamp')
       .get();
 
-    const mensajes = [];
-
-    mensajesSnapshot.forEach((doc) => {
-      const data = doc.data();
-      mensajes.push({
-        id: doc.id,
-        userId: userId,
-        lastInteraction: data.timestamp || new Date().toISOString(),
-        message: data.mensaje || "",
-        from: data.rol || "usuario",
-        tipo: data.tipo || "texto"
-      });
-    });
+    const mensajes = mensajesSnapshot.docs
+      .map(doc => {
+        const data = doc.data();
+        if (!data || !data.timestamp || !data.mensaje || !data.rol) {
+          return null;
+        }
+        return {
+          userId,
+          lastInteraction: data.timestamp,
+          message: data.mensaje,
+          from: data.rol,
+          tipo: data.tipo || "texto"
+        };
+      })
+      .filter(msg => msg !== null);
 
     res.json(mensajes);
   } catch (error) {
