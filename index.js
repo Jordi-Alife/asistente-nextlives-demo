@@ -1,4 +1,4 @@
-// index.js completo y corregido
+// index.js corregido y completo
 
 import express from "express";
 import cors from "cors";
@@ -65,7 +65,7 @@ async function traducir(texto, target = "es") {
   const res = await openai.chat.completions.create({
     model: "gpt-4",
     messages: [
-      { role: "system", content: `Traduce el siguiente texto al idioma \"${target}\" sin explicar nada, solo la traducción.` },
+      { role: "system", content: `Traduce el siguiente texto al idioma "${target}" sin explicar nada, solo la traducción.` },
       { role: "user", content: texto },
     ],
   });
@@ -73,11 +73,11 @@ async function traducir(texto, target = "es") {
 }
 
 function detectarIdioma(texto) {
-  if (/[\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1\u00fc]/i.test(texto)) return "es";
+  if (/[áéíóúñü]/i.test(texto)) return "es";
   if (/[\u3040-\u30ff]/.test(texto)) return "ja";
   if (/[\u4e00-\u9fa5]/.test(texto)) return "zh";
   if (/\b(the|you|and|hello|please|thank)\b/i.test(texto)) return "en";
-  if (/[\u0430-\u044f\u0410-\u042f]/.test(texto)) return "ru";
+  if (/[а-яА-ЯёЁ]/.test(texto)) return "ru";
   return "es";
 }
 
@@ -251,7 +251,7 @@ app.get("/api/conversaciones", async (req, res) => {
   }
 });
 
-// >>> Obtener mensajes de una conversación
+// Obtener mensajes de una conversación
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
 
@@ -284,6 +284,16 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
   }
 });
 
+// Obtener vistas
+app.get("/api/vistas", (req, res) => {
+  try {
+    res.json(vistas || {});
+  } catch (error) {
+    console.error("❌ Error obteniendo vistas:", error);
+    res.status(500).json({ error: "Error obteniendo vistas" });
+  }
+});
+
 // Poll para Slack
 app.get("/api/poll/:userId", (req, res) => {
   const mensajes = slackResponses.get(req.params.userId) || [];
@@ -292,5 +302,5 @@ app.get("/api/poll/:userId", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
+  console.log(`🚀 Servidor asistente escuchando en puerto ${PORT}`);
 });
