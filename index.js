@@ -1,3 +1,5 @@
+// index.js actualizado COMPLETO y corregido ✅
+
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
@@ -63,7 +65,7 @@ async function traducir(texto, target = "es") {
   const res = await openai.chat.completions.create({
     model: "gpt-4",
     messages: [
-      { role: "system", content: `Traduce el siguiente texto al idioma "${target}" sin explicar nada, solo la traducción.` },
+      { role: "system", content: `Traduce el siguiente texto al idioma \"${target}\" sin explicar nada, solo la traducción.` },
       { role: "user", content: texto },
     ],
   });
@@ -72,8 +74,8 @@ async function traducir(texto, target = "es") {
 
 function detectarIdioma(texto) {
   if (/[áéíóúñü]/i.test(texto)) return "es";
-  if (/[\u3040-\u30ff]/.test(texto)) return "ja";
-  if (/[\u4e00-\u9fa5]/.test(texto)) return "zh";
+  if (/[぀-ヿ]/.test(texto)) return "ja";
+  if (/[一-龥]/.test(texto)) return "zh";
   if (/\b(the|you|and|hello|please|thank)\b/i.test(texto)) return "en";
   if (/[а-яА-ЯёЁ]/.test(texto)) return "ru";
   return "es";
@@ -145,15 +147,9 @@ app.post("/api/chat", async (req, res) => {
     const refUsuario = db.collection('usuarios_chat').doc(finalUserId);
     const docUsuario = await refUsuario.get();
     if (!docUsuario.exists) {
-      await refUsuario.set({
-        nombre: "Invitado",
-        idioma: idioma || "es",
-        ultimaConexion: new Date().toISOString()
-      });
+      await refUsuario.set({ nombre: "Invitado", idioma, ultimaConexion: new Date().toISOString() });
     } else {
-      await refUsuario.update({
-        ultimaConexion: new Date().toISOString()
-      });
+      await refUsuario.update({ ultimaConexion: new Date().toISOString() });
     }
   } catch (error) {
     console.error("❌ Error guardando usuario:", error);
@@ -167,7 +163,7 @@ app.post("/api/chat", async (req, res) => {
         idUsuario: finalUserId,
         fechaInicio: new Date().toISOString(),
         estado: "abierta",
-        idioma: idioma || "es"
+        idioma
       });
     }
   } catch (error) {
@@ -199,7 +195,7 @@ app.post("/api/chat", async (req, res) => {
     const response = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
-        { role: "system", content: system || `Eres un asistente de soporte funerario. Responde en el mismo idioma que el usuario.` },
+        { role: "system", content: system || "Eres un asistente de soporte funerario. Responde en el mismo idioma que el usuario." },
         { role: "user", content: message },
       ],
     });
@@ -273,7 +269,7 @@ app.get("/api/conversaciones", async (req, res) => {
     res.json(conversaciones);
   } catch (error) {
     console.error("❌ Error obteniendo conversaciones:", error);
-    res.status(500).json({ error: "Error obteniendo conversaciones" });
+    res.status(500).json([]);
   }
 });
 
@@ -286,6 +282,10 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
       .where('idConversacion', '==', userId)
       .orderBy('timestamp')
       .get();
+
+    if (mensajesSnapshot.empty) {
+      return res.json([]);
+    }
 
     const mensajes = mensajesSnapshot.docs.map(doc => {
       const data = doc.data();
@@ -301,8 +301,13 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
     res.json(mensajes);
   } catch (error) {
     console.error("❌ Error obteniendo mensajes:", error);
-    res.status(500).json({ error: "Error obteniendo mensajes" });
+    res.status(500).json([]);
   }
+});
+
+// >>> Vistas (nuevo)
+app.get("/api/vistas", (req, res) => {
+  res.json(vistas || {});
 });
 
 // >>> Poll para respuestas desde Slack
