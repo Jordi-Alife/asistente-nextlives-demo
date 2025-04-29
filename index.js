@@ -1,4 +1,4 @@
-// index.js
+// index.js corregido
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
@@ -72,11 +72,11 @@ async function traducir(texto, target = "es") {
 }
 
 function detectarIdioma(texto) {
-  if (/[\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1\u00fc]/i.test(texto)) return "es";
-  if (/[\u3040-\u30ff]/.test(texto)) return "ja";
-  if (/[\u4e00-\u9fa5]/.test(texto)) return "zh";
+  if (/[áéíóúñü]/i.test(texto)) return "es";
+  if (/[぀-ヿ]/.test(texto)) return "ja";
+  if (/[一-龥]/.test(texto)) return "zh";
   if (/\b(the|you|and|hello|please|thank)\b/i.test(texto)) return "en";
-  if (/[\u0430-\u044f\u0410-\u042f]/.test(texto)) return "ru";
+  if (/[а-яА-Я]/.test(texto)) return "ru";
   return "es";
 }
 
@@ -103,7 +103,6 @@ function shouldEscalateToHuman(message) {
   );
 }
 
-// Subida de archivos
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
@@ -136,7 +135,6 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-// Chat principal
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId } = req.body;
   const finalUserId = userId || "anon";
@@ -183,7 +181,6 @@ app.post("/api/chat", async (req, res) => {
     });
 
     const reply = response.choices[0].message.content;
-
     const traduccionRespuesta = await traducir(reply, idioma);
 
     await db.collection('mensajes').add({
@@ -204,7 +201,6 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// Enviar manual desde panel
 app.post("/api/send-to-user", async (req, res) => {
   const { userId, message } = req.body;
   if (!userId || !message) return res.status(400).json({ error: "Faltan datos" });
@@ -219,13 +215,16 @@ app.post("/api/send-to-user", async (req, res) => {
 
   intervenidas[userId] = true;
 
+  await db.collection('conversaciones').doc(userId).set({
+    intervenida: true
+  }, { merge: true });
+
   if (!slackResponses.has(userId)) slackResponses.set(userId, []);
   slackResponses.get(userId).push(message);
 
   res.json({ ok: true });
 });
 
-// Marcar como visto
 app.post("/api/marcar-visto", (req, res) => {
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: "Falta userId" });
@@ -234,7 +233,6 @@ app.post("/api/marcar-visto", (req, res) => {
   res.json({ ok: true });
 });
 
-// Obtener conversaciones
 app.get("/api/conversaciones", async (req, res) => {
   try {
     const snapshot = await db.collection('conversaciones').get();
@@ -242,6 +240,7 @@ app.get("/api/conversaciones", async (req, res) => {
       userId: doc.data().idUsuario,
       lastInteraction: doc.data().fechaInicio,
       estado: doc.data().estado || "abierta",
+      intervenida: doc.data().intervenida || false,
       message: ""
     }));
     res.json(conversaciones);
@@ -251,7 +250,6 @@ app.get("/api/conversaciones", async (req, res) => {
   }
 });
 
-// Obtener mensajes de una conversación
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
 
@@ -284,7 +282,6 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
   }
 });
 
-// Poll desde Slack
 app.get("/api/poll/:userId", (req, res) => {
   const mensajes = slackResponses.get(req.params.userId) || [];
   slackResponses.set(req.params.userId, []);
