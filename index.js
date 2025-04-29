@@ -1,5 +1,3 @@
-// index.js COMPLETO corregido
-
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
@@ -49,7 +47,7 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+    cb(null, ${Date.now()}-${Math.round(Math.random() * 1e9)}${ext});
   },
 });
 const upload = multer({ storage });
@@ -65,7 +63,7 @@ async function traducir(texto, target = "es") {
   const res = await openai.chat.completions.create({
     model: "gpt-4",
     messages: [
-      { role: "system", content: `Traduce el siguiente texto al idioma "${target}" sin explicar nada, solo la traducción.` },
+      { role: "system", content: Traduce el siguiente texto al idioma "${target}" sin explicar nada, solo la traducción. },
       { role: "user", content: texto },
     ],
   });
@@ -84,7 +82,7 @@ function detectarIdioma(texto) {
 async function sendToSlack(message, userId = null) {
   const webhook = process.env.SLACK_WEBHOOK_URL;
   if (!webhook) return;
-  const text = userId ? `[${userId}] ${message}` : message;
+  const text = userId ? [${userId}] ${message} : message;
   await fetch(webhook, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -109,7 +107,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
   const imagePath = req.file.path;
-  const optimizedPath = `uploads/optimized-${req.file.filename}`;
+  const optimizedPath = uploads/optimized-${req.file.filename};
   const userId = req.body.userId || "desconocido";
 
   try {
@@ -118,9 +116,9 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
       .jpeg({ quality: 80 })
       .toFile(optimizedPath);
 
-    const imageUrl = `${req.protocol}://${req.get("host")}/${optimizedPath}`;
+    const imageUrl = ${req.protocol}://${req.get("host")}/${optimizedPath};
 
-    await sendToSlack(`🖼️ Imagen subida por usuario [${userId}]: ${imageUrl}`);
+    await sendToSlack(🖼️ Imagen subida por usuario [${userId}]: ${imageUrl});
 
     await db.collection('mensajes').add({
       idConversacion: userId,
@@ -168,7 +166,7 @@ app.post("/api/chat", async (req, res) => {
     });
 
     if (shouldEscalateToHuman(message)) {
-      await sendToSlack(`⚠️ [${finalUserId}] pide ayuda humana:\n${message}`, finalUserId);
+      await sendToSlack(⚠️ [${finalUserId}] pide ayuda humana:\n${message}, finalUserId);
       return res.json({ reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia." });
     }
 
@@ -179,7 +177,7 @@ app.post("/api/chat", async (req, res) => {
     const response = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
-        { role: "system", content: system || `Eres un asistente de soporte funerario. Responde en el mismo idioma que el usuario.` },
+        { role: "system", content: system || Eres un asistente de soporte funerario. Responde en el mismo idioma que el usuario. },
         { role: "user", content: message },
       ],
     });
@@ -194,7 +192,7 @@ app.post("/api/chat", async (req, res) => {
       timestamp: new Date().toISOString()
     });
 
-    await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${reply}`, finalUserId);
+    await sendToSlack(👤 [${finalUserId}] ${message}\n🤖 ${reply}, finalUserId);
 
     res.json({ reply });
   } catch (error) {
@@ -291,5 +289,5 @@ app.get("/api/poll/:userId", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
+  console.log(🚀 Servidor escuchando en puerto ${PORT});
 });
