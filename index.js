@@ -1,4 +1,3 @@
-// index.js corregido
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
@@ -64,7 +63,7 @@ async function traducir(texto, target = "es") {
   const res = await openai.chat.completions.create({
     model: "gpt-4",
     messages: [
-      { role: "system", content: `Traduce el siguiente texto al idioma "${target}" sin explicar nada, solo la traducción.` },
+      { role: "system", content: `Traduce el siguiente texto al idioma \"${target}\" sin explicar nada, solo la traducción.` },
       { role: "user", content: texto },
     ],
   });
@@ -72,11 +71,11 @@ async function traducir(texto, target = "es") {
 }
 
 function detectarIdioma(texto) {
-  if (/[áéíóúñü]/i.test(texto)) return "es";
-  if (/[぀-ヿ]/.test(texto)) return "ja";
-  if (/[一-龥]/.test(texto)) return "zh";
+  if (/[\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1\u00fc]/i.test(texto)) return "es";
+  if (/[\u3040-\u30ff]/.test(texto)) return "ja";
+  if (/[\u4e00-\u9fa5]/.test(texto)) return "zh";
   if (/\b(the|you|and|hello|please|thank)\b/i.test(texto)) return "en";
-  if (/[а-яА-Я]/.test(texto)) return "ru";
+  if (/[\u0430-\u044f\u0410-\u042f]/.test(texto)) return "ru";
   return "es";
 }
 
@@ -202,21 +201,27 @@ app.post("/api/chat", async (req, res) => {
 });
 
 app.post("/api/send-to-user", async (req, res) => {
-  const { userId, message } = req.body;
-  if (!userId || !message) return res.status(400).json({ error: "Faltan datos" });
+  const { userId, message, agente } = req.body;
+  if (!userId || !message || !agente) return res.status(400).json({ error: "Faltan datos" });
 
   await db.collection('mensajes').add({
     idConversacion: userId,
     rol: "asistente",
     mensaje: message,
     tipo: "texto",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    manual: true,
+    original: null
   });
 
   intervenidas[userId] = true;
 
   await db.collection('conversaciones').doc(userId).set({
-    intervenida: true
+    intervenida: true,
+    intervenidaPor: {
+      nombre: agente.nombre,
+      foto: agente.foto
+    }
   }, { merge: true });
 
   if (!slackResponses.has(userId)) slackResponses.set(userId, []);
@@ -241,6 +246,7 @@ app.get("/api/conversaciones", async (req, res) => {
       lastInteraction: doc.data().fechaInicio,
       estado: doc.data().estado || "abierta",
       intervenida: doc.data().intervenida || false,
+      intervenidaPor: doc.data().intervenidaPor || null,
       message: ""
     }));
     res.json(conversaciones);
