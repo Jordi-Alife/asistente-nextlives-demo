@@ -1,3 +1,4 @@
+// index.js
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
@@ -47,7 +48,7 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    cb(null, ${Date.now()}-${Math.round(Math.random() * 1e9)}${ext});
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
   },
 });
 const upload = multer({ storage });
@@ -63,7 +64,7 @@ async function traducir(texto, target = "es") {
   const res = await openai.chat.completions.create({
     model: "gpt-4",
     messages: [
-      { role: "system", content: Traduce el siguiente texto al idioma "${target}" sin explicar nada, solo la traducción. },
+      { role: "system", content: `Traduce el siguiente texto al idioma "${target}" sin explicar nada, solo la traducción.` },
       { role: "user", content: texto },
     ],
   });
@@ -82,7 +83,7 @@ function detectarIdioma(texto) {
 async function sendToSlack(message, userId = null) {
   const webhook = process.env.SLACK_WEBHOOK_URL;
   if (!webhook) return;
-  const text = userId ? [${userId}] ${message} : message;
+  const text = userId ? `[${userId}] ${message}` : message;
   await fetch(webhook, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -107,7 +108,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
   const imagePath = req.file.path;
-  const optimizedPath = uploads/optimized-${req.file.filename};
+  const optimizedPath = `uploads/optimized-${req.file.filename}`;
   const userId = req.body.userId || "desconocido";
 
   try {
@@ -116,9 +117,9 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
       .jpeg({ quality: 80 })
       .toFile(optimizedPath);
 
-    const imageUrl = ${req.protocol}://${req.get("host")}/${optimizedPath};
+    const imageUrl = `${req.protocol}://${req.get("host")}/${optimizedPath}`;
 
-    await sendToSlack(🖼️ Imagen subida por usuario [${userId}]: ${imageUrl});
+    await sendToSlack(`🖼️ Imagen subida por usuario [${userId}]: ${imageUrl}`);
 
     await db.collection('mensajes').add({
       idConversacion: userId,
@@ -142,57 +143,59 @@ app.post("/api/chat", async (req, res) => {
   const idioma = detectarIdioma(message);
 
   try {
-    const refUsuario = db.collection('usuarios_chat').doc(finalUserId);
-    await refUsuario.set({
+    await db.collection('usuarios_chat').doc(finalUserId).set({
       nombre: "Invitado",
       idioma: idioma || "es",
       ultimaConexion: new Date().toISOString()
     }, { merge: true });
 
-    const refConversacion = db.collection('conversaciones').doc(finalUserId);
-    await refConversacion.set({
+    await db.collection('conversaciones').doc(finalUserId).set({
       idUsuario: finalUserId,
       fechaInicio: new Date().toISOString(),
       estado: "abierta",
       idioma: idioma || "es"
     }, { merge: true });
 
+    const traduccionUsuario = await traducir(message, "es");
+
     await db.collection('mensajes').add({
       idConversacion: finalUserId,
       rol: "usuario",
-      mensaje: message,
+      mensaje: traduccionUsuario,
+      original: message,
       tipo: "texto",
       timestamp: new Date().toISOString()
     });
 
     if (shouldEscalateToHuman(message)) {
-      await sendToSlack(⚠️ [${finalUserId}] pide ayuda humana:\n${message}, finalUserId);
+      await sendToSlack(`⚠️ [${finalUserId}] pide ayuda humana:\n${message}`, finalUserId);
       return res.json({ reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia." });
     }
 
-    if (intervenidas[finalUserId]) {
-      return res.json({ reply: null });
-    }
+    if (intervenidas[finalUserId]) return res.json({ reply: null });
 
     const response = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
-        { role: "system", content: system || Eres un asistente de soporte funerario. Responde en el mismo idioma que el usuario. },
+        { role: "system", content: system || `Eres un asistente de soporte funerario. Responde en el mismo idioma que el usuario.` },
         { role: "user", content: message },
       ],
     });
 
     const reply = response.choices[0].message.content;
 
+    const traduccionRespuesta = await traducir(reply, idioma);
+
     await db.collection('mensajes').add({
       idConversacion: finalUserId,
       rol: "asistente",
-      mensaje: reply,
+      mensaje: traduccionRespuesta,
+      original: reply,
       tipo: "texto",
       timestamp: new Date().toISOString()
     });
 
-    await sendToSlack(👤 [${finalUserId}] ${message}\n🤖 ${reply}, finalUserId);
+    await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${reply}`, finalUserId);
 
     res.json({ reply });
   } catch (error) {
@@ -241,7 +244,6 @@ app.get("/api/conversaciones", async (req, res) => {
       estado: doc.data().estado || "abierta",
       message: ""
     }));
-
     res.json(conversaciones);
   } catch (error) {
     console.error("❌ Error obteniendo conversaciones:", error);
@@ -249,7 +251,7 @@ app.get("/api/conversaciones", async (req, res) => {
   }
 });
 
-// Obtener mensajes de una conversación (CORREGIDO)
+// Obtener mensajes de una conversación
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
 
@@ -269,6 +271,7 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
         userId,
         lastInteraction: data.timestamp,
         message: data.mensaje,
+        original: data.original || null,
         from: data.rol,
         tipo: data.tipo || "texto"
       };
@@ -281,7 +284,7 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
   }
 });
 
-// Poll para Slack
+// Poll desde Slack
 app.get("/api/poll/:userId", (req, res) => {
   const mensajes = slackResponses.get(req.params.userId) || [];
   slackResponses.set(req.params.userId, []);
@@ -289,5 +292,5 @@ app.get("/api/poll/:userId", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(🚀 Servidor escuchando en puerto ${PORT});
+  console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
 });
