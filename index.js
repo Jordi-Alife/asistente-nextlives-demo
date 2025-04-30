@@ -313,6 +313,11 @@ app.get("/api/poll/:userId", (req, res) => {
   res.json({ mensajes });
 });
 
+// NUEVO: devolver vistasPorAgente para el frontend
+app.get("/api/vistas", (req, res) => {
+  res.json(vistasPorAgente);
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
 });
