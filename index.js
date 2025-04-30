@@ -1,4 +1,4 @@
-// index.js COMPLETO Y ACTUALIZADO
+// index.js
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
@@ -260,14 +260,28 @@ app.post("/api/marcar-visto", async (req, res) => {
 app.get("/api/conversaciones", async (req, res) => {
   try {
     const snapshot = await db.collection('conversaciones').get();
-    const conversaciones = snapshot.docs.map(doc => ({
-      userId: doc.data().idUsuario,
-      lastInteraction: doc.data().fechaInicio,
-      estado: doc.data().estado || "abierta",
-      intervenida: doc.data().intervenida || false,
-      intervenidaPor: doc.data().intervenidaPor || null,
-      message: ""
+
+    const conversaciones = await Promise.all(snapshot.docs.map(async (doc) => {
+      const data = doc.data();
+      const mensajesSnapshot = await db.collection('mensajes')
+        .where('idConversacion', '==', data.idUsuario)
+        .orderBy('timestamp', 'desc')
+        .limit(1)
+        .get();
+
+      const lastMessage = mensajesSnapshot.docs[0]?.data();
+      const lastInteraction = lastMessage?.timestamp || data.fechaInicio;
+
+      return {
+        userId: data.idUsuario,
+        lastInteraction,
+        estado: data.estado || "abierta",
+        intervenida: data.intervenida || false,
+        intervenidaPor: data.intervenidaPor || null,
+        message: lastMessage?.mensaje || ""
+      };
     }));
+
     res.json(conversaciones);
   } catch (error) {
     console.error("❌ Error obteniendo conversaciones:", error);
@@ -313,7 +327,6 @@ app.get("/api/poll/:userId", (req, res) => {
   res.json({ mensajes });
 });
 
-// NUEVO: devolver vistasPorAgente para el frontend
 app.get("/api/vistas", (req, res) => {
   res.json(vistasPorAgente);
 });
