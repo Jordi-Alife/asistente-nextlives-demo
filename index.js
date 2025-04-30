@@ -1,3 +1,4 @@
+// index.js COMPLETO Y ACTUALIZADO
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
@@ -22,18 +23,20 @@ const HISTORIAL_PATH = "./historial.json";
 let conversaciones = [];
 let vistas = {};
 let intervenidas = {};
+let vistasPorAgente = {};
 
 if (fs.existsSync(HISTORIAL_PATH)) {
   const data = JSON.parse(fs.readFileSync(HISTORIAL_PATH, "utf8"));
   conversaciones = data.conversaciones || [];
   vistas = data.vistas || {};
   intervenidas = data.intervenidas || {};
+  vistasPorAgente = data.vistasPorAgente || {};
 }
 
 function guardarConversaciones() {
   fs.writeFileSync(
     HISTORIAL_PATH,
-    JSON.stringify({ conversaciones, vistas, intervenidas }, null, 2)
+    JSON.stringify({ conversaciones, vistas, intervenidas, vistasPorAgente }, null, 2)
   );
 }
 
@@ -71,11 +74,11 @@ async function traducir(texto, target = "es") {
 }
 
 function detectarIdioma(texto) {
-  if (/[\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1\u00fc]/i.test(texto)) return "es";
-  if (/[\u3040-\u30ff]/.test(texto)) return "ja";
-  if (/[\u4e00-\u9fa5]/.test(texto)) return "zh";
+  if (/[áéíóúñü]/i.test(texto)) return "es";
+  if (/[぀-ヿ]/.test(texto)) return "ja";
+  if (/[一-龥]/.test(texto)) return "zh";
   if (/\b(the|you|and|hello|please|thank)\b/i.test(texto)) return "en";
-  if (/[\u0430-\u044f\u0410-\u042f]/.test(texto)) return "ru";
+  if (/[а-яА-Я]/.test(texto)) return "ru";
   return "es";
 }
 
@@ -230,12 +233,28 @@ app.post("/api/send-to-user", async (req, res) => {
   res.json({ ok: true });
 });
 
-app.post("/api/marcar-visto", (req, res) => {
-  const { userId } = req.body;
-  if (!userId) return res.status(400).json({ error: "Falta userId" });
-  vistas[userId] = new Date().toISOString();
-  guardarConversaciones();
-  res.json({ ok: true });
+app.post("/api/marcar-visto", async (req, res) => {
+  const { userId, agente } = req.body;
+  if (!userId || !agente) return res.status(400).json({ error: "Faltan datos" });
+
+  try {
+    const convSnap = await db.collection("conversaciones").doc(userId).get();
+    const data = convSnap.data();
+
+    const esIntervenida = data?.intervenida;
+    const asignado = data?.intervenidaPor?.nombre || "";
+
+    if (!esIntervenida || agente === asignado) {
+      vistasPorAgente[userId] = new Date().toISOString();
+      guardarConversaciones();
+      return res.json({ ok: true });
+    }
+
+    return res.json({ ok: false, motivo: "Agente no autorizado para marcar como visto" });
+  } catch (e) {
+    console.error("❌ Error en /api/marcar-visto:", e);
+    res.status(500).json({ error: "Error en marcar-visto" });
+  }
 });
 
 app.get("/api/conversaciones", async (req, res) => {
