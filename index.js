@@ -257,32 +257,45 @@ app.post("/api/marcar-visto", async (req, res) => {
   }
 });
 
+// ✅ REEMPLAZADO CON VERSIÓN ROBUSTA
 app.get("/api/conversaciones", async (req, res) => {
   try {
     const snapshot = await db.collection('conversaciones').get();
 
     const conversaciones = await Promise.all(snapshot.docs.map(async (doc) => {
       const data = doc.data();
-      const mensajesSnapshot = await db.collection('mensajes')
-        .where('idConversacion', '==', data.idUsuario)
-        .orderBy('timestamp', 'desc')
-        .limit(1)
-        .get();
+      const userId = data.idUsuario;
+      if (!userId) return null;
 
-      const lastMessage = mensajesSnapshot.docs[0]?.data();
-      const lastInteraction = lastMessage?.timestamp || data.fechaInicio;
+      let lastInteraction = data.fechaInicio;
+      let lastMessageText = "";
+
+      try {
+        const mensajesSnapshot = await db.collection('mensajes')
+          .where('idConversacion', '==', userId)
+          .orderBy('timestamp', 'desc')
+          .limit(1)
+          .get();
+
+        const lastMessage = mensajesSnapshot.docs[0]?.data();
+        lastInteraction = lastMessage?.timestamp || data.fechaInicio;
+        lastMessageText = lastMessage?.mensaje || "";
+      } catch (e) {
+        console.warn(`⚠️ No se pudo cargar el último mensaje para ${userId}`);
+      }
 
       return {
-        userId: data.idUsuario,
+        userId,
         lastInteraction,
         estado: data.estado || "abierta",
         intervenida: data.intervenida || false,
         intervenidaPor: data.intervenidaPor || null,
-        message: lastMessage?.mensaje || ""
+        message: lastMessageText
       };
     }));
 
-    res.json(conversaciones);
+    const limpias = conversaciones.filter(c => !!c);
+    res.json(limpias);
   } catch (error) {
     console.error("❌ Error obteniendo conversaciones:", error);
     res.status(500).json({ error: "Error obteniendo conversaciones" });
