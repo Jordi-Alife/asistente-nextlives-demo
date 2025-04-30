@@ -1,4 +1,3 @@
-// index.js
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
@@ -66,7 +65,7 @@ async function traducir(texto, target = "es") {
   const res = await openai.chat.completions.create({
     model: "gpt-4",
     messages: [
-      { role: "system", content: `Traduce el siguiente texto al idioma \"${target}\" sin explicar nada, solo la traducción.` },
+      { role: "system", content: `Traduce el siguiente texto al idioma "${target}" sin explicar nada, solo la traducción.` },
       { role: "user", content: texto },
     ],
   });
@@ -104,7 +103,6 @@ function shouldEscalateToHuman(message) {
     lower.includes("agente humano")
   );
 }
-
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
@@ -257,7 +255,7 @@ app.post("/api/marcar-visto", async (req, res) => {
   }
 });
 
-// ✅ REEMPLAZADO CON VERSIÓN ROBUSTA
+// ✅ NUEVO ENDPOINT CON MENSAJES REALES
 app.get("/api/conversaciones", async (req, res) => {
   try {
     const snapshot = await db.collection('conversaciones').get();
@@ -269,19 +267,33 @@ app.get("/api/conversaciones", async (req, res) => {
 
       let lastInteraction = data.fechaInicio;
       let lastMessageText = "";
+      let mensajes = [];
 
       try {
         const mensajesSnapshot = await db.collection('mensajes')
           .where('idConversacion', '==', userId)
           .orderBy('timestamp', 'desc')
-          .limit(1)
+          .limit(20)
           .get();
 
-        const lastMessage = mensajesSnapshot.docs[0]?.data();
-        lastInteraction = lastMessage?.timestamp || data.fechaInicio;
-        lastMessageText = lastMessage?.mensaje || "";
+        mensajes = mensajesSnapshot.docs.map(d => {
+          const m = d.data();
+          return {
+            from: m.rol,
+            lastInteraction: m.timestamp,
+            message: m.mensaje,
+            original: m.original || null,
+            tipo: m.tipo || "texto",
+            manual: m.manual || false
+          };
+        });
+
+        if (mensajes[0]) {
+          lastInteraction = mensajes[0].lastInteraction;
+          lastMessageText = mensajes[0].message;
+        }
       } catch (e) {
-        console.warn(`⚠️ No se pudo cargar el último mensaje para ${userId}`);
+        console.warn(`⚠️ No se pudo cargar mensajes para ${userId}`);
       }
 
       return {
@@ -290,7 +302,8 @@ app.get("/api/conversaciones", async (req, res) => {
         estado: data.estado || "abierta",
         intervenida: data.intervenida || false,
         intervenidaPor: data.intervenidaPor || null,
-        message: lastMessageText
+        message: lastMessageText,
+        mensajes
       };
     }));
 
