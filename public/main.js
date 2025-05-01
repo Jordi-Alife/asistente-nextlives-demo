@@ -1,7 +1,7 @@
 const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('messageInput');
 const fileInput = document.getElementById('fileInput');
-const sendBtn = document.querySelector('.send-button'); // nuevo
+const sendBtn = document.querySelector('.send-button');
 
 function getUserId() {
   let id = localStorage.getItem("userId");
@@ -14,14 +14,30 @@ function getUserId() {
   return id;
 }
 
+// NUEVO: historial y metadata
+const metadata = {
+  userAgent: navigator.userAgent,
+  historial: JSON.parse(localStorage.getItem("historialPaginas") || "[]"),
+  pais: null
+};
+metadata.historial.push(window.location.href);
+localStorage.setItem("historialPaginas", JSON.stringify(metadata.historial));
+
+fetch("https://ipapi.co/json")
+  .then(res => res.json())
+  .then(data => {
+    metadata.pais = data.country_name;
+    console.log("🌍 País detectado:", metadata.pais);
+  })
+  .catch(() => {
+    metadata.pais = "Desconocido";
+  });
+
 function addMessage(text, sender, tempId = null) {
   if (!text.trim()) return null;
-
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
-
   if (tempId) msg.dataset.tempId = tempId;
-
   msg.innerText = text;
   messagesDiv.appendChild(msg);
   scrollToBottom();
@@ -70,7 +86,6 @@ function restoreChat() {
   const saved = localStorage.getItem('chatMessages');
   if (saved) {
     messagesDiv.innerHTML = saved;
-
     const allMessages = messagesDiv.querySelectorAll('.message');
     allMessages.forEach(msg => {
       const isEmpty = !msg.textContent.trim() && msg.children.length === 0;
@@ -98,16 +113,24 @@ async function sendMessage() {
   const userId = getUserId();
   addMessage(text, 'user');
   input.value = '';
-  sendBtn.classList.remove('active'); // nuevo: quita la clase tras enviar
+  sendBtn.classList.remove('active');
 
   const tempId = `typing-${Date.now()}`;
   addTypingBubble(tempId);
 
   try {
+    const bodyData = {
+      message: text,
+      userId,
+      userAgent: metadata.userAgent,
+      pais: metadata.pais,
+      historial: metadata.historial
+    };
+
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: text, userId })
+      body: JSON.stringify(bodyData)
     });
 
     const data = await res.json();
@@ -147,11 +170,9 @@ fileInput.addEventListener('change', async (event) => {
 
 async function checkSlackMessages() {
   const userId = getUserId();
-
   try {
     const res = await fetch(`/api/poll/${userId}`);
     const data = await res.json();
-
     if (data && Array.isArray(data.mensajes)) {
       data.mensajes.forEach((msg) => {
         console.log("📨 Mensaje desde Slack recibido:", msg);
@@ -175,7 +196,6 @@ messagesDiv.addEventListener('scroll', () => {
   scrollBtn.style.display = isNearBottom ? 'none' : 'flex';
 });
 
-/* NUEVO: activar/desactivar botón de enviar */
 input.addEventListener('input', () => {
   if (input.value.trim() !== "") {
     sendBtn.classList.add('active');
@@ -184,7 +204,6 @@ input.addEventListener('input', () => {
   }
 });
 
-/* NUEVO: forzar scroll cuando se enfoca el input (móvil) */
 input.addEventListener('focus', () => {
   setTimeout(() => scrollToBottom(), 300);
 });
