@@ -40,7 +40,6 @@ function guardarConversaciones() {
 }
 
 const slackResponses = new Map();
-
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = "./uploads";
@@ -60,7 +59,6 @@ app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 async function traducir(texto, target = "es") {
   const res = await openai.chat.completions.create({
     model: "gpt-4",
@@ -320,7 +318,6 @@ app.get("/api/conversaciones", async (req, res) => {
     res.status(500).json({ error: "Error obteniendo conversaciones" });
   }
 });
-
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
 
@@ -361,6 +358,32 @@ app.get("/api/poll/:userId", (req, res) => {
 
 app.get("/api/vistas", (req, res) => {
   res.json(vistasPorAgente);
+});
+
+// ✅ NUEVO ENDPOINT PARA ESTADÍSTICAS
+app.get("/api/estadisticas", async (req, res) => {
+  try {
+    const mensajesSnapshot = await db.collection('mensajes').get();
+    const mensajes = mensajesSnapshot.docs.map(doc => doc.data());
+
+    const ahora = new Date();
+    const hace24h = new Date(ahora.getTime() - (24 * 60 * 60 * 1000));
+    const hace7d = new Date(ahora.getTime() - (7 * 24 * 60 * 60 * 1000));
+    const hace30d = new Date(ahora.getTime() - (30 * 24 * 60 * 60 * 1000));
+
+    const filtrarPorFecha = (lista, fecha) =>
+      lista.filter(m => new Date(m.timestamp) >= fecha);
+
+    const total = mensajes.length;
+    const hoy = filtrarPorFecha(mensajes, hace24h).length;
+    const semana = filtrarPorFecha(mensajes, hace7d).length;
+    const mes = filtrarPorFecha(mensajes, hace30d).length;
+
+    res.json({ total, hoy, semana, mes });
+  } catch (error) {
+    console.error("❌ Error obteniendo estadísticas:", error);
+    res.status(500).json({ error: "Error obteniendo estadísticas" });
+  }
 });
 
 app.listen(PORT, () => {
