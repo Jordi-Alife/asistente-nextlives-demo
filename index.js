@@ -17,29 +17,12 @@ const db = admin.firestore();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const HISTORIAL_PATH = "./historial.json";
 
 let conversaciones = [];
-let vistas = {};
 let intervenidas = {};
-let vistasPorAgente = {};
-
-if (fs.existsSync(HISTORIAL_PATH)) {
-  const data = JSON.parse(fs.readFileSync(HISTORIAL_PATH, "utf8"));
-  conversaciones = data.conversaciones || [];
-  vistas = data.vistas || {};
-  intervenidas = data.intervenidas || {};
-  vistasPorAgente = data.vistasPorAgente || {};
-}
-
-function guardarConversaciones() {
-  fs.writeFileSync(
-    HISTORIAL_PATH,
-    JSON.stringify({ conversaciones, vistas, intervenidas, vistasPorAgente }, null, 2)
-  );
-}
 
 const slackResponses = new Map();
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = "./uploads";
@@ -90,6 +73,7 @@ async function sendToSlack(message, userId = null) {
     body: JSON.stringify({ text }),
   });
 }
+
 function shouldEscalateToHuman(message) {
   const lower = message.toLowerCase();
   return (
@@ -101,7 +85,6 @@ function shouldEscalateToHuman(message) {
     lower.includes("agente humano")
   );
 }
-
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
@@ -133,6 +116,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: "Error procesando la imagen" });
   }
 });
+
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial } = req.body;
   const finalUserId = userId || "anon";
