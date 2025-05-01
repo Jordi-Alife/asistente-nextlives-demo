@@ -103,7 +103,6 @@ function shouldEscalateToHuman(message) {
     lower.includes("agente humano")
   );
 }
-
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
@@ -155,7 +154,10 @@ app.post("/api/chat", async (req, res) => {
       idUsuario: finalUserId,
       fechaInicio: new Date().toISOString(),
       estado: "abierta",
-      idioma: idioma || "es"
+      idioma: idioma || "es",
+      navegador: userAgent || "",
+      pais: pais || "",
+      historial: historial || []
     }, { merge: true });
 
     const traduccionUsuario = await traducir(message, "es");
@@ -204,12 +206,6 @@ app.post("/api/chat", async (req, res) => {
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
   }
 });
-
-// resto de tu archivo (NO MODIFICADO):
-// ✅ aquí no tocamos nada, solo lo anterior
-
-// send-to-user, marcar-visto, get conversacion, etc. (igual que tenías)
-
 app.post("/api/send-to-user", async (req, res) => {
   const { userId, message, agente } = req.body;
   if (!userId || !message || !agente) return res.status(400).json({ error: "Faltan datos" });
@@ -265,7 +261,6 @@ app.post("/api/marcar-visto", async (req, res) => {
 });
 
 app.get("/api/conversaciones", async (req, res) => {
-  // sin cambios aquí
   try {
     const snapshot = await db.collection('conversaciones').get();
     const conversaciones = await Promise.all(snapshot.docs.map(async (doc) => {
