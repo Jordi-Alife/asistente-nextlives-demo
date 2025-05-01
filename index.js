@@ -103,6 +103,7 @@ function shouldEscalateToHuman(message) {
     lower.includes("agente humano")
   );
 }
+
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
@@ -136,7 +137,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
 });
 
 app.post("/api/chat", async (req, res) => {
-  const { message, system, userId } = req.body;
+  const { message, system, userId, userAgent, pais, historial } = req.body;
   const finalUserId = userId || "anon";
   const idioma = detectarIdioma(message);
 
@@ -144,7 +145,10 @@ app.post("/api/chat", async (req, res) => {
     await db.collection('usuarios_chat').doc(finalUserId).set({
       nombre: "Invitado",
       idioma: idioma || "es",
-      ultimaConexion: new Date().toISOString()
+      ultimaConexion: new Date().toISOString(),
+      navegador: userAgent || "",
+      pais: pais || "",
+      historial: historial || []
     }, { merge: true });
 
     await db.collection('conversaciones').doc(finalUserId).set({
@@ -201,6 +205,11 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
+// resto de tu archivo (NO MODIFICADO):
+// ✅ aquí no tocamos nada, solo lo anterior
+
+// send-to-user, marcar-visto, get conversacion, etc. (igual que tenías)
+
 app.post("/api/send-to-user", async (req, res) => {
   const { userId, message, agente } = req.body;
   if (!userId || !message || !agente) return res.status(400).json({ error: "Faltan datos" });
@@ -255,11 +264,10 @@ app.post("/api/marcar-visto", async (req, res) => {
   }
 });
 
-// ✅ NUEVO ENDPOINT CON MENSAJES REALES
 app.get("/api/conversaciones", async (req, res) => {
+  // sin cambios aquí
   try {
     const snapshot = await db.collection('conversaciones').get();
-
     const conversaciones = await Promise.all(snapshot.docs.map(async (doc) => {
       const data = doc.data();
       const userId = data.idUsuario;
