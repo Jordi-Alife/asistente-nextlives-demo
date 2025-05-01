@@ -59,6 +59,7 @@ app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
 async function traducir(texto, target = "es") {
   const res = await openai.chat.completions.create({
     model: "gpt-4",
@@ -89,7 +90,6 @@ async function sendToSlack(message, userId = null) {
     body: JSON.stringify({ text }),
   });
 }
-
 function shouldEscalateToHuman(message) {
   const lower = message.toLowerCase();
   return (
@@ -101,6 +101,7 @@ function shouldEscalateToHuman(message) {
     lower.includes("agente humano")
   );
 }
+
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
@@ -132,7 +133,6 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: "Error procesando la imagen" });
   }
 });
-
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial } = req.body;
   const finalUserId = userId || "anon";
@@ -204,7 +204,6 @@ app.post("/api/chat", async (req, res) => {
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
   }
 });
-
 app.post("/api/send-to-user", async (req, res) => {
   const { userId, message, agente } = req.body;
   if (!userId || !message || !agente) return res.status(400).json({ error: "Faltan datos" });
@@ -234,6 +233,7 @@ app.post("/api/send-to-user", async (req, res) => {
 
   res.json({ ok: true });
 });
+
 app.post("/api/marcar-visto", async (req, res) => {
   const { userId, agente } = req.body;
   if (!userId || !agente) return res.status(400).json({ error: "Faltan datos" });
@@ -257,7 +257,6 @@ app.post("/api/marcar-visto", async (req, res) => {
     res.status(500).json({ error: "Error en marcar-visto" });
   }
 });
-
 app.get("/api/conversaciones", async (req, res) => {
   try {
     const snapshot = await db.collection('conversaciones').get();
@@ -358,32 +357,6 @@ app.get("/api/poll/:userId", (req, res) => {
 
 app.get("/api/vistas", (req, res) => {
   res.json(vistasPorAgente);
-});
-
-// ✅ NUEVO ENDPOINT PARA ESTADÍSTICAS
-app.get("/api/estadisticas", async (req, res) => {
-  try {
-    const mensajesSnapshot = await db.collection('mensajes').get();
-    const mensajes = mensajesSnapshot.docs.map(doc => doc.data());
-
-    const ahora = new Date();
-    const hace24h = new Date(ahora.getTime() - (24 * 60 * 60 * 1000));
-    const hace7d = new Date(ahora.getTime() - (7 * 24 * 60 * 60 * 1000));
-    const hace30d = new Date(ahora.getTime() - (30 * 24 * 60 * 60 * 1000));
-
-    const filtrarPorFecha = (lista, fecha) =>
-      lista.filter(m => new Date(m.timestamp) >= fecha);
-
-    const total = mensajes.length;
-    const hoy = filtrarPorFecha(mensajes, hace24h).length;
-    const semana = filtrarPorFecha(mensajes, hace7d).length;
-    const mes = filtrarPorFecha(mensajes, hace30d).length;
-
-    res.json({ total, hoy, semana, mes });
-  } catch (error) {
-    console.error("❌ Error obteniendo estadísticas:", error);
-    res.status(500).json({ error: "Error obteniendo estadísticas" });
-  }
 });
 
 app.listen(PORT, () => {
