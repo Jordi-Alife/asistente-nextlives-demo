@@ -11,18 +11,39 @@ import serviceAccount from "./serviceAccountKey.json" assert { type: "json" };
 import sharp from "sharp";
 
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+  credential: admin.credential.cert(serviceAccount),
 });
 const db = admin.firestore();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HISTORIAL_PATH = "./historial.json";
 
 let conversaciones = [];
+let vistas = {};
 let intervenidas = {};
+let vistasPorAgente = {};
+
+if (fs.existsSync(HISTORIAL_PATH)) {
+  const data = JSON.parse(fs.readFileSync(HISTORIAL_PATH, "utf8"));
+  conversaciones = data.conversaciones || [];
+  vistas = data.vistas || {};
+  intervenidas = data.intervenidas || {};
+  vistasPorAgente = data.vistasPorAgente || {};
+}
+
+function guardarConversaciones() {
+  fs.writeFileSync(
+    HISTORIAL_PATH,
+    JSON.stringify(
+      { conversaciones, vistas, intervenidas, vistasPorAgente },
+      null,
+      2
+    )
+  );
+}
 
 const slackResponses = new Map();
-
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = "./uploads";
@@ -40,14 +61,15 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
-
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 async function traducir(texto, target = "es") {
   const res = await openai.chat.completions.create({
     model: "gpt-4",
     messages: [
-      { role: "system", content: `Traduce el siguiente texto al idioma "${target}" sin explicar nada, solo la traducción.` },
+      {
+        role: "system",
+        content: `Traduce el siguiente texto al idioma "${target}" sin explicar nada, solo la traducción.`,
+      },
       { role: "user", content: texto },
     ],
   });
@@ -85,6 +107,7 @@ function shouldEscalateToHuman(message) {
     lower.includes("agente humano")
   );
 }
+
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
@@ -102,12 +125,12 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
 
     await sendToSlack(`🖼️ Imagen subida por usuario [${userId}]: ${imageUrl}`);
 
-    await db.collection('mensajes').add({
+    await db.collection("mensajes").add({
       idConversacion: userId,
       rol: "usuario",
       mensaje: imageUrl,
       tipo: "imagen",
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     res.json({ imageUrl });
@@ -116,46 +139,53 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: "Error procesando la imagen" });
   }
 });
-
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial } = req.body;
   const finalUserId = userId || "anon";
   const idioma = detectarIdioma(message);
 
   try {
-    await db.collection('usuarios_chat').doc(finalUserId).set({
-      nombre: "Invitado",
-      idioma: idioma || "es",
-      ultimaConexion: new Date().toISOString(),
-      navegador: userAgent || "",
-      pais: pais || "",
-      historial: historial || []
-    }, { merge: true });
+    await db.collection("usuarios_chat").doc(finalUserId).set(
+      {
+        nombre: "Invitado",
+        idioma: idioma || "es",
+        ultimaConexion: new Date().toISOString(),
+        navegador: userAgent || "",
+        pais: pais || "",
+        historial: historial || [],
+      },
+      { merge: true }
+    );
 
-    await db.collection('conversaciones').doc(finalUserId).set({
-      idUsuario: finalUserId,
-      fechaInicio: new Date().toISOString(),
-      estado: "abierta",
-      idioma: idioma || "es",
-      navegador: userAgent || "",
-      pais: pais || "",
-      historial: historial || []
-    }, { merge: true });
+    await db.collection("conversaciones").doc(finalUserId).set(
+      {
+        idUsuario: finalUserId,
+        fechaInicio: new Date().toISOString(),
+        estado: "abierta",
+        idioma: idioma || "es",
+        navegador: userAgent || "",
+        pais: pais || "",
+        historial: historial || [],
+      },
+      { merge: true }
+    );
 
     const traduccionUsuario = await traducir(message, "es");
 
-    await db.collection('mensajes').add({
+    await db.collection("mensajes").add({
       idConversacion: finalUserId,
       rol: "usuario",
       mensaje: traduccionUsuario,
       original: message,
       tipo: "texto",
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     if (shouldEscalateToHuman(message)) {
       await sendToSlack(`⚠️ [${finalUserId}] pide ayuda humana:\n${message}`, finalUserId);
-      return res.json({ reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia." });
+      return res.json({
+        reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia.",
+      });
     }
 
     if (intervenidas[finalUserId]) return res.json({ reply: null });
@@ -163,7 +193,10 @@ app.post("/api/chat", async (req, res) => {
     const response = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
-        { role: "system", content: system || `Eres un asistente de soporte funerario. Responde en el mismo idioma que el usuario.` },
+        {
+          role: "system",
+          content: system || `Eres un asistente de soporte funerario. Responde en el mismo idioma que el usuario.`,
+        },
         { role: "user", content: message },
       ],
     });
@@ -171,13 +204,13 @@ app.post("/api/chat", async (req, res) => {
     const reply = response.choices[0].message.content;
     const traduccionRespuesta = await traducir(reply, idioma);
 
-    await db.collection('mensajes').add({
+    await db.collection("mensajes").add({
       idConversacion: finalUserId,
       rol: "asistente",
       mensaje: traduccionRespuesta,
       original: reply,
       tipo: "texto",
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${reply}`, finalUserId);
@@ -190,27 +223,31 @@ app.post("/api/chat", async (req, res) => {
 });
 app.post("/api/send-to-user", async (req, res) => {
   const { userId, message, agente } = req.body;
-  if (!userId || !message || !agente) return res.status(400).json({ error: "Faltan datos" });
+  if (!userId || !message || !agente)
+    return res.status(400).json({ error: "Faltan datos" });
 
-  await db.collection('mensajes').add({
+  await db.collection("mensajes").add({
     idConversacion: userId,
     rol: "asistente",
     mensaje: message,
     tipo: "texto",
     timestamp: new Date().toISOString(),
     manual: true,
-    original: null
+    original: null,
   });
 
   intervenidas[userId] = true;
 
-  await db.collection('conversaciones').doc(userId).set({
-    intervenida: true,
-    intervenidaPor: {
-      nombre: agente.nombre,
-      foto: agente.foto
-    }
-  }, { merge: true });
+  await db.collection("conversaciones").doc(userId).set(
+    {
+      intervenida: true,
+      intervenidaPor: {
+        nombre: agente.nombre,
+        foto: agente.foto,
+      },
+    },
+    { merge: true }
+  );
 
   if (!slackResponses.has(userId)) slackResponses.set(userId, []);
   slackResponses.get(userId).push(message);
@@ -219,112 +256,111 @@ app.post("/api/send-to-user", async (req, res) => {
 });
 
 app.post("/api/marcar-visto", async (req, res) => {
-  const { userId, agente } = req.body;
-  if (!userId || !agente) return res.status(400).json({ error: "Faltan datos" });
+  const { userId } = req.body;
+  if (!userId)
+    return res.status(400).json({ error: "Falta el userId" });
 
   try {
-    const convSnap = await db.collection("conversaciones").doc(userId).get();
-    const data = convSnap.data();
-
-    const esIntervenida = data?.intervenida;
-    const asignado = data?.intervenidaPor?.nombre || "";
-
-    if (!esIntervenida || agente === asignado) {
-      vistasPorAgente[userId] = new Date().toISOString();
-      guardarConversaciones();
-      return res.json({ ok: true });
-    }
-
-    return res.json({ ok: false, motivo: "Agente no autorizado para marcar como visto" });
+    vistasPorAgente[userId] = new Date().toISOString();
+    guardarConversaciones();
+    return res.json({ ok: true });
   } catch (e) {
     console.error("❌ Error en /api/marcar-visto:", e);
     res.status(500).json({ error: "Error en marcar-visto" });
   }
 });
+
 app.get("/api/conversaciones", async (req, res) => {
   try {
-    const snapshot = await db.collection('conversaciones').get();
-    const conversaciones = await Promise.all(snapshot.docs.map(async (doc) => {
-      const data = doc.data();
-      const userId = data.idUsuario;
-      if (!userId) return null;
+    const snapshot = await db.collection("conversaciones").get();
+    const conversaciones = await Promise.all(
+      snapshot.docs.map(async (doc) => {
+        const data = doc.data();
+        const userId = data.idUsuario;
+        if (!userId) return null;
 
-      let lastInteraction = data.fechaInicio;
-      let lastMessageText = "";
-      let mensajes = [];
+        let lastInteraction = data.fechaInicio;
+        let lastMessageText = "";
+        let mensajes = [];
 
-      try {
-        const mensajesSnapshot = await db.collection('mensajes')
-          .where('idConversacion', '==', userId)
-          .orderBy('timestamp', 'desc')
-          .limit(20)
-          .get();
+        try {
+          const mensajesSnapshot = await db
+            .collection("mensajes")
+            .where("idConversacion", "==", userId)
+            .orderBy("timestamp", "desc")
+            .limit(20)
+            .get();
 
-        mensajes = mensajesSnapshot.docs.map(d => {
-          const m = d.data();
-          return {
-            from: m.rol,
-            lastInteraction: m.timestamp,
-            message: m.mensaje,
-            original: m.original || null,
-            tipo: m.tipo || "texto",
-            manual: m.manual || false
-          };
-        });
+          mensajes = mensajesSnapshot.docs.map((d) => {
+            const m = d.data();
+            return {
+              from: m.rol,
+              lastInteraction: m.timestamp,
+              message: m.mensaje,
+              original: m.original || null,
+              tipo: m.tipo || "texto",
+              manual: m.manual || false,
+            };
+          });
 
-        if (mensajes[0]) {
-          lastInteraction = mensajes[0].lastInteraction;
-          lastMessageText = mensajes[0].message;
+          if (mensajes[0]) {
+            lastInteraction = mensajes[0].lastInteraction;
+            lastMessageText = mensajes[0].message;
+          }
+        } catch (e) {
+          console.warn(`⚠️ No se pudo cargar mensajes para ${userId}`);
         }
-      } catch (e) {
-        console.warn(`⚠️ No se pudo cargar mensajes para ${userId}`);
-      }
 
-      return {
-        userId,
-        lastInteraction,
-        estado: data.estado || "abierta",
-        intervenida: data.intervenida || false,
-        intervenidaPor: data.intervenidaPor || null,
-        pais: data.pais || "🌐",
-        navegador: data.navegador || "Desconocido",
-        historial: data.historial || [],
-        message: lastMessageText,
-        mensajes
-      };
-    }));
+        return {
+          userId,
+          lastInteraction,
+          estado: data.estado || "abierta",
+          intervenida: data.intervenida || false,
+          intervenidaPor: data.intervenidaPor || null,
+          pais: data.pais || "🌐",
+          navegador: data.navegador || "Desconocido",
+          historial: data.historial || [],
+          message: lastMessageText,
+          mensajes,
+        };
+      })
+    );
 
-    const limpias = conversaciones.filter(c => !!c);
+    const limpias = conversaciones.filter((c) => !!c);
     res.json(limpias);
   } catch (error) {
     console.error("❌ Error obteniendo conversaciones:", error);
     res.status(500).json({ error: "Error obteniendo conversaciones" });
   }
 });
+
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
 
   try {
-    const mensajesSnapshot = await db.collection('mensajes')
-      .where('idConversacion', '==', userId)
-      .orderBy('timestamp')
+    const mensajesSnapshot = await db
+      .collection("mensajes")
+      .where("idConversacion", "==", userId)
+      .orderBy("timestamp")
       .get();
 
-    const mensajes = mensajesSnapshot.docs.map(doc => {
-      const data = doc.data();
-      if (!data || !data.timestamp || !data.mensaje || !data.rol) {
-        console.error("⚠️ Mensaje inválido detectado:", doc.id, data);
-        return null;
-      }
-      return {
-        userId,
-        lastInteraction: data.timestamp,
-        message: data.mensaje,
-        original: data.original || null,
-        from: data.rol,
-        tipo: data.tipo || "texto"
-      };
-    }).filter(msg => msg !== null);
+    const mensajes = mensajesSnapshot.docs
+      .map((doc) => {
+        const data = doc.data();
+        if (!data || !data.timestamp || !data.mensaje || !data.rol) {
+          console.error("⚠️ Mensaje inválido detectado:", doc.id, data);
+          return null;
+        }
+        return {
+          userId,
+          lastInteraction: data.timestamp,
+          message: data.mensaje,
+          original: data.original || null,
+          from: data.rol,
+          tipo: data.tipo || "texto",
+        };
+      })
+      .filter((msg) => msg !== null);
 
     res.json(mensajes);
   } catch (error) {
