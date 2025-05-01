@@ -206,6 +206,7 @@ app.post("/api/chat", async (req, res) => {
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
   }
 });
+
 app.post("/api/send-to-user", async (req, res) => {
   const { userId, message, agente } = req.body;
   if (!userId || !message || !agente) return res.status(400).json({ error: "Faltan datos" });
@@ -235,7 +236,6 @@ app.post("/api/send-to-user", async (req, res) => {
 
   res.json({ ok: true });
 });
-
 app.post("/api/marcar-visto", async (req, res) => {
   const { userId, agente } = req.body;
   if (!userId || !agente) return res.status(400).json({ error: "Faltan datos" });
@@ -305,6 +305,9 @@ app.get("/api/conversaciones", async (req, res) => {
         estado: data.estado || "abierta",
         intervenida: data.intervenida || false,
         intervenidaPor: data.intervenidaPor || null,
+        pais: data.pais || "🌐",
+        navegador: data.navegador || "Desconocido",
+        historial: data.historial || [],
         message: lastMessageText,
         mensajes
       };
