@@ -53,7 +53,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
 async function traducir(texto, target = "es") {
   const res = await openai.chat.completions.create({
     model: "gpt-4",
@@ -99,7 +101,6 @@ function shouldEscalateToHuman(message) {
     lower.includes("agente humano")
   );
 }
-
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
@@ -131,6 +132,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: "Error procesando la imagen" });
   }
 });
+
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial } = req.body;
   const finalUserId = userId || "anon";
@@ -253,14 +255,9 @@ app.post("/api/marcar-visto", async (req, res) => {
     return res.status(400).json({ error: "Falta el userId" });
 
   try {
-    // Guardamos el timestamp de última vista de la conversación
     await db.collection("vistas_globales").doc(userId).set({
       timestamp: new Date().toISOString(),
     });
-
-    // También lo actualizamos en memoria por compatibilidad
-    vistasPorAgente[userId] = new Date().toISOString();
-    guardarConversaciones();
 
     return res.json({ ok: true });
   } catch (e) {
@@ -379,6 +376,26 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
   } catch (error) {
     console.error("❌ Error crítico obteniendo mensajes:", error);
     res.status(500).json({ error: "Error crítico obteniendo mensajes" });
+  }
+});
+
+app.get("/api/mensajes-agente/:uid", async (req, res) => {
+  const { uid } = req.params;
+
+  try {
+    const snapshot = await db
+      .collection("mensajes")
+      .where("manual", "==", true)
+      .where("agenteUid", "==", uid)
+      .orderBy("timestamp", "desc")
+      .limit(100)
+      .get();
+
+    const mensajes = snapshot.docs.map((doc) => doc.data());
+    res.json(mensajes);
+  } catch (error) {
+    console.error("❌ Error obteniendo mensajes de agente:", error);
+    res.status(500).json({ error: "Error obteniendo mensajes de agente" });
   }
 });
 
