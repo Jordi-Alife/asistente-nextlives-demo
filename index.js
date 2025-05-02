@@ -21,20 +21,21 @@ const HISTORIAL_PATH = "./historial.json";
 
 let conversaciones = [];
 let intervenidas = {};
+let vistasPorAgente = {}; // ✅ añadimos esta línea
 
 if (fs.existsSync(HISTORIAL_PATH)) {
   const data = JSON.parse(fs.readFileSync(HISTORIAL_PATH, "utf8"));
   conversaciones = data.conversaciones || [];
   intervenidas = data.intervenidas || {};
+  vistasPorAgente = data.vistasPorAgente || {}; // ✅ añadimos esta línea
 }
 
 function guardarConversaciones() {
   fs.writeFileSync(
     HISTORIAL_PATH,
-    JSON.stringify({ conversaciones, intervenidas }, null, 2)
+    JSON.stringify({ conversaciones, intervenidas, vistasPorAgente }, null, 2) // ✅ añadimos vistasPorAgente aquí
   );
 }
-
 const slackResponses = new Map();
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -89,7 +90,6 @@ async function sendToSlack(message, userId = null) {
     body: JSON.stringify({ text }),
   });
 }
-
 function shouldEscalateToHuman(message) {
   const lower = message.toLowerCase();
   return (
@@ -101,6 +101,7 @@ function shouldEscalateToHuman(message) {
     lower.includes("agente humano")
   );
 }
+
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
@@ -132,7 +133,6 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: "Error procesando la imagen" });
   }
 });
-
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial } = req.body;
   const finalUserId = userId || "anon";
@@ -215,7 +215,6 @@ app.post("/api/chat", async (req, res) => {
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
   }
 });
-
 app.post("/api/send-to-user", async (req, res) => {
   const { userId, message, agente } = req.body;
   if (!userId || !message || !agente)
@@ -229,6 +228,7 @@ app.post("/api/send-to-user", async (req, res) => {
     timestamp: new Date().toISOString(),
     manual: true,
     original: null,
+    agenteUid: agente.uid || null // ✅ añadimos UID del agente
   });
 
   intervenidas[userId] = true;
@@ -239,6 +239,7 @@ app.post("/api/send-to-user", async (req, res) => {
       intervenidaPor: {
         nombre: agente.nombre,
         foto: agente.foto,
+        uid: agente.uid || null
       },
     },
     { merge: true }
@@ -249,6 +250,7 @@ app.post("/api/send-to-user", async (req, res) => {
 
   res.json({ ok: true });
 });
+
 app.post("/api/marcar-visto", async (req, res) => {
   const { userId } = req.body;
   if (!userId)
@@ -265,7 +267,6 @@ app.post("/api/marcar-visto", async (req, res) => {
     res.status(500).json({ error: "Error en marcar-visto" });
   }
 });
-
 app.get("/api/vistas", async (req, res) => {
   try {
     const snapshot = await db.collection("vistas_globales").get();
@@ -343,7 +344,6 @@ app.get("/api/conversaciones", async (req, res) => {
     res.status(500).json({ error: "Error obteniendo conversaciones" });
   }
 });
-
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
 
