@@ -17,6 +17,23 @@ const db = admin.firestore();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HISTORIAL_PATH = "./historial.json";
+
+let conversaciones = [];
+let intervenidas = {};
+
+if (fs.existsSync(HISTORIAL_PATH)) {
+  const data = JSON.parse(fs.readFileSync(HISTORIAL_PATH, "utf8"));
+  conversaciones = data.conversaciones || [];
+  intervenidas = data.intervenidas || {};
+}
+
+function guardarConversaciones() {
+  fs.writeFileSync(
+    HISTORIAL_PATH,
+    JSON.stringify({ conversaciones, intervenidas }, null, 2)
+  );
+}
 
 const slackResponses = new Map();
 const storage = multer.diskStorage({
@@ -36,9 +53,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
-
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 async function traducir(texto, target = "es") {
   const res = await openai.chat.completions.create({
     model: "gpt-4",
@@ -116,7 +131,6 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: "Error procesando la imagen" });
   }
 });
-
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial } = req.body;
   const finalUserId = userId || "anon";
@@ -213,7 +227,6 @@ app.post("/api/send-to-user", async (req, res) => {
     timestamp: new Date().toISOString(),
     manual: true,
     original: null,
-    agenteId: agente.uid || "",
   });
 
   intervenidas[userId] = true;
@@ -234,21 +247,39 @@ app.post("/api/send-to-user", async (req, res) => {
 
   res.json({ ok: true });
 });
-
 app.post("/api/marcar-visto", async (req, res) => {
   const { userId } = req.body;
   if (!userId)
     return res.status(400).json({ error: "Falta el userId" });
 
   try {
-    await db.collection("vistas_globales").doc(userId).set(
-      { visto: new Date().toISOString() },
-      { merge: true }
-    );
+    // Guardamos el timestamp de última vista de la conversación
+    await db.collection("vistas_globales").doc(userId).set({
+      timestamp: new Date().toISOString(),
+    });
+
+    // También lo actualizamos en memoria por compatibilidad
+    vistasPorAgente[userId] = new Date().toISOString();
+    guardarConversaciones();
+
     return res.json({ ok: true });
   } catch (e) {
     console.error("❌ Error en /api/marcar-visto:", e);
     res.status(500).json({ error: "Error en marcar-visto" });
+  }
+});
+
+app.get("/api/vistas", async (req, res) => {
+  try {
+    const snapshot = await db.collection("vistas_globales").get();
+    const result = {};
+    snapshot.forEach((doc) => {
+      result[doc.id] = doc.data().timestamp;
+    });
+    res.json(result);
+  } catch (error) {
+    console.error("❌ Error obteniendo vistas:", error);
+    res.status(500).json({ error: "Error obteniendo vistas" });
   }
 });
 
@@ -282,7 +313,6 @@ app.get("/api/conversaciones", async (req, res) => {
               original: m.original || null,
               tipo: m.tipo || "texto",
               manual: m.manual || false,
-              agenteId: m.agenteId || null,
             };
           });
 
@@ -319,6 +349,7 @@ app.get("/api/conversaciones", async (req, res) => {
 
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
+
   try {
     const mensajesSnapshot = await db
       .collection("mensajes")
@@ -340,7 +371,6 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
           original: data.original || null,
           from: data.rol,
           tipo: data.tipo || "texto",
-          agenteId: data.agenteId || null,
         };
       })
       .filter((msg) => msg !== null);
@@ -352,22 +382,10 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
   }
 });
 
-// ** NUEVO ENDPOINT **
-app.get("/api/mensajes-agente/:uid", async (req, res) => {
-  const { uid } = req.params;
-  try {
-    const snapshot = await db
-      .collection("mensajes")
-      .where("agenteId", "==", uid)
-      .orderBy("timestamp", "desc")
-      .get();
-
-    const mensajes = snapshot.docs.map((doc) => doc.data());
-    res.json(mensajes);
-  } catch (error) {
-    console.error("❌ Error obteniendo mensajes del agente:", error);
-    res.status(500).json({ error: "Error obteniendo mensajes del agente" });
-  }
+app.get("/api/poll/:userId", (req, res) => {
+  const mensajes = slackResponses.get(req.params.userId) || [];
+  slackResponses.set(req.params.userId, []);
+  res.json({ mensajes });
 });
 
 app.listen(PORT, () => {
