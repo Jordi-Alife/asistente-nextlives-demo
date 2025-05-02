@@ -17,31 +17,6 @@ const db = admin.firestore();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const HISTORIAL_PATH = "./historial.json";
-
-let conversaciones = [];
-let vistas = {};
-let intervenidas = {};
-let vistasPorAgente = {};
-
-if (fs.existsSync(HISTORIAL_PATH)) {
-  const data = JSON.parse(fs.readFileSync(HISTORIAL_PATH, "utf8"));
-  conversaciones = data.conversaciones || [];
-  vistas = data.vistas || {};
-  intervenidas = data.intervenidas || {};
-  vistasPorAgente = data.vistasPorAgente || {};
-}
-
-function guardarConversaciones() {
-  fs.writeFileSync(
-    HISTORIAL_PATH,
-    JSON.stringify(
-      { conversaciones, vistas, intervenidas, vistasPorAgente },
-      null,
-      2
-    )
-  );
-}
 
 const slackResponses = new Map();
 const storage = multer.diskStorage({
@@ -61,6 +36,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 async function traducir(texto, target = "es") {
   const res = await openai.chat.completions.create({
@@ -107,7 +83,6 @@ function shouldEscalateToHuman(message) {
     lower.includes("agente humano")
   );
 }
-
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
@@ -139,6 +114,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: "Error procesando la imagen" });
   }
 });
+
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial } = req.body;
   const finalUserId = userId || "anon";
@@ -169,8 +145,7 @@ app.post("/api/chat", async (req, res) => {
       },
       { merge: true }
     );
-
-    const traduccionUsuario = await traducir(message, "es");
+        const traduccionUsuario = await traducir(message, "es");
 
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
@@ -261,15 +236,19 @@ app.post("/api/marcar-visto", async (req, res) => {
     return res.status(400).json({ error: "Falta el userId" });
 
   try {
+    await db.collection("vistas_globales").doc(userId).set({
+      visto: new Date().toISOString(),
+    }, { merge: true });
+
     vistasPorAgente[userId] = new Date().toISOString();
     guardarConversaciones();
+
     return res.json({ ok: true });
   } catch (e) {
     console.error("❌ Error en /api/marcar-visto:", e);
     res.status(500).json({ error: "Error en marcar-visto" });
   }
 });
-
 app.get("/api/conversaciones", async (req, res) => {
   try {
     const snapshot = await db.collection("conversaciones").get();
@@ -333,7 +312,6 @@ app.get("/api/conversaciones", async (req, res) => {
     res.status(500).json({ error: "Error obteniendo conversaciones" });
   }
 });
-
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
 
@@ -375,8 +353,18 @@ app.get("/api/poll/:userId", (req, res) => {
   res.json({ mensajes });
 });
 
-app.get("/api/vistas", (req, res) => {
-  res.json(vistasPorAgente);
+app.get("/api/vistas", async (req, res) => {
+  try {
+    const snapshot = await db.collection("vistas").get();
+    const vistasData = {};
+    snapshot.forEach((doc) => {
+      vistasData[doc.id] = doc.data().timestamp;
+    });
+    res.json(vistasData);
+  } catch (error) {
+    console.error("❌ Error obteniendo vistas:", error);
+    res.status(500).json({ error: "Error obteniendo vistas" });
+  }
 });
 
 app.listen(PORT, () => {
