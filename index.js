@@ -36,6 +36,7 @@ function guardarConversaciones() {
     JSON.stringify({ conversaciones, intervenidas, vistasPorAgente }, null, 2)
   );
 }
+
 const slackResponses = new Map();
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -134,7 +135,6 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: "Error procesando la imagen" });
   }
 });
-
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial } = req.body;
   const finalUserId = userId || "anon";
@@ -217,12 +217,12 @@ app.post("/api/chat", async (req, res) => {
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
   }
 });
+
 app.post("/api/send-to-user", async (req, res) => {
   const { userId, message, agente } = req.body;
   if (!userId || !message || !agente)
     return res.status(400).json({ error: "Faltan datos" });
 
-  // NUEVO: calcular tiempoRespuesta
   let tiempoRespuesta = null;
   try {
     const snapshot = await db
@@ -234,13 +234,13 @@ app.post("/api/send-to-user", async (req, res) => {
       .get();
 
     if (!snapshot.empty) {
-      const ultimoMensaje = snapshot.docs[0].data();
-      const t1 = new Date(ultimoMensaje.timestamp);
-      const t2 = new Date();
-      tiempoRespuesta = (t2 - t1) / 1000; // en segundos
+      const ultimoMensajeUsuario = snapshot.docs[0].data();
+      const fechaUsuario = new Date(ultimoMensajeUsuario.timestamp);
+      const fechaAhora = new Date();
+      tiempoRespuesta = (fechaAhora - fechaUsuario) / 1000;
     }
-  } catch (error) {
-    console.warn("⚠️ No se pudo calcular tiempoRespuesta:", error);
+  } catch (e) {
+    console.warn(`⚠️ No se pudo calcular tiempoRespuesta para ${userId}`);
   }
 
   await db.collection("mensajes").add({
@@ -252,7 +252,7 @@ app.post("/api/send-to-user", async (req, res) => {
     manual: true,
     original: null,
     agenteUid: agente.uid || null,
-    tiempoRespuesta: tiempoRespuesta, // ✅ nuevo campo
+    tiempoRespuesta: tiempoRespuesta,
   });
 
   intervenidas[userId] = true;
@@ -263,7 +263,7 @@ app.post("/api/send-to-user", async (req, res) => {
       intervenidaPor: {
         nombre: agente.nombre,
         foto: agente.foto,
-        uid: agente.uid || null,
+        uid: agente.uid || null
       },
     },
     { merge: true }
@@ -274,7 +274,6 @@ app.post("/api/send-to-user", async (req, res) => {
 
   res.json({ ok: true });
 });
-
 app.post("/api/marcar-visto", async (req, res) => {
   const { userId } = req.body;
   if (!userId)
@@ -418,12 +417,26 @@ app.get("/api/mensajes-agente/:uid", async (req, res) => {
       .get();
 
     const mensajes = snapshot.docs.map((doc) => doc.data());
-    res.json(mensajes);
+    res.json({
+      mensajes,
+      perfil: await obtenerPerfilAgente(uid),
+    });
   } catch (error) {
     console.error("❌ Error obteniendo mensajes de agente:", error);
     res.status(500).json({ error: "Error obteniendo mensajes de agente" });
   }
 });
+
+async function obtenerPerfilAgente(uid) {
+  try {
+    const docSnap = await db.collection("agentes").doc(uid).get();
+    if (docSnap.exists) return docSnap.data();
+    return null;
+  } catch (e) {
+    console.warn(`⚠️ No se pudo cargar perfil de agente ${uid}`);
+    return null;
+  }
+}
 
 app.get("/api/poll/:userId", (req, res) => {
   const mensajes = slackResponses.get(req.params.userId) || [];
@@ -431,6 +444,7 @@ app.get("/api/poll/:userId", (req, res) => {
   res.json({ mensajes });
 });
 
+// ✅ ÚNICO CAMBIO: añadimos 0.0.0.0 para Railway
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
 });
