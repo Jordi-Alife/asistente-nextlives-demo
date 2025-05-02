@@ -21,19 +21,19 @@ const HISTORIAL_PATH = "./historial.json";
 
 let conversaciones = [];
 let intervenidas = {};
-let vistasPorAgente = {}; // ✅ añadimos esta línea
+let vistasPorAgente = {};
 
 if (fs.existsSync(HISTORIAL_PATH)) {
   const data = JSON.parse(fs.readFileSync(HISTORIAL_PATH, "utf8"));
   conversaciones = data.conversaciones || [];
   intervenidas = data.intervenidas || {};
-  vistasPorAgente = data.vistasPorAgente || {}; // ✅ añadimos esta línea
+  vistasPorAgente = data.vistasPorAgente || {};
 }
 
 function guardarConversaciones() {
   fs.writeFileSync(
     HISTORIAL_PATH,
-    JSON.stringify({ conversaciones, intervenidas, vistasPorAgente }, null, 2) // ✅ añadimos vistasPorAgente aquí
+    JSON.stringify({ conversaciones, intervenidas, vistasPorAgente }, null, 2)
   );
 }
 const slackResponses = new Map();
@@ -217,11 +217,31 @@ app.post("/api/chat", async (req, res) => {
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
   }
 });
-
 app.post("/api/send-to-user", async (req, res) => {
   const { userId, message, agente } = req.body;
   if (!userId || !message || !agente)
     return res.status(400).json({ error: "Faltan datos" });
+
+  // NUEVO: calcular tiempoRespuesta
+  let tiempoRespuesta = null;
+  try {
+    const snapshot = await db
+      .collection("mensajes")
+      .where("idConversacion", "==", userId)
+      .where("rol", "==", "usuario")
+      .orderBy("timestamp", "desc")
+      .limit(1)
+      .get();
+
+    if (!snapshot.empty) {
+      const ultimoMensaje = snapshot.docs[0].data();
+      const t1 = new Date(ultimoMensaje.timestamp);
+      const t2 = new Date();
+      tiempoRespuesta = (t2 - t1) / 1000; // en segundos
+    }
+  } catch (error) {
+    console.warn("⚠️ No se pudo calcular tiempoRespuesta:", error);
+  }
 
   await db.collection("mensajes").add({
     idConversacion: userId,
@@ -231,7 +251,8 @@ app.post("/api/send-to-user", async (req, res) => {
     timestamp: new Date().toISOString(),
     manual: true,
     original: null,
-    agenteUid: agente.uid || null // ✅ añadimos UID del agente
+    agenteUid: agente.uid || null,
+    tiempoRespuesta: tiempoRespuesta, // ✅ nuevo campo
   });
 
   intervenidas[userId] = true;
@@ -242,7 +263,7 @@ app.post("/api/send-to-user", async (req, res) => {
       intervenidaPor: {
         nombre: agente.nombre,
         foto: agente.foto,
-        uid: agente.uid || null
+        uid: agente.uid || null,
       },
     },
     { merge: true }
@@ -410,7 +431,6 @@ app.get("/api/poll/:userId", (req, res) => {
   res.json({ mensajes });
 });
 
-// ✅ ÚNICO CAMBIO: añadimos 0.0.0.0 para Railway
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
 });
