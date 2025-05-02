@@ -90,6 +90,7 @@ async function sendToSlack(message, userId = null) {
     body: JSON.stringify({ text }),
   });
 }
+
 function shouldEscalateToHuman(message) {
   const lower = message.toLowerCase();
   return (
@@ -133,6 +134,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: "Error procesando la imagen" });
   }
 });
+
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial } = req.body;
   const finalUserId = userId || "anon";
@@ -215,6 +217,7 @@ app.post("/api/chat", async (req, res) => {
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
   }
 });
+
 app.post("/api/send-to-user", async (req, res) => {
   const { userId, message, agente } = req.body;
   if (!userId || !message || !agente)
@@ -267,6 +270,7 @@ app.post("/api/marcar-visto", async (req, res) => {
     res.status(500).json({ error: "Error en marcar-visto" });
   }
 });
+
 app.get("/api/vistas", async (req, res) => {
   try {
     const snapshot = await db.collection("vistas_globales").get();
@@ -344,6 +348,7 @@ app.get("/api/conversaciones", async (req, res) => {
     res.status(500).json({ error: "Error obteniendo conversaciones" });
   }
 });
+
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
 
@@ -405,6 +410,7 @@ app.get("/api/poll/:userId", (req, res) => {
   res.json({ mensajes });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
+// ✅ ÚNICO CAMBIO: añadimos 0.0.0.0 para Railway
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
 });
