@@ -36,7 +36,6 @@ function guardarConversaciones() {
     JSON.stringify({ conversaciones, intervenidas, vistasPorAgente }, null, 2)
   );
 }
-
 const slackResponses = new Map();
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -80,7 +79,6 @@ function detectarIdioma(texto) {
   if (/[а-яА-Я]/.test(texto)) return "ru";
   return "es";
 }
-
 async function sendToSlack(message, userId = null) {
   const webhook = process.env.SLACK_WEBHOOK_URL;
   if (!webhook) return;
@@ -217,31 +215,10 @@ app.post("/api/chat", async (req, res) => {
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
   }
 });
-
 app.post("/api/send-to-user", async (req, res) => {
   const { userId, message, agente } = req.body;
   if (!userId || !message || !agente)
     return res.status(400).json({ error: "Faltan datos" });
-
-  let tiempoRespuesta = null;
-  try {
-    const snapshot = await db
-      .collection("mensajes")
-      .where("idConversacion", "==", userId)
-      .where("rol", "==", "usuario")
-      .orderBy("timestamp", "desc")
-      .limit(1)
-      .get();
-
-    if (!snapshot.empty) {
-      const ultimoMensajeUsuario = snapshot.docs[0].data();
-      const fechaUsuario = new Date(ultimoMensajeUsuario.timestamp);
-      const fechaAhora = new Date();
-      tiempoRespuesta = (fechaAhora - fechaUsuario) / 1000;
-    }
-  } catch (e) {
-    console.warn(`⚠️ No se pudo calcular tiempoRespuesta para ${userId}`);
-  }
 
   await db.collection("mensajes").add({
     idConversacion: userId,
@@ -251,8 +228,7 @@ app.post("/api/send-to-user", async (req, res) => {
     timestamp: new Date().toISOString(),
     manual: true,
     original: null,
-    agenteUid: agente.uid || null,
-    tiempoRespuesta: tiempoRespuesta,
+    agenteUid: agente.uid || null
   });
 
   intervenidas[userId] = true;
@@ -274,6 +250,7 @@ app.post("/api/send-to-user", async (req, res) => {
 
   res.json({ ok: true });
 });
+
 app.post("/api/marcar-visto", async (req, res) => {
   const { userId } = req.body;
   if (!userId)
@@ -417,26 +394,12 @@ app.get("/api/mensajes-agente/:uid", async (req, res) => {
       .get();
 
     const mensajes = snapshot.docs.map((doc) => doc.data());
-    res.json({
-      mensajes,
-      perfil: await obtenerPerfilAgente(uid),
-    });
+    res.json(mensajes);
   } catch (error) {
     console.error("❌ Error obteniendo mensajes de agente:", error);
     res.status(500).json({ error: "Error obteniendo mensajes de agente" });
   }
 });
-
-async function obtenerPerfilAgente(uid) {
-  try {
-    const docSnap = await db.collection("agentes").doc(uid).get();
-    if (docSnap.exists) return docSnap.data();
-    return null;
-  } catch (e) {
-    console.warn(`⚠️ No se pudo cargar perfil de agente ${uid}`);
-    return null;
-  }
-}
 
 app.get("/api/poll/:userId", (req, res) => {
   const mensajes = slackResponses.get(req.params.userId) || [];
@@ -444,7 +407,6 @@ app.get("/api/poll/:userId", (req, res) => {
   res.json({ mensajes });
 });
 
-// ✅ ÚNICO CAMBIO: añadimos 0.0.0.0 para Railway
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
 });
