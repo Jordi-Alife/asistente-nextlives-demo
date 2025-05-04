@@ -290,4 +290,38 @@
 
     function minimizarChat() {
       document.getElementById("chat-widget").style.display = "none";
-      document.get 
+      document.getElementById("chat-toggle").style.display = "flex";
+      document.getElementById("scrollToBottomBtn").style.display = "none";
+    }
+
+    function abrirChat() {
+      document.getElementById("chat-widget").style.display = "flex";
+      document.getElementById("chat-toggle").style.display = "none";
+    }
+
+    function avisarEscribiendo(texto) {
+      const userId = localStorage.getItem('userId');
+      if (!userId) return;
+      fetch("https://web-production-51989.up.railway.app/api/escribiendo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, texto })
+      });
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('messageInput');
+      const texto = input.value.trim();
+      const userId = localStorage.getItem('userId');
+      if (!texto || !userId) return;
+      fetch("https://web-production-51989.up.railway.app/api/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, texto })
+      });
+      input.value = ""; // ✅ limpia el input tras enviar
+      avisarEscribiendo(""); // ✅ limpia también el estado de escribiendo
+    }
+  </script>
+</body>
+</html>
