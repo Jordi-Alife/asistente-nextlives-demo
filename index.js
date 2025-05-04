@@ -269,6 +269,30 @@ app.post("/api/send-to-user", async (req, res) => {
     res.status(500).json({ error: "Error enviando mensaje a usuario" });
   }
 });
+
+// ✅ NUEVO: ruta añadida para recibir mensajes de usuario desde el frontend
+app.post("/api/send", async (req, res) => {
+  const { userId, texto } = req.body;
+  if (!userId || !texto) {
+    return res.status(400).json({ error: "Faltan datos" });
+  }
+
+  try {
+    await db.collection("mensajes").add({
+      idConversacion: userId,
+      rol: "usuario",
+      mensaje: texto,
+      tipo: "texto",
+      timestamp: new Date().toISOString(),
+    });
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("❌ Error guardando mensaje usuario:", error);
+    res.status(500).json({ error: "Error guardando mensaje" });
+  }
+});
+
 app.post("/api/marcar-visto", async (req, res) => {
   const { userId } = req.body;
   if (!userId)
@@ -286,7 +310,6 @@ app.post("/api/marcar-visto", async (req, res) => {
   }
 });
 
-// ✅ NUEVO: endpoint para guardar lo que escribe el usuario
 app.post("/api/escribiendo", (req, res) => {
   const { userId, texto } = req.body;
   if (!userId) return res.status(400).json({ error: "Falta userId" });
@@ -294,7 +317,6 @@ app.post("/api/escribiendo", (req, res) => {
   res.json({ ok: true });
 });
 
-// ✅ NUEVO: endpoint para consultar lo que está escribiendo un usuario
 app.get("/api/escribiendo/:userId", (req, res) => {
   const texto = escribiendoUsuarios[req.params.userId] || "";
   res.json({ texto });
