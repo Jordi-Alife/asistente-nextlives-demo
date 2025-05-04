@@ -22,7 +22,7 @@ const HISTORIAL_PATH = "./historial.json";
 let conversaciones = [];
 let intervenidas = {};
 let vistasPorAgente = {};
-let escribiendoUsuarios = {}; // ✅ NUEVO: para almacenar lo que escribe cada usuario
+let escribiendoUsuarios = {}; // ✅ NUEVO
 
 if (fs.existsSync(HISTORIAL_PATH)) {
   const data = JSON.parse(fs.readFileSync(HISTORIAL_PATH, "utf8"));
@@ -89,7 +89,6 @@ async function sendToSlack(message, userId = null) {
     body: JSON.stringify({ text }),
   });
 }
-
 function shouldEscalateToHuman(message) {
   const lower = message.toLowerCase();
   return (
@@ -101,7 +100,6 @@ function shouldEscalateToHuman(message) {
     lower.includes("agente humano")
   );
 }
-
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
@@ -288,6 +286,19 @@ app.post("/api/marcar-visto", async (req, res) => {
   }
 });
 
+// ✅ NUEVO: endpoint para guardar lo que escribe el usuario
+app.post("/api/escribiendo", (req, res) => {
+  const { userId, texto } = req.body;
+  if (!userId) return res.status(400).json({ error: "Falta userId" });
+  escribiendoUsuarios[userId] = texto || "";
+  res.json({ ok: true });
+});
+
+// ✅ NUEVO: endpoint para consultar lo que está escribiendo un usuario
+app.get("/api/escribiendo/:userId", (req, res) => {
+  const texto = escribiendoUsuarios[req.params.userId] || "";
+  res.json({ texto });
+});
 app.get("/api/vistas", async (req, res) => {
   try {
     const snapshot = await db.collection("vistas_globales").get();
@@ -300,20 +311,6 @@ app.get("/api/vistas", async (req, res) => {
     console.error("❌ Error obteniendo vistas:", error);
     res.status(500).json({ error: "Error obteniendo vistas" });
   }
-});
-
-// ✅ NUEVO: endpoint para recibir lo que el usuario está escribiendo en tiempo real
-app.post("/api/escribiendo", (req, res) => {
-  const { userId, texto } = req.body;
-  if (!userId) return res.status(400).json({ error: "Falta userId" });
-  escribiendoUsuarios[userId] = texto || "";
-  res.json({ ok: true });
-});
-
-// ✅ NUEVO: endpoint para consultar lo que está escribiendo un usuario
-app.get("/api/escribiendo/:userId", (req, res) => {
-  const texto = escribiendoUsuarios[req.params.userId] || "";
-  res.json({ texto });
 });
 
 app.get("/api/conversaciones", async (req, res) => {
