@@ -254,9 +254,8 @@
     <div class="chat-messages" id="messages"></div>
 
     <div id="userIdDisplay"></div>
-
-    <div class="chat-input">
-      <input id="messageInput" type="text" placeholder="Escribe un mensaje..." />
+        <div class="chat-input">
+      <input id="messageInput" type="text" placeholder="Escribe un mensaje..." oninput="avisarEscribiendo(this.value)" />
       <button class="file-button" onclick="document.getElementById('fileInput').click()" title="Adjuntar archivo">
         <svg width="20" height="20" viewBox="0 0 24 24" stroke="black" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="5" ry="5" />
@@ -281,6 +280,7 @@
   </button>
 
   <script src="main.js"></script>
+    <script src="main.js"></script>
   <script>
     function cerrarChat() {
       localStorage.removeItem('chatMessages');
@@ -298,6 +298,16 @@
     function abrirChat() {
       document.getElementById("chat-widget").style.display = "flex";
       document.getElementById("chat-toggle").style.display = "none";
+    }
+
+    function avisarEscribiendo(texto) {
+      const userId = localStorage.getItem('userId');
+      if (!userId) return;
+      fetch(`https://web-production-51989.up.railway.app/api/escribiendo/${userId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texto })
+      });
     }
   </script>
 </body>
