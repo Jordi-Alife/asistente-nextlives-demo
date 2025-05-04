@@ -220,37 +220,58 @@ app.post("/api/send-to-user", async (req, res) => {
   if (!userId || !message || !agente)
     return res.status(400).json({ error: "Faltan datos" });
 
-  await db.collection("mensajes").add({
-    idConversacion: userId,
-    rol: "asistente",
-    mensaje: message,
-    tipo: "texto",
-    timestamp: new Date().toISOString(),
-    manual: true,
-    original: null,
-    agenteUid: agente.uid || null
-  });
+  try {
+    // Obtener el último mensaje del usuario para detectar su idioma
+    const mensajesSnapshot = await db
+      .collection("mensajes")
+      .where("idConversacion", "==", userId)
+      .where("rol", "==", "usuario")
+      .orderBy("timestamp", "desc")
+      .limit(1)
+      .get();
 
-  intervenidas[userId] = true;
+    let idiomaDestino = "es";
+    if (!mensajesSnapshot.empty) {
+      const ultimoMensaje = mensajesSnapshot.docs[0].data();
+      idiomaDestino = detectarIdioma(ultimoMensaje.original || ultimoMensaje.mensaje) || "es";
+    }
 
-  await db.collection("conversaciones").doc(userId).set(
-    {
-      intervenida: true,
-      intervenidaPor: {
-        nombre: agente.nombre,
-        foto: agente.foto,
-        uid: agente.uid || null
+    const traduccion = await traducir(message, idiomaDestino);
+
+    await db.collection("mensajes").add({
+      idConversacion: userId,
+      rol: "asistente",
+      mensaje: traduccion,
+      original: message,
+      tipo: "texto",
+      timestamp: new Date().toISOString(),
+      manual: true,
+      agenteUid: agente.uid || null,
+    });
+
+    intervenidas[userId] = true;
+
+    await db.collection("conversaciones").doc(userId).set(
+      {
+        intervenida: true,
+        intervenidaPor: {
+          nombre: agente.nombre,
+          foto: agente.foto,
+          uid: agente.uid || null,
+        },
       },
-    },
-    { merge: true }
-  );
+      { merge: true }
+    );
 
-  if (!slackResponses.has(userId)) slackResponses.set(userId, []);
-  slackResponses.get(userId).push(message);
+    if (!slackResponses.has(userId)) slackResponses.set(userId, []);
+    slackResponses.get(userId).push(message);
 
-  res.json({ ok: true });
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("❌ Error en /api/send-to-user:", error);
+    res.status(500).json({ error: "Error enviando mensaje a usuario" });
+  }
 });
-
 app.post("/api/marcar-visto", async (req, res) => {
   const { userId } = req.body;
   if (!userId)
