@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
-import fetch from "node-fetch";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -37,7 +36,7 @@ function guardarConversaciones() {
     JSON.stringify({ conversaciones, intervenidas, vistasPorAgente }, null, 2)
   );
 }
-const slackResponses = new Map();
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = "./uploads";
@@ -71,6 +70,7 @@ async function traducir(texto, target = "es") {
   });
   return res.choices[0].message.content.trim();
 }
+
 function detectarIdioma(texto) {
   if (/[áéíóúñü]/i.test(texto)) return "es";
   if (/[぀-ヿ]/.test(texto)) return "ja";
@@ -79,16 +79,7 @@ function detectarIdioma(texto) {
   if (/[а-яА-Я]/.test(texto)) return "ru";
   return "es";
 }
-async function sendToSlack(message, userId = null) {
-  const webhook = process.env.SLACK_WEBHOOK_URL;
-  if (!webhook) return;
-  const text = userId ? `[${userId}] ${message}` : message;
-  await fetch(webhook, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
-  });
-}
+
 function shouldEscalateToHuman(message) {
   const lower = message.toLowerCase();
   return (
@@ -115,8 +106,6 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
 
     const imageUrl = `${req.protocol}://${req.get("host")}/${optimizedPath}`;
 
-    await sendToSlack(`🖼️ Imagen subida por usuario [${userId}]: ${imageUrl}`);
-
     await db.collection("mensajes").add({
       idConversacion: userId,
       rol: "usuario",
@@ -131,6 +120,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: "Error procesando la imagen" });
   }
 });
+
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial } = req.body;
   const finalUserId = userId || "anon";
@@ -161,7 +151,8 @@ app.post("/api/chat", async (req, res) => {
       },
       { merge: true }
     );
-        const traduccionUsuario = await traducir(message, "es");
+
+    const traduccionUsuario = await traducir(message, "es");
 
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
@@ -173,7 +164,6 @@ app.post("/api/chat", async (req, res) => {
     });
 
     if (shouldEscalateToHuman(message)) {
-      await sendToSlack(`⚠️ [${finalUserId}] pide ayuda humana:\n${message}`, finalUserId);
       return res.json({
         reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia.",
       });
@@ -203,8 +193,6 @@ app.post("/api/chat", async (req, res) => {
       tipo: "texto",
       timestamp: new Date().toISOString(),
     });
-
-    await sendToSlack(`👤 [${finalUserId}] ${message}\n🤖 ${reply}`, finalUserId);
 
     res.json({ reply });
   } catch (error) {
@@ -259,16 +247,13 @@ app.post("/api/send-to-user", async (req, res) => {
       { merge: true }
     );
 
-    if (!slackResponses.has(userId)) slackResponses.set(userId, []);
-    slackResponses.get(userId).push(message);
-
     res.json({ ok: true });
   } catch (error) {
     console.error("❌ Error en /api/send-to-user:", error);
     res.status(500).json({ error: "Error enviando mensaje a usuario" });
   }
 });
-// ✅ NUEVO: ruta añadida para recibir mensajes de usuario desde el frontend
+
 app.post("/api/send", async (req, res) => {
   const { userId, texto } = req.body;
   if (!userId || !texto) {
@@ -320,7 +305,6 @@ app.get("/api/escribiendo/:userId", (req, res) => {
   const texto = escribiendoUsuarios[req.params.userId] || "";
   res.json({ texto });
 });
-
 app.get("/api/vistas", async (req, res) => {
   try {
     const snapshot = await db.collection("vistas_globales").get();
@@ -398,6 +382,7 @@ app.get("/api/conversaciones", async (req, res) => {
     res.status(500).json({ error: "Error obteniendo conversaciones" });
   }
 });
+
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
 
@@ -451,12 +436,6 @@ app.get("/api/mensajes-agente/:uid", async (req, res) => {
     console.error("❌ Error obteniendo mensajes de agente:", error);
     res.status(500).json({ error: "Error obteniendo mensajes de agente" });
   }
-});
-
-app.get("/api/poll/:userId", (req, res) => {
-  const mensajes = slackResponses.get(req.params.userId) || [];
-  slackResponses.set(req.params.userId, []);
-  res.json({ mensajes });
 });
 
 app.listen(PORT, "0.0.0.0", () => {
