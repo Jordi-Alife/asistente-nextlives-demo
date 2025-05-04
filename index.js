@@ -22,6 +22,7 @@ const HISTORIAL_PATH = "./historial.json";
 let conversaciones = [];
 let intervenidas = {};
 let vistasPorAgente = {};
+let escribiendoUsuarios = {}; // ✅ NUEVO: para almacenar lo que escribe cada usuario
 
 if (fs.existsSync(HISTORIAL_PATH)) {
   const data = JSON.parse(fs.readFileSync(HISTORIAL_PATH, "utf8"));
@@ -70,7 +71,6 @@ async function traducir(texto, target = "es") {
   });
   return res.choices[0].message.content.trim();
 }
-
 function detectarIdioma(texto) {
   if (/[áéíóúñü]/i.test(texto)) return "es";
   if (/[぀-ヿ]/.test(texto)) return "ja";
@@ -221,7 +221,6 @@ app.post("/api/send-to-user", async (req, res) => {
     return res.status(400).json({ error: "Faltan datos" });
 
   try {
-    // Obtener el último mensaje del usuario para detectar su idioma
     const mensajesSnapshot = await db
       .collection("mensajes")
       .where("idConversacion", "==", userId)
@@ -301,6 +300,20 @@ app.get("/api/vistas", async (req, res) => {
     console.error("❌ Error obteniendo vistas:", error);
     res.status(500).json({ error: "Error obteniendo vistas" });
   }
+});
+
+// ✅ NUEVO: endpoint para recibir lo que el usuario está escribiendo en tiempo real
+app.post("/api/escribiendo", (req, res) => {
+  const { userId, texto } = req.body;
+  if (!userId) return res.status(400).json({ error: "Falta userId" });
+  escribiendoUsuarios[userId] = texto || "";
+  res.json({ ok: true });
+});
+
+// ✅ NUEVO: endpoint para consultar lo que está escribiendo un usuario
+app.get("/api/escribiendo/:userId", (req, res) => {
+  const texto = escribiendoUsuarios[req.params.userId] || "";
+  res.json({ texto });
 });
 
 app.get("/api/conversaciones", async (req, res) => {
