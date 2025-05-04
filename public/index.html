@@ -81,8 +81,7 @@
       height: 20px;
       display: block;
     }
-
-    .chat-status-dot {
+        .chat-status-dot {
       position: absolute;
       right: -2px;
       top: -2px;
@@ -155,8 +154,7 @@
       color: #000;
       border-bottom-left-radius: 4px;
     }
-
-    .chat-input {
+        .chat-input {
       display: flex;
       align-items: center;
       padding: 10px 12px;
@@ -229,7 +227,7 @@
   </style>
 </head>
 <body>
-  <button id="chat-toggle" onclick="abrirChat()">💬</button>
+    <button id="chat-toggle" onclick="abrirChat()">💬</button>
 
   <div id="chat-widget">
     <div class="chat-header">
@@ -254,7 +252,8 @@
     <div class="chat-messages" id="messages"></div>
 
     <div id="userIdDisplay"></div>
-        <div class="chat-input">
+
+    <div class="chat-input">
       <input id="messageInput" type="text" placeholder="Escribe un mensaje..." oninput="avisarEscribiendo(this.value)" />
       <button class="file-button" onclick="document.getElementById('fileInput').click()" title="Adjuntar archivo">
         <svg width="20" height="20" viewBox="0 0 24 24" stroke="black" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -278,8 +277,6 @@
       <path d="M6 9l6 6 6-6"></path>
     </svg>
   </button>
-
-  <script src="main.js"></script>
     <script src="main.js"></script>
   <script>
     function cerrarChat() {
@@ -303,10 +300,10 @@
     function avisarEscribiendo(texto) {
       const userId = localStorage.getItem('userId');
       if (!userId) return;
-      fetch(`https://web-production-51989.up.railway.app/api/escribiendo/${userId}`, {
+      fetch("https://web-production-51989.up.railway.app/api/escribiendo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ texto })
+        body: JSON.stringify({ userId, texto })
       });
     }
   </script>
