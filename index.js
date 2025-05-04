@@ -71,7 +71,6 @@ async function traducir(texto, target = "es") {
   });
   return res.choices[0].message.content.trim();
 }
-
 function detectarIdioma(texto) {
   if (/[áéíóúñü]/i.test(texto)) return "es";
   if (/[぀-ヿ]/.test(texto)) return "ja";
@@ -80,7 +79,6 @@ function detectarIdioma(texto) {
   if (/[а-яА-Я]/.test(texto)) return "ru";
   return "es";
 }
-
 async function sendToSlack(message, userId = null) {
   const webhook = process.env.SLACK_WEBHOOK_URL;
   if (!webhook) return;
@@ -91,7 +89,6 @@ async function sendToSlack(message, userId = null) {
     body: JSON.stringify({ text }),
   });
 }
-
 function shouldEscalateToHuman(message) {
   const lower = message.toLowerCase();
   return (
@@ -103,7 +100,6 @@ function shouldEscalateToHuman(message) {
     lower.includes("agente humano")
   );
 }
-
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
@@ -135,7 +131,6 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: "Error procesando la imagen" });
   }
 });
-
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial } = req.body;
   const finalUserId = userId || "anon";
@@ -166,8 +161,7 @@ app.post("/api/chat", async (req, res) => {
       },
       { merge: true }
     );
-
-    const traduccionUsuario = await traducir(message, "es");
+        const traduccionUsuario = await traducir(message, "es");
 
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
@@ -218,7 +212,6 @@ app.post("/api/chat", async (req, res) => {
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
   }
 });
-
 app.post("/api/send-to-user", async (req, res) => {
   const { userId, message, agente } = req.body;
   if (!userId || !message || !agente)
@@ -275,8 +268,7 @@ app.post("/api/send-to-user", async (req, res) => {
     res.status(500).json({ error: "Error enviando mensaje a usuario" });
   }
 });
-
-// ✅ MODIFICADO: ahora traduce y guarda original
+// ✅ NUEVO: ruta añadida para recibir mensajes de usuario desde el frontend
 app.post("/api/send", async (req, res) => {
   const { userId, texto } = req.body;
   if (!userId || !texto) {
@@ -284,12 +276,10 @@ app.post("/api/send", async (req, res) => {
   }
 
   try {
-    const traduccion = await traducir(texto, "es");
-
     await db.collection("mensajes").add({
       idConversacion: userId,
       rol: "usuario",
-      mensaje: traduccion,
+      mensaje: texto,
       original: texto,
       tipo: "texto",
       timestamp: new Date().toISOString(),
@@ -302,7 +292,6 @@ app.post("/api/send", async (req, res) => {
   }
 });
 
-// … (todo el resto igual que tu archivo)
 app.post("/api/marcar-visto", async (req, res) => {
   const { userId } = req.body;
   if (!userId)
@@ -409,7 +398,6 @@ app.get("/api/conversaciones", async (req, res) => {
     res.status(500).json({ error: "Error obteniendo conversaciones" });
   }
 });
-
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
 
