@@ -14,7 +14,6 @@
       -webkit-overflow-scrolling: touch;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
-
     #chat-toggle {
       position: fixed;
       bottom: 20px;
@@ -31,14 +30,12 @@
       justify-content: center;
       align-items: center;
     }
-
     #chat-widget {
       display: flex;
       flex-direction: column;
       height: 100dvh;
       background: #f2f2f2;
     }
-
     .chat-header {
       position: sticky;
       top: 0;
@@ -52,20 +49,17 @@
       justify-content: space-between;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
-
     .chat-header-info {
       display: flex;
       align-items: center;
       background: transparent;
       gap: 10px;
     }
-
     .chat-avatar-wrapper {
       position: relative;
       width: 36px;
       height: 36px;
     }
-
     .chat-avatar {
       width: 36px;
       height: 36px;
@@ -75,13 +69,11 @@
       align-items: center;
       justify-content: center;
     }
-
     .chat-avatar img {
       width: 20px;
       height: 20px;
       display: block;
     }
-
     .chat-status-dot {
       position: absolute;
       right: -2px;
@@ -92,28 +84,23 @@
       border-radius: 50%;
       border: 2px solid white;
     }
-
     .chat-header-text {
       display: flex;
       flex-direction: column;
       line-height: 1.2;
     }
-
     .chat-header-text strong {
       font-size: 14px;
       color: #000;
     }
-
     .chat-header-text span {
       font-size: 12px;
       color: #888;
     }
-
     .chat-header-actions {
       display: flex;
       gap: 8px;
     }
-
     .chat-header button {
       background: transparent;
       border: none;
@@ -121,7 +108,6 @@
       cursor: pointer;
       color: #333;
     }
-
     .chat-messages {
       flex: 1;
       overflow-y: auto;
@@ -131,7 +117,6 @@
       flex-direction: column;
       scroll-behavior: smooth;
     }
-
     .message {
       max-width: 80%;
       padding: 10px 14px;
@@ -141,21 +126,18 @@
       line-height: 1.4;
       font-size: 15px;
     }
-
     .message.user {
       align-self: flex-end;
       background-color: #000;
       color: #fff;
       border-bottom-right-radius: 4px;
     }
-
     .message.assistant {
       align-self: flex-start;
       background-color: #ffffff;
       color: #000;
       border-bottom-left-radius: 4px;
     }
-
     .chat-input {
       display: flex;
       align-items: center;
@@ -164,7 +146,6 @@
       border-top: 1px solid #e0e0e0;
       gap: 10px;
     }
-
     .chat-input input[type="text"] {
       flex: 1;
       padding: 12px 16px;
@@ -174,11 +155,9 @@
       outline: none;
       background-color: #fafafa;
     }
-
     .chat-input input[type="text"]::placeholder {
       color: #888;
     }
-
     .file-button,
     .send-button {
       background: none;
@@ -190,19 +169,16 @@
       align-items: center;
       justify-content: center;
     }
-
     .file-button:hover,
     .send-button:hover {
       background-color: rgba(0, 0, 0, 0.05);
     }
-
     #userIdDisplay {
       font-size: 11px;
       text-align: center;
       opacity: 0.5;
       padding-bottom: 5px;
     }
-
     #scrollToBottomBtn {
       position: fixed;
       bottom: 80px;
@@ -221,7 +197,6 @@
       cursor: pointer;
       transition: opacity 0.3s ease, transform 0.2s ease;
     }
-
     #scrollToBottomBtn:hover {
       background-color: rgba(0, 0, 0, 0.8);
       transform: scale(1.05);
@@ -273,13 +248,13 @@
       </button>
     </div>
   </div>
-
-  <button id="scrollToBottomBtn" onclick="scrollToBottom()" title="Ir al final">
+    <button id="scrollToBottomBtn" onclick="scrollToBottom()" title="Ir al final">
     <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M6 9l6 6 6-6"></path>
     </svg>
   </button>
-    <script src="main.js"></script>
+
+  <script src="main.js"></script>
   <script>
     function cerrarChat() {
       localStorage.removeItem('chatMessages');
@@ -309,6 +284,24 @@
       });
     }
 
+    function cargarMensajes() {
+      const userId = localStorage.getItem('userId');
+      if (!userId) return;
+      fetch(`https://web-production-51989.up.railway.app/api/conversaciones/${userId}`)
+        .then(res => res.json())
+        .then(data => {
+          const messagesContainer = document.getElementById('messages');
+          messagesContainer.innerHTML = '';
+          data.forEach(msg => {
+            const div = document.createElement('div');
+            div.className = `message ${msg.from === 'usuario' ? 'user' : 'assistant'}`;
+            div.textContent = msg.message;
+            messagesContainer.appendChild(div);
+          });
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        });
+    }
+
     function sendMessage() {
       const input = document.getElementById('messageInput');
       const texto = input.value.trim();
@@ -318,10 +311,14 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, texto })
+      }).then(() => {
+        cargarMensajes(); // ✅ recargar mensajes tras enviar
       });
       input.value = ""; // ✅ limpia el input tras enviar
       avisarEscribiendo(""); // ✅ limpia también el estado de escribiendo
     }
+
+    window.addEventListener('load', cargarMensajes); // ✅ carga mensajes al abrir
   </script>
 </body>
 </html>
