@@ -205,57 +205,33 @@
 </head>
 <body>
   <button id="chat-toggle" onclick="abrirChat()">💬</button>
-
   <div id="chat-widget">
     <div class="chat-header">
       <div class="chat-header-info">
         <div class="chat-avatar-wrapper">
-          <div class="chat-avatar">
-            <img src="/chat-icon.svg" alt="Chat Icon" />
-          </div>
-          <span class="chat-status-dot"></span>
+          <div class="chat-avatar"><img src="/chat-icon.svg" alt="Chat Icon" /></div><span class="chat-status-dot"></span>
         </div>
-        <div class="chat-header-text">
-          <strong>Soporte Canal Digital</strong>
-          <span>Funeraria Esperanza</span>
-        </div>
+        <div class="chat-header-text"><strong>Soporte Canal Digital</strong><span>Funeraria Esperanza</span></div>
       </div>
       <div class="chat-header-actions">
-        <button onclick="minimizarChat()">–</button>
-        <button onclick="cerrarChat()">×</button>
+        <button onclick="minimizarChat()">–</button><button onclick="cerrarChat()">×</button>
       </div>
     </div>
-
     <div class="chat-messages" id="messages"></div>
-
     <div id="userIdDisplay"></div>
-
     <div class="chat-input">
       <input id="messageInput" type="text" placeholder="Escribe un mensaje..." oninput="avisarEscribiendo(this.value)" />
       <button class="file-button" onclick="document.getElementById('fileInput').click()" title="Adjuntar archivo">
-        <svg width="20" height="20" viewBox="0 0 24 24" stroke="black" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="5" ry="5" />
-          <line x1="12" y1="8" x2="12" y2="16" />
-          <line x1="8" y1="12" x2="16" y2="12" />
-        </svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" stroke="black" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5" ry="5" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" /></svg>
       </button>
       <input type="file" id="fileInput" accept="image/*" hidden />
       <button class="send-button" onclick="sendMessage()" title="Enviar">
-        <svg width="22" height="22" viewBox="0 0 24 24" stroke="#999" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="22" y1="2" x2="11" y2="13"></line>
-          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-        </svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke="#999" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
       </button>
     </div>
   </div>
-
-  <button id="scrollToBottomBtn" onclick="scrollToBottom()" title="Ir al final">
-    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M6 9l6 6 6-6"></path>
-    </svg>
-  </button>
-
-  <script src="main.js"></script>
+  <button id="scrollToBottomBtn" onclick="scrollToBottom()" title="Ir al final"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button>
+    <script src="main.js"></script>
   <script>
     function cerrarChat() {
       localStorage.removeItem('chatMessages');
@@ -292,6 +268,7 @@
         .then(res => res.json())
         .then(data => {
           const messagesContainer = document.getElementById('messages');
+          const isAtBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop <= messagesContainer.clientHeight + 50;
           messagesContainer.innerHTML = '';
           data.forEach(msg => {
             const div = document.createElement('div');
@@ -299,7 +276,9 @@
             div.textContent = msg.original ? msg.original : msg.message;
             messagesContainer.appendChild(div);
           });
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          if (isAtBottom) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          }
         });
     }
 
@@ -327,8 +306,7 @@
     }
 
     window.addEventListener('load', cargarMensajes);
-    setInterval(cargarMensajes, 2000); // ✅ añadido polling cada 2 segundos
-
+    setInterval(cargarMensajes, 2000);
   </script>
 </body>
 </html>
