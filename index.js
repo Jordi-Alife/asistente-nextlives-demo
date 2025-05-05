@@ -181,18 +181,18 @@ app.post("/api/chat", async (req, res) => {
     });
 
     const reply = response.choices[0].message.content;
-    const traduccionRespuesta = await traducir(reply, "es"); // 🔥 traducimos SIEMPRE al español
+    const traduccionRespuesta = await traducir(reply, "es");
 
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
       rol: "asistente",
-      mensaje: traduccionRespuesta, // ✅ mensaje principal en español (para PANEL)
-      original: reply, // ✅ original = respuesta original GPT (en inglés si vino en inglés)
+      mensaje: traduccionRespuesta,
+      original: reply,
       tipo: "texto",
       timestamp: new Date().toISOString(),
     });
 
-    res.json({ reply }); // ⚠️ devolvemos la original al asistente para que muestre lo mismo de siempre
+    res.json({ reply });
   } catch (error) {
     console.error("❌ Error general en /api/chat:", error);
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
@@ -223,8 +223,8 @@ app.post("/api/send-to-user", async (req, res) => {
     await db.collection("mensajes").add({
       idConversacion: userId,
       rol: "asistente",
-      mensaje: traduccion,
-      original: message,
+      mensaje: message, // ✅ 🔥 dejamos mensaje EN ESPAÑOL para PANEL
+      original: traduccion, // ✅ 🔥 guardamos TRADUCIDO para el ASISTENTE
       tipo: "texto",
       timestamp: new Date().toISOString(),
       manual: true,
@@ -303,7 +303,6 @@ app.get("/api/escribiendo/:userId", (req, res) => {
   const texto = escribiendoUsuarios[req.params.userId] || "";
   res.json({ texto });
 });
-
 app.get("/api/vistas", async (req, res) => {
   try {
     const snapshot = await db.collection("vistas_globales").get();
