@@ -79,6 +79,7 @@ function detectarIdioma(texto) {
   if (/[а-яА-Я]/.test(texto)) return "ru";
   return "es";
 }
+
 function shouldEscalateToHuman(message) {
   const lower = message.toLowerCase();
   return (
@@ -119,6 +120,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: "Error procesando la imagen" });
   }
 });
+
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial } = req.body;
   const finalUserId = userId || "anon";
@@ -128,7 +130,7 @@ app.post("/api/chat", async (req, res) => {
     await db.collection("usuarios_chat").doc(finalUserId).set(
       {
         nombre: "Invitado",
-        idioma: idioma || "es",
+        idioma: idioma,
         ultimaConexion: new Date().toISOString(),
         navegador: userAgent || "",
         pais: pais || "",
@@ -142,7 +144,7 @@ app.post("/api/chat", async (req, res) => {
         idUsuario: finalUserId,
         fechaInicio: new Date().toISOString(),
         estado: "abierta",
-        idioma: idioma || "es",
+        idioma: idioma,
         navegador: userAgent || "",
         pais: pais || "",
         historial: historial || [],
@@ -157,6 +159,7 @@ app.post("/api/chat", async (req, res) => {
       rol: "usuario",
       mensaje: traduccionUsuario,
       original: message,
+      idiomaDetectado: idioma,  // ✅ añadido campo refuerzo idioma
       tipo: "texto",
       timestamp: new Date().toISOString(),
     });
@@ -181,13 +184,14 @@ app.post("/api/chat", async (req, res) => {
     });
 
     const reply = response.choices[0].message.content;
-    const traduccionRespuesta = await traducir(reply, "es");
+    const traduccionRespuesta = await traducir(reply, idioma);
 
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
       rol: "asistente",
       mensaje: traduccionRespuesta,
       original: reply,
+      idiomaDetectado: idioma, // ✅ añadido campo refuerzo idioma
       tipo: "texto",
       timestamp: new Date().toISOString(),
     });
@@ -215,7 +219,7 @@ app.post("/api/send-to-user", async (req, res) => {
     let idiomaDestino = "es";
     if (!mensajesSnapshot.empty) {
       const ultimoMensaje = mensajesSnapshot.docs[0].data();
-      idiomaDestino = detectarIdioma(ultimoMensaje.original || ultimoMensaje.mensaje) || "es";
+      idiomaDestino = ultimoMensaje.idiomaDetectado || detectarIdioma(ultimoMensaje.original || ultimoMensaje.mensaje) || "es"; // ✅ reforzado uso de idioma guardado
     }
 
     const traduccion = await traducir(message, idiomaDestino);
@@ -223,8 +227,9 @@ app.post("/api/send-to-user", async (req, res) => {
     await db.collection("mensajes").add({
       idConversacion: userId,
       rol: "asistente",
-      mensaje: message, // ✅ 🔥 dejamos mensaje EN ESPAÑOL para PANEL
-      original: traduccion, // ✅ 🔥 guardamos TRADUCIDO para el ASISTENTE
+      mensaje: traduccion,
+      original: message,
+      idiomaDetectado: idiomaDestino, // ✅ guardamos idioma detectado
       tipo: "texto",
       timestamp: new Date().toISOString(),
       manual: true,
@@ -259,11 +264,14 @@ app.post("/api/send", async (req, res) => {
   }
 
   try {
+    const idioma = detectarIdioma(texto);
+
     await db.collection("mensajes").add({
       idConversacion: userId,
       rol: "usuario",
       mensaje: texto,
       original: texto,
+      idiomaDetectado: idioma, // ✅ guardamos idioma detectado
       tipo: "texto",
       timestamp: new Date().toISOString(),
     });
@@ -274,7 +282,6 @@ app.post("/api/send", async (req, res) => {
     res.status(500).json({ error: "Error guardando mensaje" });
   }
 });
-
 app.post("/api/marcar-visto", async (req, res) => {
   const { userId } = req.body;
   if (!userId)
@@ -303,6 +310,7 @@ app.get("/api/escribiendo/:userId", (req, res) => {
   const texto = escribiendoUsuarios[req.params.userId] || "";
   res.json({ texto });
 });
+
 app.get("/api/vistas", async (req, res) => {
   try {
     const snapshot = await db.collection("vistas_globales").get();
@@ -316,7 +324,6 @@ app.get("/api/vistas", async (req, res) => {
     res.status(500).json({ error: "Error obteniendo vistas" });
   }
 });
-
 app.get("/api/conversaciones", async (req, res) => {
   try {
     const snapshot = await db.collection("conversaciones").get();
