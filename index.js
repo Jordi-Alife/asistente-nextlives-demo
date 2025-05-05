@@ -222,16 +222,16 @@ app.post("/api/send-to-user", async (req, res) => {
     const traduccion = await traducir(message, idiomaDestino);
 
     await db.collection("mensajes").add({
-      idConversacion: userId,
-      rol: "asistente",
-      mensaje: traduccion,
-      original: message,
-      idiomaDetectado: idiomaDestino,
-      tipo: "texto",
-      timestamp: new Date().toISOString(),
-      manual: true,
-      agenteUid: agente.uid || null,
-    });
+  idConversacion: userId,
+  rol: "asistente",
+  mensaje: message,         // guardamos en 'mensaje' lo que escribe el agente
+  original: traduccion,     // guardamos en 'original' la traducción para el usuario
+  idiomaDetectado: idiomaDestino,
+  tipo: "texto",
+  timestamp: new Date().toISOString(),
+  manual: true,
+  agenteUid: agente.uid || null,
+});
 
     intervenidas[userId] = true;
 
