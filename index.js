@@ -70,8 +70,8 @@ async function traducir(texto, target = "es") {
   });
   return res.choices[0].message.content.trim();
 }
-
 function detectarIdioma(texto) {
+  if (/[àèéíïòóúüç]/i.test(texto)) return "ca"; // ✅ añadido catalán
   if (/[áéíóúñü]/i.test(texto)) return "es";
   if (/[぀-ヿ]/.test(texto)) return "ja";
   if (/[一-龥]/.test(texto)) return "zh";
@@ -91,6 +91,7 @@ function shouldEscalateToHuman(message) {
     lower.includes("agente humano")
   );
 }
+
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
@@ -120,7 +121,6 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: "Error procesando la imagen" });
   }
 });
-
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial } = req.body;
   const finalUserId = userId || "anon";
@@ -157,8 +157,8 @@ app.post("/api/chat", async (req, res) => {
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
       rol: "usuario",
-      mensaje: traduccionUsuario,  // SIEMPRE español para panel
-      original: message,           // idioma original del usuario
+      mensaje: traduccionUsuario,
+      original: message,
       idiomaDetectado: idioma,
       tipo: "texto",
       timestamp: new Date().toISOString(),
@@ -189,8 +189,8 @@ app.post("/api/chat", async (req, res) => {
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
       rol: "asistente",
-      mensaje: traduccionRespuesta,  // SIEMPRE español para panel
-      original: reply,               // idioma original GPT
+      mensaje: traduccionRespuesta,
+      original: reply,
       idiomaDetectado: idioma,
       tipo: "texto",
       timestamp: new Date().toISOString(),
@@ -202,6 +202,7 @@ app.post("/api/chat", async (req, res) => {
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
   }
 });
+
 app.post("/api/send-to-user", async (req, res) => {
   const { userId, message, agente } = req.body;
   if (!userId || !message || !agente)
@@ -219,7 +220,10 @@ app.post("/api/send-to-user", async (req, res) => {
     let idiomaDestino = "es";
     if (!mensajesSnapshot.empty) {
       const ultimoMensaje = mensajesSnapshot.docs[0].data();
-      idiomaDestino = ultimoMensaje.idiomaDetectado || detectarIdioma(ultimoMensaje.original || ultimoMensaje.mensaje) || "es";
+      idiomaDestino =
+        ultimoMensaje.idiomaDetectado ||
+        detectarIdioma(ultimoMensaje.original || ultimoMensaje.mensaje) ||
+        "es";
     }
 
     const traduccion = await traducir(message, idiomaDestino);
@@ -227,8 +231,8 @@ app.post("/api/send-to-user", async (req, res) => {
     await db.collection("mensajes").add({
       idConversacion: userId,
       rol: "asistente",
-      mensaje: traduccion,  // ✅ traducido al idioma del usuario final
-      original: message,     // ✅ lo que escribe el agente en español
+      mensaje: traduccion,
+      original: message,
       idiomaDetectado: idiomaDestino,
       tipo: "texto",
       timestamp: new Date().toISOString(),
@@ -282,6 +286,7 @@ app.post("/api/send", async (req, res) => {
     res.status(500).json({ error: "Error guardando mensaje" });
   }
 });
+
 app.post("/api/marcar-visto", async (req, res) => {
   const { userId } = req.body;
   if (!userId)
