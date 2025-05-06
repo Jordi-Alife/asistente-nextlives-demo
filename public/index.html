@@ -231,7 +231,7 @@
     </div>
   </div>
   <button id="scrollToBottomBtn" onclick="scrollToBottom()" title="Ir al final"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button>
-    <script src="main.js"></script>
+  <script src="main.js"></script>
   <script>
     function cerrarChat() {
       localStorage.removeItem('chatMessages');
@@ -269,7 +269,9 @@
         .then(data => {
           const messagesContainer = document.getElementById('messages');
           const isAtBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop <= messagesContainer.clientHeight + 50;
-          messagesContainer.innerHTML = '';
+          // CAMBIO: solo eliminamos los mensajes normales, no los que tengan data-temp-id (typing bubble)
+          const mensajesPrevios = messagesContainer.querySelectorAll('.message:not([data-temp-id])');
+          mensajesPrevios.forEach(msg => msg.remove());
           data.forEach(msg => {
             const div = document.createElement('div');
             div.className = `message ${msg.from === 'usuario' ? 'user' : 'assistant'}`;
