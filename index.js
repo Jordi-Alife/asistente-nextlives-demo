@@ -172,13 +172,17 @@ app.post("/api/chat", async (req, res) => {
 
     if (intervenidas[finalUserId]) return res.json({ reply: null });
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        { role: "system", content: system || `Eres un asistente de soporte funerario. Responde en el mismo idioma que el usuario.` },
-        { role: "user", content: message },
-      ],
-    });
+    const baseConocimiento = fs.readFileSync('./base_conocimiento_actualizado.txt', 'utf8');
+
+const response = await openai.chat.completions.create({
+  model: "gpt-4",
+  messages: [
+    { role: "system", content: `Responde solo basado en la siguiente información y no inventes nada fuera de esto:
+
+${baseConocimiento}` },
+    { role: "user", content: traduccionUsuario },
+  ],
+}););
 
     const reply = response.choices[0].message.content;
     const traduccionRespuesta = await traducir(reply, "es");
