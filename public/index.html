@@ -65,15 +65,16 @@
 
   <script src="main.js"></script>
   <script>
-    // BLOQUE AÑADIDO: escucha postMessage y guarda en localStorage
+    // BLOQUE NUEVO: escucha mensajes postMessage y guarda en localStorage
     window.addEventListener('message', (event) => {
       if (event.data) {
         for (const key in event.data) {
           if (event.data.hasOwnProperty(key)) {
-            localStorage.setItem(key, typeof event.data[key] === 'object' ? JSON.stringify(event.data[key]) : event.data[key]);
+            const valor = event.data[key];
+            localStorage.setItem(key, typeof valor === 'object' ? JSON.stringify(valor) : valor);
           }
         }
-        console.log('Datos recibidos via postMessage:', event.data);
+        console.log('✅ Datos recibidos via postMessage:', event.data);
       }
     });
 
