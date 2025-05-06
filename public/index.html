@@ -288,6 +288,15 @@
       const texto = input.value.trim();
       const userId = localStorage.getItem('userId');
       if (!texto || !userId) return;
+
+      // ✅ MOSTRAR INMEDIATAMENTE EL MENSAJE DEL USUARIO
+      const messagesContainer = document.getElementById('messages');
+      const div = document.createElement('div');
+      div.className = 'message user';
+      div.textContent = texto;
+      messagesContainer.appendChild(div);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
       fetch("https://web-production-51989.up.railway.app/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -302,6 +311,7 @@
       }).then(() => {
         cargarMensajes();
       });
+
       input.value = "";
       avisarEscribiendo("");
     }
