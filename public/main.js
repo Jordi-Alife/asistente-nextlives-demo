@@ -118,6 +118,7 @@ async function sendMessage() {
   const tempId = `typing-${Date.now()}`;
   addTypingBubble(tempId);
 
+  const start = Date.now();
   try {
     const bodyData = {
       message: text,
@@ -134,8 +135,15 @@ async function sendMessage() {
     });
 
     const data = await res.json();
-    removeMessageByTempId(tempId);
-    addMessage(data.reply, 'assistant');
+    const elapsed = Date.now() - start;
+    const minDelay = 1500;
+    const remaining = Math.max(0, minDelay - elapsed);
+
+    setTimeout(() => {
+      removeMessageByTempId(tempId);
+      addMessage(data.reply, 'assistant');
+    }, remaining);
+
   } catch (err) {
     removeMessageByTempId(tempId);
     addMessage("Error al conectar con el servidor.", "assistant");
