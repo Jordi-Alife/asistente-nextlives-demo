@@ -65,6 +65,16 @@
   
   <script src="main.js"></script>
   <script>
+    // 🚩 BLOQUE AÑADIDO AL PRINCIPIO
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.eventoId && event.data.userId) {
+        console.log('Recibido eventoId y userId via postMessage:', event.data);
+        localStorage.setItem('eventoId', event.data.eventoId);
+        localStorage.setItem('userId', event.data.userId);
+        cargarMensajes();
+      }
+    });
+
     let lastMessageIds = new Set();
 
     function cerrarChat() {
