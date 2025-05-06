@@ -1,84 +1,126 @@
-app.post("/api/chat", async (req, res) => {
-  const { message, system, userId, userAgent, pais, historial } = req.body;
-  const finalUserId = userId || "anon";
-  const idioma = await detectarIdiomaGPT(message);
+import express from "express";
+const app = express();
+import cors from "cors";
+import OpenAI from "openai";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import { v4 as uuidv4 } from "uuid";
+import admin from "firebase-admin";
+import serviceAccount from "./serviceAccountKey.json" assert { type: "json" };
+import sharp from "sharp";
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+const db = admin.firestore();
+
+const PORT = process.env.PORT || 3000;
+const HISTORIAL_PATH = "./historial.json";
+
+let conversaciones = [];
+let intervenidas = {};
+let vistasPorAgente = {};
+let escribiendoUsuarios = {};
+
+if (fs.existsSync(HISTORIAL_PATH)) {
+  const data = JSON.parse(fs.readFileSync(HISTORIAL_PATH, "utf8"));
+  conversaciones = data.conversaciones || [];
+  intervenidas = data.intervenidas || {};
+  vistasPorAgente = data.vistasPorAgente || {};
+}
+
+function guardarConversaciones() {
+  fs.writeFileSync(
+    HISTORIAL_PATH,
+    JSON.stringify({ conversaciones, intervenidas, vistasPorAgente }, null, 2)
+  );
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = "./uploads";
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+  },
+});
+const upload = multer({ storage });
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static("public"));
+app.use("/uploads", express.static("uploads"));
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+async function traducir(texto, target = "es") {
+  const res = await openai.chat.completions.create({
+    model: "gpt-4",
+    messages: [
+      { role: "system", content: `Traduce el siguiente texto al idioma "${target}" sin explicar nada, solo la traducción.` },
+      { role: "user", content: texto },
+    ],
+  });
+  return res.choices[0].message.content.trim();
+}
+
+async function detectarIdiomaGPT(texto) {
+  const res = await openai.chat.completions.create({
+    model: "gpt-4",
+    messages: [
+      { role: "system", content: `Detecta el idioma exacto del siguiente texto. Devuelve solo el código ISO 639-1 de dos letras, sin explicación ni texto adicional.` },
+      { role: "user", content: texto },
+    ],
+  });
+  return res.choices[0].message.content.trim().toLowerCase();
+}
+
+function shouldEscalateToHuman(message) {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("hablar con una persona") ||
+    lower.includes("quiero hablar con un humano") ||
+    lower.includes("necesito ayuda humana") ||
+    lower.includes("pasame con un humano") ||
+    lower.includes("quiero hablar con alguien") ||
+    lower.includes("agente humano")
+  );
+}
+
+app.post("/api/upload", upload.single("file"), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
+
+  const imagePath = req.file.path;
+  const optimizedPath = `uploads/optimized-${req.file.filename}`;
+  const userId = req.body.userId || "desconocido";
 
   try {
-    await db.collection("usuarios_chat").doc(finalUserId).set(
-      {
-        nombre: "Invitado",
-        idioma: idioma,
-        ultimaConexion: new Date().toISOString(),
-        navegador: userAgent || "",
-        pais: pais || "",
-        historial: historial || [],
-      },
-      { merge: true }
-    );
+    await sharp(imagePath)
+      .resize({ width: 800 })
+      .jpeg({ quality: 80 })
+      .toFile(optimizedPath);
 
-    await db.collection("conversaciones").doc(finalUserId).set(
-      {
-        idUsuario: finalUserId,
-        fechaInicio: new Date().toISOString(),
-        estado: "abierta",
-        idioma: idioma,
-        navegador: userAgent || "",
-        pais: pais || "",
-        historial: historial || [],
-      },
-      { merge: true }
-    );
-
-    const traduccionUsuario = await traducir(message, "es");
+    const imageUrl = `${req.protocol}://${req.get("host")}/${optimizedPath}`;
 
     await db.collection("mensajes").add({
-      idConversacion: finalUserId,
+      idConversacion: userId,
       rol: "usuario",
-      mensaje: traduccionUsuario,
-      original: message,
-      idiomaDetectado: idioma,
-      tipo: "texto",
+      mensaje: imageUrl,
+      tipo: "imagen",
       timestamp: new Date().toISOString(),
     });
 
-    if (shouldEscalateToHuman(message)) {
-      return res.json({
-        reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia.",
-      });
-    }
-
-    if (intervenidas[finalUserId]) return res.json({ reply: null });
-
-    // 🚨 CAMBIO AQUI: cargamos el archivo base de conocimiento y lo usamos en el system prompt
-    const baseConocimiento = fs.readFileSync('./base_conocimiento_actualizado.txt', 'utf8');
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        { role: "system", content: `Responde solo basado en la siguiente información y no inventes nada fuera de esto:\\n\\n${baseConocimiento}` },
-        { role: "user", content: traduccionUsuario },
-      ],
-    });
-
-    const reply = response.choices[0].message.content;
-    const traduccionRespuesta = await traducir(reply, "es");
-
-    await db.collection("mensajes").add({
-      idConversacion: finalUserId,
-      rol: "asistente",
-      mensaje: traduccionRespuesta,
-      original: reply,
-      idiomaDetectado: idioma,
-      tipo: "texto",
-      timestamp: new Date().toISOString(),
-    });
-
-    res.json({ reply });
+    res.json({ imageUrl });
   } catch (error) {
-    console.error("❌ Error general en /api/chat:", error);
-    res.status(500).json({ reply: "Lo siento, ocurrió un error." });
+    console.error("❌ Error procesando imagen:", error);
+    res.status(500).json({ error: "Error procesando la imagen" });
   }
 });
+
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial } = req.body;
   const finalUserId = userId || "anon";
@@ -130,13 +172,12 @@ app.post("/api/chat", async (req, res) => {
 
     if (intervenidas[finalUserId]) return res.json({ reply: null });
 
-    // 🚨 CAMBIO AQUI: cargamos el archivo base de conocimiento y lo usamos en el system prompt
     const baseConocimiento = fs.readFileSync('./base_conocimiento_actualizado.txt', 'utf8');
 
     const response = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
-        { role: "system", content: `Responde solo basado en la siguiente información y no inventes nada fuera de esto:\\n\\n${baseConocimiento}` },
+        { role: "system", content: `Responde solo basado en la siguiente información y no inventes nada fuera de esto:\n\n${baseConocimiento}` },
         { role: "user", content: traduccionUsuario },
       ],
     });
