@@ -208,7 +208,7 @@ app.post("/api/chat", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
-    res.json({ reply });
+    res.json({ reply: traduccionRespuesta });
   } catch (error) {
     console.error("❌ Error general en /api/chat:", error);
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
