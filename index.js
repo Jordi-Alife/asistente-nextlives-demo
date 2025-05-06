@@ -9,20 +9,6 @@ import admin from "firebase-admin";
 import serviceAccount from "./serviceAccountKey.json" assert { type: "json" };
 import sharp from "sharp";
 
-// NUEVO: leemos base de conocimiento al iniciar
-const baseConocimiento = fs.readFileSync('./base_conocimiento_actualizado.txt', 'utf8');
-const systemPrompt = `
-Eres el Asistente del Canal Digital de la funeraria. Solo puedes responder en base a la siguiente base de conocimiento. Si la pregunta del usuario no está cubierta aquí, debes responder: “Lo siento, no tengo esa información, contacta directamente con la funeraria para más ayuda.”
-
-BASE DE CONOCIMIENTO:
-${baseConocimiento}
-
-INSTRUCCIONES:
-- Responde solo con la información proporcionada.
-- Sé claro y breve.
-- Si no sabes la respuesta, usa la frase de respuesta por defecto.
-`;
-
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
@@ -82,6 +68,7 @@ async function traducir(texto, target = "es") {
   return res.choices[0].message.content.trim();
 }
 
+// NUEVA FUNCIÓN GPT para detección de idioma
 async function detectarIdiomaGPT(texto) {
   const res = await openai.chat.completions.create({
     model: "gpt-4",
@@ -104,7 +91,6 @@ function shouldEscalateToHuman(message) {
     lower.includes("agente humano")
   );
 }
-
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
@@ -135,11 +121,10 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-// MODIFICADO: solo este endpoint
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial } = req.body;
   const finalUserId = userId || "anon";
-  const idioma = await detectarIdiomaGPT(message);
+  const idioma = await detectarIdiomaGPT(message);  // << cambio aquí
 
   try {
     await db.collection("usuarios_chat").doc(finalUserId).set(
@@ -190,7 +175,7 @@ app.post("/api/chat", async (req, res) => {
     const response = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
-        { role: "system", content: systemPrompt }, // << usa base de conocimiento
+        { role: "system", content: system || `Eres un asistente de soporte funerario. Responde en el mismo idioma que el usuario.` },
         { role: "user", content: message },
       ],
     });
@@ -208,7 +193,7 @@ app.post("/api/chat", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
-    res.json({ reply: traduccionRespuesta });
+    res.json({ reply });
   } catch (error) {
     console.error("❌ Error general en /api/chat:", error);
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
@@ -231,22 +216,22 @@ app.post("/api/send-to-user", async (req, res) => {
     let idiomaDestino = "es";
     if (!mensajesSnapshot.empty) {
       const ultimoMensaje = mensajesSnapshot.docs[0].data();
-      idiomaDestino = ultimoMensaje.idiomaDetectado || await detectarIdiomaGPT(ultimoMensaje.original || ultimoMensaje.mensaje) || "es";
+      idiomaDestino = ultimoMensaje.idiomaDetectado || await detectarIdiomaGPT(ultimoMensaje.original || ultimoMensaje.mensaje) || "es";  // << cambio aquí
     }
 
     const traduccion = await traducir(message, idiomaDestino);
 
     await db.collection("mensajes").add({
-      idConversacion: userId,
-      rol: "asistente",
-      mensaje: message,
-      original: traduccion,
-      idiomaDetectado: idiomaDestino,
-      tipo: "texto",
-      timestamp: new Date().toISOString(),
-      manual: true,
-      agenteUid: agente.uid || null,
-    });
+  idConversacion: userId,
+  rol: "asistente",
+  mensaje: message,         // guardamos en 'mensaje' lo que escribe el agente
+  original: traduccion,     // guardamos en 'original' la traducción para el usuario
+  idiomaDetectado: idiomaDestino,
+  tipo: "texto",
+  timestamp: new Date().toISOString(),
+  manual: true,
+  agenteUid: agente.uid || null,
+});
 
     intervenidas[userId] = true;
 
@@ -268,7 +253,6 @@ app.post("/api/send-to-user", async (req, res) => {
     res.status(500).json({ error: "Error enviando mensaje a usuario" });
   }
 });
-
 app.post("/api/send", async (req, res) => {
   const { userId, texto } = req.body;
   if (!userId || !texto) {
@@ -276,7 +260,7 @@ app.post("/api/send", async (req, res) => {
   }
 
   try {
-    const idioma = await detectarIdiomaGPT(texto);
+    const idioma = await detectarIdiomaGPT(texto);  // << cambiamos a GPT aquí también
 
     await db.collection("mensajes").add({
       idConversacion: userId,
@@ -322,9 +306,7 @@ app.post("/api/escribiendo", (req, res) => {
 app.get("/api/escribiendo/:userId", (req, res) => {
   const texto = escribiendoUsuarios[req.params.userId] || "";
   res.json({ texto });
-});
-
-app.get("/api/vistas", async (req, res) => {
+});app.get("/api/vistas", async (req, res) => {
   try {
     const snapshot = await db.collection("vistas_globales").get();
     const result = {};
@@ -456,7 +438,6 @@ app.get("/api/mensajes-agente/:uid", async (req, res) => {
     res.status(500).json({ error: "Error obteniendo mensajes de agente" });
   }
 });
-
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
 });
