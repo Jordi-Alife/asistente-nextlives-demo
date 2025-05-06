@@ -136,7 +136,7 @@ async function sendMessage() {
 
     const data = await res.json();
     const elapsed = Date.now() - start;
-    const minDelay = 1500;
+    const minDelay = 1500; // mínimo 1.5 segundos para que la animación sea visible
     const remaining = Math.max(0, minDelay - elapsed);
 
     setTimeout(() => {
