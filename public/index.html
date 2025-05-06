@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Soporte Canal Digital</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
     html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; -webkit-overflow-scrolling: touch; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     #chat-toggle { position: fixed; bottom: 20px; right: 20px; z-index: 999; background-color: #22c55e; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; display: none; justify-content: center; align-items: center; }
@@ -37,7 +35,7 @@
   </style>
 </head>
 <body>
-    <button id="chat-toggle" onclick="abrirChat()">💬</button>
+  <button id="chat-toggle" onclick="abrirChat()">💬</button>
   <div id="chat-widget">
     <div class="chat-header">
       <div class="chat-header-info">
@@ -64,22 +62,13 @@
     </div>
   </div>
   <button id="scrollToBottomBtn" onclick="scrollToBottom()" title="Ir al final"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button>
-
+  
+  <script src="main.js"></script>
   <script>
-    // 🔥 Configuración de Firebase
-    const firebaseConfig = {
-      apiKey: "TU_API_KEY",
-      authDomain: "TU_PROYECTO.firebaseapp.com",
-      databaseURL: "https://TU_PROYECTO.firebaseio.com",
-      projectId: "TU_PROYECTO",
-      storageBucket: "TU_PROYECTO.appspot.com",
-      messagingSenderId: "TU_ID",
-      appId: "TU_APP_ID"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    let lastMessageIds = new Set();
 
     function cerrarChat() {
+      localStorage.removeItem('chatMessages');
       document.getElementById("chat-widget").style.display = "none";
       document.getElementById("chat-toggle").style.display = "flex";
       document.getElementById("scrollToBottomBtn").style.display = "none";
@@ -106,26 +95,31 @@
       });
     }
 
-    const messagesContainer = document.getElementById('messages');
-    const lastMessageIds = new Set();
-
-    function listenToMessages() {
+    function cargarMensajes() {
       const userId = localStorage.getItem('userId');
       if (!userId) return;
+      fetch(`https://web-production-51989.up.railway.app/api/conversaciones/${userId}`)
+        .then(res => res.json())
+        .then(data => {
+          const messagesContainer = document.getElementById('messages');
+          let nuevos = 0;
 
-      const ref = db.ref(`mensajes/${userId}`);
-      ref.on('child_added', snapshot => {
-        const msg = snapshot.val();
-        const uniqueId = `${msg.from}-${msg.timestamp}-${msg.message}`;
-        if (!lastMessageIds.has(uniqueId)) {
-          const div = document.createElement('div');
-          div.className = `message ${msg.from === 'usuario' ? 'user' : 'assistant'}`;
-          div.textContent = msg.original ? msg.original : msg.message;
-          messagesContainer.appendChild(div);
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
-          lastMessageIds.add(uniqueId);
-        }
-      });
+          data.forEach(msg => {
+            const uniqueId = `${msg.from}-${msg.timestamp}-${msg.message}`;
+            if (!lastMessageIds.has(uniqueId)) {
+              const div = document.createElement('div');
+              div.className = `message ${msg.from === 'usuario' ? 'user' : 'assistant'}`;
+              div.textContent = msg.original ? msg.original : msg.message;
+              messagesContainer.appendChild(div);
+              lastMessageIds.add(uniqueId);
+              nuevos++;
+            }
+          });
+
+          if (nuevos > 0) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          }
+        });
     }
 
     function sendMessage() {
@@ -134,11 +128,15 @@
       const userId = localStorage.getItem('userId');
       if (!texto || !userId) return;
 
+      const messagesContainer = document.getElementById('messages');
       const div = document.createElement('div');
       div.className = 'message user';
       div.textContent = texto;
       messagesContainer.appendChild(div);
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+      const uniqueId = `usuario-${Date.now()}-${texto}`;
+      lastMessageIds.add(uniqueId);
 
       fetch("https://web-production-51989.up.railway.app/api/chat", {
         method: "POST",
@@ -157,7 +155,8 @@
       avisarEscribiendo("");
     }
 
-    window.addEventListener('load', listenToMessages);
+    window.addEventListener('load', cargarMensajes);
+    setInterval(cargarMensajes, 2000);
   </script>
 </body>
 </html>
