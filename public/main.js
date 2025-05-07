@@ -83,18 +83,19 @@ function saveChat() {
 
 function restoreChat() {
   const saved = localStorage.getItem('chatMessages');
-  if (saved) {
-    messagesDiv.innerHTML = saved;
-    const allMessages = messagesDiv.querySelectorAll('.message');
-    allMessages.forEach(msg => {
-      const isEmpty = !msg.textContent.trim() && msg.children.length === 0;
-      if (isEmpty) msg.remove();
-    });
-  } else {
+  if (!saved) {
     setTimeout(() => {
       addMessage("Hola, ¿cómo puedo ayudarte?", "assistant");
     }, 500);
+    return;
   }
+
+  messagesDiv.innerHTML = saved;
+  const allMessages = messagesDiv.querySelectorAll('.message');
+  allMessages.forEach(msg => {
+    const isEmpty = !msg.textContent.trim() && msg.children.length === 0;
+    if (isEmpty) msg.remove();
+  });
   scrollToBottom(false);
 }
 
@@ -175,11 +176,12 @@ async function notificarEvento(tipo) {
 }
 
 function cerrarChatConfirmado() {
+  localStorage.removeItem('chatMessages');
+  localStorage.setItem('chatEstado', 'cerrado');
+  messagesDiv.innerHTML = '';
   document.getElementById('chat-widget').style.display = 'none';
   document.getElementById('chat-toggle').style.display = 'flex';
   document.getElementById('scrollToBottomBtn').style.display = 'none';
-  localStorage.removeItem('chatMessages');
-  messagesDiv.innerHTML = '';
   notificarEvento("chat_cerrado");
 }
 
@@ -187,9 +189,11 @@ function abrirChat() {
   localStorage.setItem('chatEstado', 'abierto');
   document.getElementById('chat-widget').style.display = 'flex';
   document.getElementById('chat-toggle').style.display = 'none';
-  
-  // Limpiar visualmente al abrir para garantizar pantalla limpia
-  messagesDiv.innerHTML = '';
+
+  if (!localStorage.getItem('chatMessages')) {
+    messagesDiv.innerHTML = '';
+  }
+
   restoreChat();
 }
 
