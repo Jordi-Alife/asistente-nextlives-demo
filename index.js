@@ -56,12 +56,14 @@ app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 async function traducir(texto, target = "es") {
   const res = await openai.chat.completions.create({
     model: "gpt-4",
     messages: [
-      { role: "system", content: `Traduce el siguiente texto al idioma "${target}" sin explicar nada, solo la traducción.` },
+      {
+        role: "system",
+        content: `Traduce el siguiente texto al idioma "${target}" sin explicar nada, solo la traducción.`,
+      },
       { role: "user", content: texto },
     ],
   });
@@ -72,7 +74,10 @@ async function detectarIdiomaGPT(texto) {
   const res = await openai.chat.completions.create({
     model: "gpt-4",
     messages: [
-      { role: "system", content: `Detecta el idioma exacto del siguiente texto. Devuelve solo el código ISO 639-1 de dos letras, sin explicación ni texto adicional.` },
+      {
+        role: "system",
+        content: `Detecta el idioma exacto del siguiente texto. Devuelve solo el código ISO 639-1 de dos letras, sin explicación ni texto adicional.`,
+      },
       { role: "user", content: texto },
     ],
   });
@@ -90,6 +95,7 @@ function shouldEscalateToHuman(message) {
     lower.includes("agente humano")
   );
 }
+
 // NUEVO ENDPOINT PARA TRADUCIR TEXTO AL ÚLTIMO IDIOMA DETECTADO
 app.post("/api/traducir-modal", async (req, res) => {
   const { userId, texto } = req.body;
@@ -112,7 +118,6 @@ app.post("/api/chat", async (req, res) => {
   const idioma = await detectarIdiomaGPT(message);
 
   try {
-    // Guardamos o actualizamos usuario
     await db.collection("usuarios_chat").doc(finalUserId).set(
       {
         nombre: "Invitado",
@@ -125,7 +130,6 @@ app.post("/api/chat", async (req, res) => {
       { merge: true }
     );
 
-    // Guardamos o actualizamos conversación, ahora incluyendo datosContexto
     await db.collection("conversaciones").doc(finalUserId).set(
       {
         idUsuario: finalUserId,
@@ -135,7 +139,7 @@ app.post("/api/chat", async (req, res) => {
         navegador: userAgent || "",
         pais: pais || "",
         historial: historial || [],
-        datosContexto: datosContexto || null,  // << AÑADIMOS AQUÍ
+        datosContexto: datosContexto || null,
       },
       { merge: true }
     );
@@ -160,17 +164,15 @@ app.post("/api/chat", async (req, res) => {
 
     if (intervenidas[finalUserId]) return res.json({ reply: null });
 
-    // Leemos base conocimiento si existe
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
       : "";
 
-    // Creamos prompt combinando base + datosContexto si existen
     const promptSystem = [
-  baseConocimiento,
-  datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
-  `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}". Si el usuario escribió en catalán, responde en catalán; si lo hizo en inglés, responde en inglés; si en español, responde en español. No traduzcas ni expliques nada adicional.`,
-].join("\n");
+      baseConocimiento,
+      datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
+      `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}". Si el usuario escribió en catalán, responde en catalán; si lo hizo en inglés, responde en inglés; si en español, responde en español. No traduzcas ni expliques nada adicional.`,
+    ].join("\n");
 
     const response = await openai.chat.completions.create({
       model: "gpt-4",
@@ -283,7 +285,6 @@ app.post("/api/send-to-user", async (req, res) => {
     res.status(500).json({ error: "Error enviando mensaje a usuario" });
   }
 });
-
 app.post("/api/send", async (req, res) => {
   const { userId, texto } = req.body;
   if (!userId || !texto) {
