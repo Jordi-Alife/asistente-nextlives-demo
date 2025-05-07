@@ -97,21 +97,30 @@
 
     async function mostrarModal() {
       const userId = localStorage.getItem('userId');
-      let textoModal = "¿Realmente quieres cerrar el chat?<br>Esto borrará toda la conversación.";
+      const textos = [
+        "¿Realmente quieres cerrar el chat? Esto borrará toda la conversación.",
+        "Cancelar",
+        "Cerrar el chat"
+      ];
+      let traducciones = textos;
+
       if (userId) {
         try {
           const res = await fetch(`/api/traducir-modal`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId, texto: "¿Realmente quieres cerrar el chat? Esto borrará toda la conversación." })
+            body: JSON.stringify({ userId, textos })
           });
           const data = await res.json();
-          textoModal = data.traduccion || textoModal;
+          traducciones = data.traducciones || textos;
         } catch (error) {
           console.error("Error traduciendo modal:", error);
         }
       }
-      document.getElementById('modalText').innerHTML = textoModal;
+
+      document.getElementById('modalText').innerHTML = traducciones[0];
+      document.getElementById('btnCancelar').innerText = traducciones[1];
+      document.getElementById('btnConfirmar').innerText = traducciones[2];
       document.getElementById('modalConfirm').style.display = 'flex';
     }
 
