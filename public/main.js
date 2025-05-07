@@ -179,6 +179,7 @@ function cerrarChatConfirmado() {
   document.getElementById('chat-widget').style.display = 'none';
   document.getElementById('chat-toggle').style.display = 'flex';
   document.getElementById('scrollToBottomBtn').style.display = 'none';
+  messagesDiv.innerHTML = ''; // <<--- LIMPIAMOS LA VISTA DE MENSAJES AL USUARIO
   notificarEvento("chat_cerrado");
 }
 
