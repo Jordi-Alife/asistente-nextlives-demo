@@ -1,4 +1,3 @@
-// main.js completo actualizado con limpieza al reabrir
 const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('messageInput');
 const fileInput = document.getElementById('fileInput');
@@ -83,15 +82,6 @@ function saveChat() {
 }
 
 function restoreChat() {
-  const estado = localStorage.getItem('chatEstado');
-  if (estado === 'cerrado') {
-    // Si el chat fue cerrado, no restauramos nada viejo
-    setTimeout(() => {
-      addMessage("Hola, ¿cómo puedo ayudarte?", "assistant");
-    }, 500);
-    return;
-  }
-
   const saved = localStorage.getItem('chatMessages');
   if (saved) {
     messagesDiv.innerHTML = saved;
@@ -238,7 +228,13 @@ async function checkSlackMessages() {
 }
 
 setInterval(checkSlackMessages, 5000);
-restoreChat();
+
+if (localStorage.getItem('chatEstado') !== 'cerrado') {
+  restoreChat();
+} else {
+  messagesDiv.innerHTML = '';
+}
+
 getUserId();
 
 const scrollBtn = document.getElementById('scrollToBottomBtn');
