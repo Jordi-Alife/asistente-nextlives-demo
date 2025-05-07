@@ -160,15 +160,26 @@ function avisarEscribiendo(texto) {
   });
 }
 
+// NUEVA FUNCIÓN: Notificar evento general
+async function notificarEvento(tipo) {
+  const userId = getUserId();
+  try {
+    await fetch("/api/evento", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, tipo }),
+    });
+    console.log(`✅ Evento "${tipo}" notificado para ${userId}`);
+  } catch (err) {
+    console.error(`❌ Error notificando evento "${tipo}"`, err);
+  }
+}
+
 function cerrarChatConfirmado() {
   document.getElementById('chat-widget').style.display = 'none';
   document.getElementById('chat-toggle').style.display = 'flex';
   document.getElementById('scrollToBottomBtn').style.display = 'none';
-  fetch("/api/chat-cerrado", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId: getUserId() })
-  });
+  notificarEvento("chat_cerrado");
 }
 
 fileInput.addEventListener('change', async (event) => {
