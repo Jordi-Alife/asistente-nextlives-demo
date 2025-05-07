@@ -1,5 +1,3 @@
-// main.js COMPLETO con recarga al cerrar el chat
-
 const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('messageInput');
 const fileInput = document.getElementById('fileInput');
@@ -162,6 +160,7 @@ function avisarEscribiendo(texto) {
   });
 }
 
+// NUEVA FUNCIÓN: Notificar evento general
 async function notificarEvento(tipo) {
   const userId = getUserId();
   try {
@@ -177,17 +176,16 @@ async function notificarEvento(tipo) {
 }
 
 function cerrarChatConfirmado() {
-  localStorage.removeItem('chatMessages');
-  localStorage.setItem('chatEstado', 'cerrado');
-  messagesDiv.innerHTML = '';
   document.getElementById('chat-widget').style.display = 'none';
   document.getElementById('chat-toggle').style.display = 'flex';
   document.getElementById('scrollToBottomBtn').style.display = 'none';
+  localStorage.removeItem('chatMessages');
+  messagesDiv.innerHTML = '';
   notificarEvento("chat_cerrado");
-  ocultarModal();
+}
 
-  // 🚀 NUEVO: recargar para limpiar memoria del navegador
-  window.location.reload();
+function abrirChat() {
+  window.location.reload(); // <<--- FUERZA RECARGA AL ABRIR
 }
 
 fileInput.addEventListener('change', async (event) => {
