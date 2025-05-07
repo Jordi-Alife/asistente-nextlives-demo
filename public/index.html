@@ -32,6 +32,14 @@
     #userIdDisplay { font-size: 11px; text-align: center; opacity: 0.5; padding-bottom: 5px; }
     #scrollToBottomBtn { position: fixed; bottom: 80px; right: 20px; z-index: 999; background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); border: none; border-radius: 50%; width: 48px; height: 48px; display: none; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25); cursor: pointer; transition: opacity 0.3s ease, transform 0.2s ease; }
     #scrollToBottomBtn:hover { background-color: rgba(0, 0, 0, 0.8); transform: scale(1.05); }
+    
+    /* Estilos del modal */
+    #modalConfirm { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
+    #modalContent { background: #fff; padding: 20px; border-radius: 12px; text-align: center; max-width: 300px; }
+    #modalContent p { margin-bottom: 20px; color: #000; font-size: 16px; }
+    #modalContent button { margin: 5px; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    #btnCancelar { background-color: #ddd; color: #000; }
+    #btnConfirmar { background-color: #000; color: #fff; }
   </style>
 </head>
 <body>
@@ -45,7 +53,7 @@
         <div class="chat-header-text"><strong>Soporte Canal Digital</strong><span>Funeraria Esperanza</span></div>
       </div>
       <div class="chat-header-actions">
-        <button onclick="minimizarChat()">–</button><button onclick="cerrarChat()">×</button>
+        <button onclick="minimizarChat()">–</button><button onclick="mostrarModal()">×</button>
       </div>
     </div>
     <div class="chat-messages" id="messages"></div>
@@ -61,6 +69,15 @@
       </button>
     </div>
   </div>
+
+  <div id="modalConfirm">
+    <div id="modalContent">
+      <p>¿Realmente quieres cerrar el chat?<br>Esto borrará toda la conversación.</p>
+      <button id="btnCancelar" onclick="ocultarModal()">Cancelar</button>
+      <button id="btnConfirmar" onclick="cerrarChatConfirmado()">Cerrar el chat</button>
+    </div>
+  </div>
+
   <button id="scrollToBottomBtn" onclick="scrollToBottom()" title="Ir al final"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button>
 
   <script src="main.js"></script>
@@ -77,25 +94,34 @@
       }
     });
 
-    function cerrarChat() {
+    function mostrarModal() {
+      document.getElementById('modalConfirm').style.display = 'flex';
+    }
+
+    function ocultarModal() {
+      document.getElementById('modalConfirm').style.display = 'none';
+    }
+
+    function cerrarChatConfirmado() {
       localStorage.removeItem('chatMessages');
       localStorage.setItem('chatEstado', 'cerrado');
-      document.getElementById("chat-widget").style.display = "none";
-      document.getElementById("chat-toggle").style.display = "flex";
-      document.getElementById("scrollToBottomBtn").style.display = "none";
+      document.getElementById('chat-widget').style.display = 'none';
+      document.getElementById('chat-toggle').style.display = 'flex';
+      document.getElementById('scrollToBottomBtn').style.display = 'none';
+      ocultarModal();
     }
 
     function minimizarChat() {
       localStorage.setItem('chatEstado', 'cerrado');
-      document.getElementById("chat-widget").style.display = "none";
-      document.getElementById("chat-toggle").style.display = "flex";
-      document.getElementById("scrollToBottomBtn").style.display = "none";
+      document.getElementById('chat-widget').style.display = 'none';
+      document.getElementById('chat-toggle').style.display = 'flex';
+      document.getElementById('scrollToBottomBtn').style.display = 'none';
     }
 
     function abrirChat() {
       localStorage.setItem('chatEstado', 'abierto');
-      document.getElementById("chat-widget").style.display = "flex";
-      document.getElementById("chat-toggle").style.display = "none";
+      document.getElementById('chat-widget').style.display = 'flex';
+      document.getElementById('chat-toggle').style.display = 'none';
     }
 
     function avisarEscribiendo(texto) {
@@ -171,7 +197,7 @@
       if (localStorage.getItem('chatEstado') === 'abierto') {
         abrirChat();
       } else {
-        cerrarChat();
+        cerrarChatConfirmado();
       }
       cargarMensajes();
     });
