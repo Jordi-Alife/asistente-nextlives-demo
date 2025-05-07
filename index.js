@@ -90,6 +90,22 @@ function shouldEscalateToHuman(message) {
     lower.includes("agente humano")
   );
 }
+// NUEVO ENDPOINT PARA TRADUCIR TEXTO AL ÚLTIMO IDIOMA DETECTADO
+app.post("/api/traducir-modal", async (req, res) => {
+  const { userId, texto } = req.body;
+  if (!userId || !texto) return res.status(400).json({ error: "Faltan datos" });
+
+  try {
+    const userDoc = await db.collection("usuarios_chat").doc(userId).get();
+    const userData = userDoc.exists ? userDoc.data() : null;
+    const idioma = userData?.idioma || "es";
+    const traduccion = await traducir(texto, idioma);
+    res.json({ traduccion });
+  } catch (error) {
+    console.error("❌ Error en /api/traducir-modal:", error);
+    res.status(500).json({ error: "Error traduciendo modal" });
+  }
+});
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial, datosContexto } = req.body;
   const finalUserId = userId || "anon";
