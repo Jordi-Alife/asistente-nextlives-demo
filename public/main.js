@@ -231,10 +231,7 @@ setInterval(checkSlackMessages, 5000);
 
 if (localStorage.getItem('chatEstado') !== 'cerrado') {
   restoreChat();
-} else {
-  messagesDiv.innerHTML = '';
 }
-
 getUserId();
 
 const scrollBtn = document.getElementById('scrollToBottomBtn');
