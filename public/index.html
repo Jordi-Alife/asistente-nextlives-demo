@@ -62,109 +62,116 @@
     </div>
   </div>
   <button id="scrollToBottomBtn" onclick="scrollToBottom()" title="Ir al final"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button>
-    <script src="main.js"></script>
-  <script>
-    window.addEventListener('message', (event) => {
-      if (event.data) {
-        for (const key in event.data) {
-          if (event.data.hasOwnProperty(key)) {
-            const valor = event.data[key];
-            localStorage.setItem(key, typeof valor === 'object' ? JSON.stringify(valor) : valor);
-          }
+  <script src="main.js"></script>
+<script>
+  window.addEventListener('message', (event) => {
+    if (event.data) {
+      for (const key in event.data) {
+        if (event.data.hasOwnProperty(key)) {
+          const valor = event.data[key];
+          localStorage.setItem(key, typeof valor === 'object' ? JSON.stringify(valor) : valor);
         }
-        console.log('✅ Datos recibidos via postMessage:', event.data);
+      }
+      console.log('✅ Datos recibidos via postMessage:', event.data);
+    }
+  });
+
+  // NUEVO BLOQUE → Ocultar burbuja en integraciones específicas
+  if (document.referrer.includes('inmemoriam.com')) {
+    document.getElementById('chat-toggle').style.display = 'none';
+  } else {
+    document.getElementById('chat-toggle').style.display = 'flex';
+  }
+
+  function cerrarChat() {
+    localStorage.removeItem('chatMessages');
+    document.getElementById("chat-widget").style.display = "none";
+    document.getElementById("chat-toggle").style.display = "flex";
+    document.getElementById("scrollToBottomBtn").style.display = "none";
+  }
+
+  function minimizarChat() {
+    document.getElementById("chat-widget").style.display = "none";
+    document.getElementById("chat-toggle").style.display = "flex";
+    document.getElementById("scrollToBottomBtn").style.display = "none";
+  }
+
+  function abrirChat() {
+    document.getElementById("chat-widget").style.display = "flex";
+    document.getElementById("chat-toggle").style.display = "none";
+  }
+
+  function avisarEscribiendo(texto) {
+    const userId = localStorage.getItem('userId');
+    if (!userId) return;
+    fetch("https://web-production-51989.up.railway.app/api/escribiendo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, texto })
+    });
+  }
+
+  function cargarMensajes() {
+    const userId = localStorage.getItem('userId');
+    if (!userId) return;
+    fetch(`https://web-production-51989.up.railway.app/api/conversaciones/${userId}`)
+      .then(res => res.json())
+      .then(data => {
+        const messagesContainer = document.getElementById('messages');
+        const isAtBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop <= messagesContainer.clientHeight + 50;
+        messagesContainer.innerHTML = '';
+        data.forEach(msg => {
+          const div = document.createElement('div');
+          div.className = `message ${msg.from === 'usuario' ? 'user' : 'assistant'}`;
+          div.textContent = msg.original ? msg.original : msg.message;
+          messagesContainer.appendChild(div);
+        });
+        if (isAtBottom) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+      });
+  }
+
+  function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const texto = input.value.trim();
+    const userId = localStorage.getItem('userId');
+    if (!texto || !userId) return;
+
+    const datosContexto = {};
+    Object.keys(localStorage).forEach((key) => {
+      if (key !== 'chatMessages' && key !== 'userId') {
+        const valor = localStorage.getItem(key);
+        try {
+          datosContexto[key] = JSON.parse(valor);
+        } catch (e) {
+          datosContexto[key] = valor;
+        }
       }
     });
 
-    function cerrarChat() {
-      localStorage.removeItem('chatMessages');
-      document.getElementById("chat-widget").style.display = "none";
-      document.getElementById("chat-toggle").style.display = "flex";
-      document.getElementById("scrollToBottomBtn").style.display = "none";
-    }
+    fetch("https://web-production-51989.up.railway.app/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        message: texto,
+        system: "",
+        userAgent: navigator.userAgent,
+        pais: "desconocido",
+        historial: [],
+        datosContexto
+      })
+    }).then(() => {
+      cargarMensajes();
+    });
 
-    function minimizarChat() {
-      document.getElementById("chat-widget").style.display = "none";
-      document.getElementById("chat-toggle").style.display = "flex";
-      document.getElementById("scrollToBottomBtn").style.display = "none";
-    }
+    input.value = "";
+    avisarEscribiendo("");
+  }
 
-    function abrirChat() {
-      document.getElementById("chat-widget").style.display = "flex";
-      document.getElementById("chat-toggle").style.display = "none";
-    }
-
-    function avisarEscribiendo(texto) {
-      const userId = localStorage.getItem('userId');
-      if (!userId) return;
-      fetch("https://web-production-51989.up.railway.app/api/escribiendo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, texto })
-      });
-    }
-
-    function cargarMensajes() {
-      const userId = localStorage.getItem('userId');
-      if (!userId) return;
-      fetch(`https://web-production-51989.up.railway.app/api/conversaciones/${userId}`)
-        .then(res => res.json())
-        .then(data => {
-          const messagesContainer = document.getElementById('messages');
-          const isAtBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop <= messagesContainer.clientHeight + 50;
-          messagesContainer.innerHTML = '';
-          data.forEach(msg => {
-            const div = document.createElement('div');
-            div.className = `message ${msg.from === 'usuario' ? 'user' : 'assistant'}`;
-            div.textContent = msg.original ? msg.original : msg.message;
-            messagesContainer.appendChild(div);
-          });
-          if (isAtBottom) {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-          }
-        });
-    }
-
-    function sendMessage() {
-      const input = document.getElementById('messageInput');
-      const texto = input.value.trim();
-      const userId = localStorage.getItem('userId');
-      if (!texto || !userId) return;
-
-      const datosContexto = {};
-      Object.keys(localStorage).forEach((key) => {
-        if (key !== 'chatMessages' && key !== 'userId') {
-          const valor = localStorage.getItem(key);
-          try {
-            datosContexto[key] = JSON.parse(valor);
-          } catch (e) {
-            datosContexto[key] = valor;
-          }
-        }
-      });
-
-      fetch("https://web-production-51989.up.railway.app/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          message: texto,
-          system: "",
-          userAgent: navigator.userAgent,
-          pais: "desconocido",
-          historial: [],
-          datosContexto
-        })
-      }).then(() => {
-        cargarMensajes();
-      });
-
-      input.value = "";
-      avisarEscribiendo("");
-    }
-
-    window.addEventListener('load', cargarMensajes);
-    setInterval(cargarMensajes, 2000);
-  </script>
+  window.addEventListener('load', cargarMensajes);
+  setInterval(cargarMensajes, 2000);
+</script>
 </body>
 </html>
