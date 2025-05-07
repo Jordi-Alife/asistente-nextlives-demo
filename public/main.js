@@ -150,6 +150,50 @@ async function sendMessage() {
   }
 }
 
+// NUEVO BLOQUE PARA OBTENER Y MOSTRAR EL MODAL CON TEXTO TRADUCIDO
+async function obtenerTraduccionModal(texto) {
+  const userId = getUserId();
+  try {
+    const res = await fetch("/api/traducir-modal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, texto })
+    });
+    const data = await res.json();
+    return data.traduccion || texto;
+  } catch (error) {
+    console.error("❌ Error obteniendo traducción del modal:", error);
+    return texto; // fallback al texto original
+  }
+}
+
+async function mostrarModalCierre() {
+  const textoBase = "¿Realmente quieres cerrar el chat? Esta acción borrará todo y si lo abres de nuevo, comenzará desde cero.";
+  const textoBoton = "Cerrar el chat";
+
+  const textoTraducido = await obtenerTraduccionModal(textoBase);
+  const botonTraducido = await obtenerTraduccionModal(textoBoton);
+
+  const modalHtml = `
+    <div id="modalConfirmCierre" style="position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+      <div style="background: white; padding: 20px; border-radius: 10px; text-align: center; max-width: 300px;">
+        <p style="margin-bottom: 20px;">${textoTraducido}</p>
+        <button id="confirmCerrarChat" style="background: red; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">${botonTraducido}</button>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML("beforeend", modalHtml);
+
+  document.getElementById("confirmCerrarChat").addEventListener("click", () => {
+    localStorage.removeItem('chatMessages');
+    localStorage.setItem('chatEstado', 'cerrado');
+    document.getElementById("chat-widget").style.display = "none";
+    document.getElementById("chat-toggle").style.display = "flex";
+    document.getElementById("scrollToBottomBtn").style.display = "none";
+    document.getElementById("modalConfirmCierre").remove();
+  });
+}
+
 fileInput.addEventListener('change', async (event) => {
   const file = event.target.files[0];
   if (!file) return;
