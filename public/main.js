@@ -113,7 +113,7 @@ async function sendMessage() {
   addMessage(text, 'user');
   input.value = '';
   sendBtn.classList.remove('active');
-  avisarEscribiendo(""); // Limpia el aviso después de enviar
+  avisarEscribiendo("");
 
   const tempId = `typing-${Date.now()}`;
   addTypingBubble(tempId);
@@ -157,6 +157,17 @@ function avisarEscribiendo(texto) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ userId, texto })
+  });
+}
+
+function cerrarChatConfirmado() {
+  document.getElementById('chat-widget').style.display = 'none';
+  document.getElementById('chat-toggle').style.display = 'flex';
+  document.getElementById('scrollToBottomBtn').style.display = 'none';
+  fetch("/api/chat-cerrado", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId: getUserId() })
   });
 }
 
