@@ -1,3 +1,5 @@
+// main.js COMPLETO con recarga al cerrar el chat
+
 const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('messageInput');
 const fileInput = document.getElementById('fileInput');
@@ -83,19 +85,18 @@ function saveChat() {
 
 function restoreChat() {
   const saved = localStorage.getItem('chatMessages');
-  if (!saved) {
+  if (saved) {
+    messagesDiv.innerHTML = saved;
+    const allMessages = messagesDiv.querySelectorAll('.message');
+    allMessages.forEach(msg => {
+      const isEmpty = !msg.textContent.trim() && msg.children.length === 0;
+      if (isEmpty) msg.remove();
+    });
+  } else {
     setTimeout(() => {
       addMessage("Hola, ¿cómo puedo ayudarte?", "assistant");
     }, 500);
-    return;
   }
-
-  messagesDiv.innerHTML = saved;
-  const allMessages = messagesDiv.querySelectorAll('.message');
-  allMessages.forEach(msg => {
-    const isEmpty = !msg.textContent.trim() && msg.children.length === 0;
-    if (isEmpty) msg.remove();
-  });
   scrollToBottom(false);
 }
 
@@ -183,18 +184,10 @@ function cerrarChatConfirmado() {
   document.getElementById('chat-toggle').style.display = 'flex';
   document.getElementById('scrollToBottomBtn').style.display = 'none';
   notificarEvento("chat_cerrado");
-}
+  ocultarModal();
 
-function abrirChat() {
-  localStorage.setItem('chatEstado', 'abierto');
-  document.getElementById('chat-widget').style.display = 'flex';
-  document.getElementById('chat-toggle').style.display = 'none';
-
-  if (!localStorage.getItem('chatMessages')) {
-    messagesDiv.innerHTML = '';
-  }
-
-  restoreChat();
+  // 🚀 NUEVO: recargar para limpiar memoria del navegador
+  window.location.reload();
 }
 
 fileInput.addEventListener('change', async (event) => {
