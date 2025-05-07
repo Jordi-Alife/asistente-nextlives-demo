@@ -471,6 +471,32 @@ app.get("/api/mensajes-agente/:uid", async (req, res) => {
   }
 });
 
+app.post("/api/evento", async (req, res) => {
+  const { userId, tipo } = req.body;
+  if (!userId || !tipo) {
+    return res.status(400).json({ error: "Faltan datos" });
+  }
+
+  try {
+    console.log(`📌 Evento recibido: ${tipo} para el usuario ${userId}`);
+
+    if (tipo === "chat_cerrado") {
+      await db.collection("mensajes").add({
+        idConversacion: userId,
+        rol: "sistema",
+        mensaje: "⚠ Usuario ha cerrado el chat.",
+        tipo: "evento",
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("❌ Error registrando evento:", error);
+    res.status(500).json({ error: "Error registrando evento" });
+  }
+});
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
 });
