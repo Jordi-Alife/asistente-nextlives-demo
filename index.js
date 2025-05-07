@@ -151,9 +151,10 @@ app.post("/api/chat", async (req, res) => {
 
     // Creamos prompt combinando base + datosContexto si existen
     const promptSystem = [
-      baseConocimiento,
-      datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
-    ].join("\n");
+  baseConocimiento,
+  datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
+  `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}". Si el usuario escribió en catalán, responde en catalán; si lo hizo en inglés, responde en inglés; si en español, responde en español. No traduzcas ni expliques nada adicional.`,
+].join("\n");
 
     const response = await openai.chat.completions.create({
       model: "gpt-4",
