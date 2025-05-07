@@ -56,6 +56,7 @@ function addTypingBubble(tempId) {
   messagesDiv.appendChild(msg);
   scrollToBottom();
 }
+
 function addImageMessage(fileURL, sender) {
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
@@ -103,6 +104,7 @@ function scrollToBottom(smooth = true) {
     behavior: smooth ? 'smooth' : 'auto'
   });
 }
+
 async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
@@ -185,12 +187,9 @@ function abrirChat() {
   localStorage.setItem('chatEstado', 'abierto');
   document.getElementById('chat-widget').style.display = 'flex';
   document.getElementById('chat-toggle').style.display = 'none';
-
-  // 👇 Limpiar visualmente si storage está vacío
-  if (!localStorage.getItem('chatMessages')) {
-    messagesDiv.innerHTML = '';
-  }
-
+  
+  // Limpiar visualmente al abrir para garantizar pantalla limpia
+  messagesDiv.innerHTML = '';
   restoreChat();
 }
 
