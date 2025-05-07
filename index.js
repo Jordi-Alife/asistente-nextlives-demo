@@ -98,15 +98,21 @@ function shouldEscalateToHuman(message) {
 
 // NUEVO ENDPOINT PARA TRADUCIR TEXTO AL ÚLTIMO IDIOMA DETECTADO
 app.post("/api/traducir-modal", async (req, res) => {
-  const { userId, texto } = req.body;
-  if (!userId || !texto) return res.status(400).json({ error: "Faltan datos" });
+  const { userId, textos } = req.body;
+  if (!userId || !Array.isArray(textos)) return res.status(400).json({ error: "Faltan datos" });
 
   try {
     const userDoc = await db.collection("usuarios_chat").doc(userId).get();
     const userData = userDoc.exists ? userDoc.data() : null;
     const idioma = userData?.idioma || "es";
-    const traduccion = await traducir(texto, idioma);
-    res.json({ traduccion });
+
+    const traducciones = [];
+    for (const texto of textos) {
+      const traducido = await traducir(texto, idioma);
+      traducciones.push(traducido);
+    }
+
+    res.json({ traducciones });
   } catch (error) {
     console.error("❌ Error en /api/traducir-modal:", error);
     res.status(500).json({ error: "Error traduciendo modal" });
