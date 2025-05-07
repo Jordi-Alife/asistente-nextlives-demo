@@ -56,7 +56,6 @@ function addTypingBubble(tempId) {
   messagesDiv.appendChild(msg);
   scrollToBottom();
 }
-
 function addImageMessage(fileURL, sender) {
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
@@ -104,7 +103,6 @@ function scrollToBottom(smooth = true) {
     behavior: smooth ? 'smooth' : 'auto'
   });
 }
-
 async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
@@ -179,9 +177,21 @@ function cerrarChatConfirmado() {
   document.getElementById('chat-toggle').style.display = 'flex';
   document.getElementById('scrollToBottomBtn').style.display = 'none';
   localStorage.removeItem('chatMessages');
-  localStorage.setItem('chatEstado', 'cerrado');
   messagesDiv.innerHTML = '';
   notificarEvento("chat_cerrado");
+}
+
+function abrirChat() {
+  localStorage.setItem('chatEstado', 'abierto');
+  document.getElementById('chat-widget').style.display = 'flex';
+  document.getElementById('chat-toggle').style.display = 'none';
+
+  // 👇 Limpiar visualmente si storage está vacío
+  if (!localStorage.getItem('chatMessages')) {
+    messagesDiv.innerHTML = '';
+  }
+
+  restoreChat();
 }
 
 fileInput.addEventListener('change', async (event) => {
@@ -228,10 +238,7 @@ async function checkSlackMessages() {
 }
 
 setInterval(checkSlackMessages, 5000);
-
-if (localStorage.getItem('chatEstado') !== 'cerrado') {
-  restoreChat();
-}
+restoreChat();
 getUserId();
 
 const scrollBtn = document.getElementById('scrollToBottomBtn');
