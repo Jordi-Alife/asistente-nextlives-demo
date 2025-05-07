@@ -106,12 +106,12 @@
     }
 
     function cerrarChatConfirmado() {
-      localStorage.removeItem('chatMessages');
-      localStorage.setItem('chatEstado', 'cerrado');
+      localStorage.clear();
       document.getElementById('chat-widget').style.display = 'none';
       document.getElementById('chat-toggle').style.display = 'flex';
       document.getElementById('scrollToBottomBtn').style.display = 'none';
       ocultarModal();
+      location.reload();
     }
 
     function minimizarChat() {
@@ -131,7 +131,7 @@
       if (localStorage.getItem('chatEstado') === 'abierto') {
         abrirChat();
       } else {
-        cerrarChatConfirmado();
+        minimizarChat();
       }
     });
   </script>
