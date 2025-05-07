@@ -14,7 +14,6 @@ function getUserId() {
   return id;
 }
 
-// NUEVO: historial y metadata
 const metadata = {
   userAgent: navigator.userAgent,
   historial: JSON.parse(localStorage.getItem("historialPaginas") || "[]"),
@@ -114,6 +113,7 @@ async function sendMessage() {
   addMessage(text, 'user');
   input.value = '';
   sendBtn.classList.remove('active');
+  avisarEscribiendo(""); // Limpia el aviso después de enviar
 
   const tempId = `typing-${Date.now()}`;
   addTypingBubble(tempId);
@@ -150,7 +150,6 @@ async function sendMessage() {
   }
 }
 
-// BLOQUE PARA AVISAR ESCRIBIENDO
 function avisarEscribiendo(texto) {
   const userId = getUserId();
   if (!userId) return;
