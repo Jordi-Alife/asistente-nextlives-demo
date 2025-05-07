@@ -1,3 +1,4 @@
+// main.js completo actualizado con limpieza al reabrir
 const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('messageInput');
 const fileInput = document.getElementById('fileInput');
@@ -82,6 +83,15 @@ function saveChat() {
 }
 
 function restoreChat() {
+  const estado = localStorage.getItem('chatEstado');
+  if (estado === 'cerrado') {
+    // Si el chat fue cerrado, no restauramos nada viejo
+    setTimeout(() => {
+      addMessage("Hola, ¿cómo puedo ayudarte?", "assistant");
+    }, 500);
+    return;
+  }
+
   const saved = localStorage.getItem('chatMessages');
   if (saved) {
     messagesDiv.innerHTML = saved;
@@ -160,7 +170,6 @@ function avisarEscribiendo(texto) {
   });
 }
 
-// NUEVA FUNCIÓN: Notificar evento general
 async function notificarEvento(tipo) {
   const userId = getUserId();
   try {
@@ -179,8 +188,9 @@ function cerrarChatConfirmado() {
   document.getElementById('chat-widget').style.display = 'none';
   document.getElementById('chat-toggle').style.display = 'flex';
   document.getElementById('scrollToBottomBtn').style.display = 'none';
-  localStorage.removeItem('chatMessages'); // BORRAR STORAGE
-  messagesDiv.innerHTML = ''; // LIMPIAR PANTALLA
+  localStorage.removeItem('chatMessages');
+  localStorage.setItem('chatEstado', 'cerrado');
+  messagesDiv.innerHTML = '';
   notificarEvento("chat_cerrado");
 }
 
