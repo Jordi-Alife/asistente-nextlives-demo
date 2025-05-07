@@ -113,7 +113,6 @@ async function sendMessage() {
   addMessage(text, 'user');
   input.value = '';
   sendBtn.classList.remove('active');
-  avisarEscribiendo(""); // Limpia el aviso después de enviar
 
   const tempId = `typing-${Date.now()}`;
   addTypingBubble(tempId);
@@ -226,3 +225,23 @@ input.addEventListener('input', () => {
 input.addEventListener('focus', () => {
   setTimeout(() => scrollToBottom(), 300);
 });
+
+async function cerrarChatConfirmado() {
+  messagesDiv.innerHTML = '';
+  const userId = getUserId();
+  try {
+    await fetch("/api/evento", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, evento: "chat_cerrado" })
+    });
+    console.log("✅ Notificado al backend: chat cerrado por usuario.");
+  } catch (error) {
+    console.error("❌ Error notificando evento chat_cerrado:", error);
+  }
+  localStorage.setItem('chatEstado', 'cerrado');
+  document.getElementById('chat-widget').style.display = 'none';
+  document.getElementById('chat-toggle').style.display = 'flex';
+  document.getElementById('scrollToBottomBtn').style.display = 'none';
+  ocultarModal();
+}
