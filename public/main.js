@@ -160,6 +160,7 @@ function avisarEscribiendo(texto) {
   });
 }
 
+// NUEVA FUNCIÓN: Notificar evento general
 async function notificarEvento(tipo) {
   const userId = getUserId();
   try {
@@ -178,8 +179,8 @@ function cerrarChatConfirmado() {
   document.getElementById('chat-widget').style.display = 'none';
   document.getElementById('chat-toggle').style.display = 'flex';
   document.getElementById('scrollToBottomBtn').style.display = 'none';
-  messagesDiv.innerHTML = ''; // limpia visual
-  localStorage.removeItem('chatMessages'); // limpia almacenamiento local
+  localStorage.removeItem('chatMessages'); // BORRAR STORAGE
+  messagesDiv.innerHTML = ''; // LIMPIAR PANTALLA
   notificarEvento("chat_cerrado");
 }
 
