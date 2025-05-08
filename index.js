@@ -503,7 +503,28 @@ app.post("/api/evento", async (req, res) => {
     res.status(500).json({ error: "Error registrando evento" });
   }
 });
+// ✅ NUEVO ENDPOINT PARA OBTENER MENSAJES MANUALES DESDE EL PANEL
+app.get("/api/poll/:userId", async (req, res) => {
+  const { userId } = req.params;
 
+  if (!userId) return res.status(400).json({ error: "Falta userId" });
+
+  try {
+    const snapshot = await db
+      .collection("mensajes")
+      .where("idConversacion", "==", userId)
+      .where("manual", "==", true)
+      .orderBy("timestamp", "asc")
+      .get();
+
+    const mensajes = snapshot.docs.map((doc) => doc.data());
+
+    res.json({ mensajes });
+  } catch (error) {
+    console.error("❌ Error en /api/poll:", error);
+    res.status(500).json({ error: "Error al obtener mensajes manuales" });
+  }
+});
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
 });
