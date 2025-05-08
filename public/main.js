@@ -211,10 +211,28 @@ fileInput.addEventListener('change', async (event) => {
   }
 
   fileInput.value = '';
+});
+
+// ✅ CAMBIO: Cargar mensajes manuales y diferenciarlos visualmente
+async function checkPanelMessages() {
+  const userId = getUserId();
+  try {
+    const res = await fetch(`/api/poll/${userId}`);
+    const data = await res.json();
+    if (data && Array.isArray(data.mensajes)) {
+      data.mensajes.forEach((msg) => {
+        console.log("📨 Mensaje manual recibido:", msg);
+        const senderClass = msg.manual ? "assistant manual" : "assistant";
+        addMessage(msg.mensaje, senderClass);
+        saveChat();
+      });
+    }
+  } catch (error) {
+    console.error("Error al obtener mensajes manuales:", error);
+  }
 }
 
-);
-
+setInterval(checkPanelMessages, 5000);
 restoreChat();
 getUserId();
 
