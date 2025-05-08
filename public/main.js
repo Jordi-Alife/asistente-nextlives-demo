@@ -222,7 +222,7 @@ async function checkSlackMessages() {
     if (data && Array.isArray(data.mensajes)) {
       data.mensajes.forEach((msg) => {
         console.log("📨 Mensaje desde Slack recibido:", msg);
-        addMessage(msg, "assistant");
+        addMessage(msg.mensaje, "assistant");
         saveChat();
       });
     }
