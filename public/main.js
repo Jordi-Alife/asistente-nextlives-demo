@@ -160,7 +160,6 @@ function avisarEscribiendo(texto) {
   });
 }
 
-// NUEVA FUNCIÓN: Notificar evento general
 async function notificarEvento(tipo) {
   const userId = getUserId();
   try {
@@ -185,7 +184,7 @@ function cerrarChatConfirmado() {
 }
 
 function abrirChat() {
-  window.location.reload(); // <<--- FUERZA RECARGA AL ABRIR
+  window.location.reload();
 }
 
 fileInput.addEventListener('change', async (event) => {
@@ -212,26 +211,10 @@ fileInput.addEventListener('change', async (event) => {
   }
 
   fileInput.value = '';
-});
-
-async function checkSlackMessages() {
-  const userId = getUserId();
-  try {
-    const res = await fetch(`/api/poll/${userId}`);
-    const data = await res.json();
-    if (data && Array.isArray(data.mensajes)) {
-      data.mensajes.forEach((msg) => {
-        console.log("📨 Mensaje desde Slack recibido:", msg);
-        addMessage(msg.mensaje, "assistant");
-        saveChat();
-      });
-    }
-  } catch (error) {
-    console.error("Error al obtener mensajes desde Slack:", error);
-  }
 }
 
-setInterval(checkSlackMessages, 5000);
+);
+
 restoreChat();
 getUserId();
 
