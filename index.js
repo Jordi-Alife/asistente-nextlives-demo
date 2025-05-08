@@ -426,28 +426,29 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
 
   try {
     const mensajesSnapshot = await db
-      .collection("mensajes")
-      .where("idConversacion", "==", userId)
-      .orderBy("timestamp")
-      .get();
+  .collection("mensajes")
+  .where("idConversacion", "==", userId)
+  .orderBy("timestamp")
+  .get();
 
-    const mensajes = mensajesSnapshot.docs
-      .map((doc) => {
-        const data = doc.data();
-        if (!data || !data.timestamp || !data.mensaje || !data.rol) {
-          console.error("⚠️ Mensaje inválido detectado:", doc.id, data);
-          return null;
-        }
-        return {
-          userId,
-          lastInteraction: data.timestamp,
-          message: data.mensaje,
-          original: data.original || null,
-          from: data.rol,
-          tipo: data.tipo || "texto",
-        };
-      })
-      .filter((msg) => msg !== null);
+const mensajes = mensajesSnapshot.docs
+  .map((doc) => {
+    const data = doc.data();
+    if (!data || !data.timestamp || !data.mensaje || !data.rol) {
+      console.error("⚠️ Mensaje inválido detectado:", doc.id, data);
+      return null;
+    }
+    return {
+      userId,
+      lastInteraction: data.timestamp,
+      message: data.mensaje,
+      original: data.original || null,
+      from: data.rol,
+      tipo: data.tipo || "texto",
+      manual: data.manual || false,  // <<< añadimos el campo manual
+    };
+  })
+  .filter((msg) => msg !== null);
 
     res.json(mensajes);
   } catch (error) {
