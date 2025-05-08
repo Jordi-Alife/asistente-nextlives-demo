@@ -32,18 +32,49 @@ fetch("https://ipapi.co/json")
     metadata.pais = "Desconocido";
   });
 
-function addMessage(text, sender, msgId = null) {
+function addMessage(text, sender, tempId = null) {
   if (!text.trim()) return null;
-  if (msgId && document.querySelector(`[data-msg-id="${msgId}"]`)) return null; // evitar duplicados
-
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
-  if (msgId) msg.dataset.msgId = msgId;
+  if (tempId) msg.dataset.tempId = tempId;
   msg.innerText = text;
   messagesDiv.appendChild(msg);
   scrollToBottom();
   saveChat();
-  return msgId || null;
+  return tempId || null;
+}
+
+function addTypingBubble(tempId) {
+  const msg = document.createElement('div');
+  msg.className = 'message assistant';
+  msg.dataset.tempId = tempId;
+  msg.innerHTML = `
+    <div class="typing-indicator">
+      <span></span><span></span><span></span>
+    </div>
+  `;
+  messagesDiv.appendChild(msg);
+  scrollToBottom();
+}
+
+function addImageMessage(fileURL, sender) {
+  const msg = document.createElement('div');
+  msg.className = 'message ' + sender;
+  const img = document.createElement('img');
+  img.src = fileURL;
+  img.alt = 'Imagen enviada';
+  img.style.maxWidth = '100%';
+  img.style.borderRadius = '12px';
+  msg.appendChild(img);
+  messagesDiv.appendChild(msg);
+  scrollToBottom();
+  saveChat();
+}
+
+function removeMessageByTempId(tempId) {
+  if (!tempId) return;
+  const temp = document.querySelector(`[data-temp-id="${tempId}"]`);
+  if (temp) temp.remove();
 }
 
 function saveChat() {
@@ -54,6 +85,11 @@ function restoreChat() {
   const saved = localStorage.getItem('chatMessages');
   if (saved) {
     messagesDiv.innerHTML = saved;
+    const allMessages = messagesDiv.querySelectorAll('.message');
+    allMessages.forEach(msg => {
+      const isEmpty = !msg.textContent.trim() && msg.children.length === 0;
+      if (isEmpty) msg.remove();
+    });
   } else {
     setTimeout(() => {
       addMessage("Hola, ¿cómo puedo ayudarte?", "assistant");
@@ -69,23 +105,6 @@ function scrollToBottom(smooth = true) {
   });
 }
 
-async function pollManualMessages() {
-  const userId = getUserId();
-  try {
-    const res = await fetch(`/api/conversaciones/${userId}`);
-    const data = await res.json();
-    if (Array.isArray(data)) {
-      data.forEach(msg => {
-        if (msg.manual) {
-          addMessage(msg.message, 'assistant', msg.lastInteraction);
-        }
-      });
-    }
-  } catch (err) {
-    console.error("Error en polling de mensajes manuales:", err);
-  }
-}
-
 async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
@@ -96,6 +115,10 @@ async function sendMessage() {
   sendBtn.classList.remove('active');
   avisarEscribiendo("");
 
+  const tempId = `typing-${Date.now()}`;
+  addTypingBubble(tempId);
+
+  const start = Date.now();
   try {
     const bodyData = {
       message: text,
@@ -112,20 +135,43 @@ async function sendMessage() {
     });
 
     const data = await res.json();
-    addMessage(data.reply, 'assistant');
+    const elapsed = Date.now() - start;
+    const minDelay = 1500;
+    const remaining = Math.max(0, minDelay - elapsed);
+
+    setTimeout(() => {
+      removeMessageByTempId(tempId);
+      addMessage(data.reply, 'assistant');
+    }, remaining);
 
   } catch (err) {
+    removeMessageByTempId(tempId);
     addMessage("Error al conectar con el servidor.", "assistant");
   }
 }
 
 function avisarEscribiendo(texto) {
   const userId = getUserId();
+  if (!userId) return;
   fetch("/api/escribiendo", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ userId, texto })
   });
+}
+
+async function notificarEvento(tipo) {
+  const userId = getUserId();
+  try {
+    await fetch("/api/evento", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, tipo }),
+    });
+    console.log(`✅ Evento "${tipo}" notificado para ${userId}`);
+  } catch (err) {
+    console.error(`❌ Error notificando evento "${tipo}"`, err);
+  }
 }
 
 function cerrarChatConfirmado() {
@@ -167,9 +213,36 @@ fileInput.addEventListener('change', async (event) => {
   fileInput.value = '';
 });
 
+// ✅ Nuevo bloque: polling para traer mensajes manuales
+async function actualizarMensajes() {
+  const userId = getUserId();
+  try {
+    const res = await fetch(`/api/conversaciones/${userId}`);
+    const data = await res.json();
+    const yaMostrados = new Set(
+      Array.from(messagesDiv.querySelectorAll(".message"))
+        .map(msg => msg.textContent.trim())
+    );
+
+    data.forEach((msg) => {
+      const contenido = msg.message?.trim();
+      if (contenido && !yaMostrados.has(contenido)) {
+        const tipo = msg.tipo || "texto";
+        if (tipo === "imagen") {
+          addImageMessage(contenido, msg.from === "usuario" ? "user" : "assistant");
+        } else {
+          addMessage(contenido, msg.from === "usuario" ? "user" : "assistant");
+        }
+      }
+    });
+  } catch (err) {
+    console.error("❌ Error al actualizar mensajes:", err);
+  }
+}
+setInterval(actualizarMensajes, 5000);
+
 restoreChat();
 getUserId();
-setInterval(pollManualMessages, 5000);
 
 const scrollBtn = document.getElementById('scrollToBottomBtn');
 messagesDiv.addEventListener('scroll', () => {
