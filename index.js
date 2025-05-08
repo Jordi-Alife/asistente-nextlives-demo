@@ -4,6 +4,7 @@ import OpenAI from "openai";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { v4 as uuidv4 } from "uuid";
 import admin from "firebase-admin";
 import serviceAccount from "./serviceAccountKey.json" assert { type: "json" };
 import sharp from "sharp";
@@ -69,6 +70,7 @@ async function traducir(texto, target = "es") {
   });
   return res.choices[0].message.content.trim();
 }
+
 async function detectarIdiomaGPT(texto) {
   const res = await openai.chat.completions.create({
     model: "gpt-4",
@@ -167,8 +169,6 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    if (intervenidas[finalUserId]) return res.json({ reply: null });
-
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
       : "";
@@ -206,51 +206,253 @@ app.post("/api/chat", async (req, res) => {
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
   }
 });
-app.get("/api/poll/:userId", async (req, res) => {
-  const { userId } = req.params;
 
-  if (!userId) return res.status(400).json({ error: "Falta userId" });
+app.post("/api/upload", upload.single("file"), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
+
+  const imagePath = req.file.path;
+  const optimizedPath = `uploads/optimized-${req.file.filename}`;
+  const userId = req.body.userId || "desconocido";
 
   try {
-    const snapshot = await db
+    await sharp(imagePath)
+      .resize({ width: 800 })
+      .jpeg({ quality: 80 })
+      .toFile(optimizedPath);
+
+    const imageUrl = `${req.protocol}://${req.get("host")}/${optimizedPath}`;
+
+    await db.collection("mensajes").add({
+      idConversacion: userId,
+      rol: "usuario",
+      mensaje: imageUrl,
+      tipo: "imagen",
+      timestamp: new Date().toISOString(),
+    });
+
+    res.json({ imageUrl });
+  } catch (error) {
+    console.error("❌ Error procesando imagen:", error);
+    res.status(500).json({ error: "Error procesando la imagen" });
+  }
+});
+app.post("/api/send-to-user", async (req, res) => {
+  const { userId, message, agente } = req.body;
+  if (!userId || !message || !agente)
+    return res.status(400).json({ error: "Faltan datos" });
+
+  try {
+    const mensajesSnapshot = await db
       .collection("mensajes")
       .where("idConversacion", "==", userId)
-      .where("manual", "==", true)
-      .orderBy("timestamp", "asc")
+      .where("rol", "==", "usuario")
+      .orderBy("timestamp", "desc")
+      .limit(1)
       .get();
 
-    const mensajes = snapshot.docs.map((doc) => doc.data());
+    let idiomaDestino = "es";
+    if (!mensajesSnapshot.empty) {
+      const ultimoMensaje = mensajesSnapshot.docs[0].data();
+      idiomaDestino = ultimoMensaje.idiomaDetectado || await detectarIdiomaGPT(ultimoMensaje.original || ultimoMensaje.mensaje) || "es";
+    }
 
-    res.json({ mensajes });
+    const traduccion = await traducir(message, idiomaDestino);
+
+    await db.collection("mensajes").add({
+      idConversacion: userId,
+      rol: "asistente",
+      mensaje: message,
+      original: traduccion,
+      idiomaDetectado: idiomaDestino,
+      tipo: "texto",
+      timestamp: new Date().toISOString(),
+      manual: true,
+      agenteUid: agente.uid || null,
+    });
+
+    await db.collection("conversaciones").doc(userId).set(
+      {
+        intervenida: true,
+        intervenidaPor: {
+          nombre: agente.nombre,
+          foto: agente.foto,
+          uid: agente.uid || null,
+        },
+      },
+      { merge: true }
+    );
+
+    res.json({ ok: true });
   } catch (error) {
-    console.error("❌ Error en /api/poll:", error);
-    res.status(500).json({ error: "Error al obtener mensajes manuales" });
+    console.error("❌ Error en /api/send-to-user:", error);
+    res.status(500).json({ error: "Error enviando mensaje a usuario" });
   }
 });
 
-app.post("/api/evento", async (req, res) => {
-  const { userId, tipo } = req.body;
-  if (!userId || !tipo) {
+app.post("/api/send", async (req, res) => {
+  const { userId, texto } = req.body;
+  if (!userId || !texto) {
     return res.status(400).json({ error: "Faltan datos" });
   }
 
   try {
-    console.log(`📌 Evento recibido: ${tipo} para el usuario ${userId}`);
+    const idioma = await detectarIdiomaGPT(texto);
 
-    if (tipo === "chat_cerrado") {
-      await db.collection("mensajes").add({
-        idConversacion: userId,
-        rol: "sistema",
-        mensaje: "⚠ Usuario ha cerrado el chat.",
-        tipo: "evento",
-        timestamp: new Date().toISOString(),
-      });
-    }
+    await db.collection("mensajes").add({
+      idConversacion: userId,
+      rol: "usuario",
+      mensaje: texto,
+      original: texto,
+      idiomaDetectado: idioma,
+      tipo: "texto",
+      timestamp: new Date().toISOString(),
+    });
 
     res.json({ ok: true });
   } catch (error) {
-    console.error("❌ Error registrando evento:", error);
-    res.status(500).json({ error: "Error registrando evento" });
+    console.error("❌ Error guardando mensaje usuario:", error);
+    res.status(500).json({ error: "Error guardando mensaje" });
+  }
+});
+
+app.post("/api/marcar-visto", async (req, res) => {
+  const { userId } = req.body;
+  if (!userId)
+    return res.status(400).json({ error: "Falta el userId" });
+
+  try {
+    await db.collection("vistas_globales").doc(userId).set({
+      timestamp: new Date().toISOString(),
+    });
+
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error("❌ Error en /api/marcar-visto:", e);
+    res.status(500).json({ error: "Error en marcar-visto" });
+  }
+});
+app.post("/api/escribiendo", (req, res) => {
+  const { userId, texto } = req.body;
+  if (!userId) return res.status(400).json({ error: "Falta userId" });
+  escribiendoUsuarios[userId] = texto || "";
+  res.json({ ok: true });
+});
+
+app.get("/api/escribiendo/:userId", (req, res) => {
+  const texto = escribiendoUsuarios[req.params.userId] || "";
+  res.json({ texto });
+});
+
+app.get("/api/vistas", async (req, res) => {
+  try {
+    const snapshot = await db.collection("vistas_globales").get();
+    const result = {};
+    snapshot.forEach((doc) => {
+      result[doc.id] = doc.data().timestamp;
+    });
+    res.json(result);
+  } catch (error) {
+    console.error("❌ Error obteniendo vistas:", error);
+    res.status(500).json({ error: "Error obteniendo vistas" });
+  }
+});
+
+app.get("/api/conversaciones", async (req, res) => {
+  try {
+    const snapshot = await db.collection("conversaciones").get();
+    const conversaciones = await Promise.all(
+      snapshot.docs.map(async (doc) => {
+        const data = doc.data();
+        const userId = data.idUsuario;
+        if (!userId) return null;
+
+        let lastInteraction = data.fechaInicio;
+        let lastMessageText = "";
+        let mensajes = [];
+
+        try {
+          const mensajesSnapshot = await db
+            .collection("mensajes")
+            .where("idConversacion", "==", userId)
+            .orderBy("timestamp", "desc")
+            .limit(20)
+            .get();
+
+          mensajes = mensajesSnapshot.docs.map((d) => {
+            const m = d.data();
+            return {
+              from: m.rol,
+              lastInteraction: m.timestamp,
+              message: m.mensaje,
+              original: m.original || null,
+              tipo: m.tipo || "texto",
+              manual: m.manual || false,
+            };
+          });
+
+          if (mensajes[0]) {
+            lastInteraction = mensajes[0].lastInteraction;
+            lastMessageText = mensajes[0].message;
+          }
+        } catch (e) {
+          console.warn(`⚠️ No se pudo cargar mensajes para ${userId}`);
+        }
+
+        return {
+          userId,
+          lastInteraction,
+          estado: data.estado || "abierta",
+          intervenida: data.intervenida || false,
+          intervenidaPor: data.intervenidaPor || null,
+          pais: data.pais || "🌐",
+          navegador: data.navegador || "Desconocido",
+          historial: data.historial || [],
+          message: lastMessageText,
+          mensajes,
+        };
+      })
+    );
+
+    const limpias = conversaciones.filter((c) => !!c);
+    res.json(limpias);
+  } catch (error) {
+    console.error("❌ Error obteniendo conversaciones:", error);
+    res.status(500).json({ error: "Error obteniendo conversaciones" });
+  }
+});
+
+app.get("/api/conversaciones/:userId", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const mensajesSnapshot = await db
+      .collection("mensajes")
+      .where("idConversacion", "==", userId)
+      .orderBy("timestamp")
+      .get();
+
+    const mensajes = mensajesSnapshot.docs
+      .map((doc) => {
+        const data = doc.data();
+        if (!data || !data.timestamp || !data.mensaje || !data.rol) {
+          console.error("⚠️ Mensaje inválido detectado:", doc.id, data);
+          return null;
+        }
+        return {
+          userId,
+          lastInteraction: data.timestamp,
+          message: data.mensaje,
+          original: data.original || null,
+          from: data.rol,
+          tipo: data.tipo || "texto",
+        };
+      })
+      .filter((msg) => msg !== null);
+
+    res.json(mensajes);
+  } catch (error) {
+    console.error("❌ Error crítico obteniendo mensajes:", error);
+    res.status(500).json({ error: "Error crítico obteniendo mensajes" });
   }
 });
 
