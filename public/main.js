@@ -213,43 +213,6 @@ fileInput.addEventListener('change', async (event) => {
   fileInput.value = '';
 });
 
-async function checkManualMessages() {
-  const userId = getUserId();
-  try {
-    const res = await fetch(`/api/conversaciones/${userId}`);
-    const mensajes = await res.json();
-    mensajes.forEach((msg) => {
-      if (msg.from === "asistente" && msg.manual) {
-        const exists = Array.from(messagesDiv.children).some(el => el.textContent === msg.message);
-        if (!exists) {
-          addMessage(msg.message, "assistant");
-        }
-      }
-    });
-  } catch (error) {
-    console.error("Error al obtener mensajes manuales:", error);
-  }
-}
-
-async function checkSlackMessages() {
-  const userId = getUserId();
-  try {
-    const res = await fetch(`/api/poll/${userId}`);
-    const data = await res.json();
-    if (data && Array.isArray(data.mensajes)) {
-      data.mensajes.forEach((msg) => {
-        console.log("📨 Mensaje desde Slack recibido:", msg);
-        addMessage(msg, "assistant");
-        saveChat();
-      });
-    }
-  } catch (error) {
-    console.error("Error al obtener mensajes desde Slack:", error);
-  }
-}
-
-setInterval(checkSlackMessages, 5000);
-setInterval(checkManualMessages, 5000);
 restoreChat();
 getUserId();
 
