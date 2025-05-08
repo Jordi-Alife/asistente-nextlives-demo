@@ -160,6 +160,7 @@ function avisarEscribiendo(texto) {
   });
 }
 
+// NUEVA FUNCIÓN: Notificar evento general
 async function notificarEvento(tipo) {
   const userId = getUserId();
   try {
@@ -184,7 +185,7 @@ function cerrarChatConfirmado() {
 }
 
 function abrirChat() {
-  window.location.reload();
+  window.location.reload(); // <<--- FUERZA RECARGA AL ABRIR
 }
 
 fileInput.addEventListener('change', async (event) => {
@@ -213,34 +214,24 @@ fileInput.addEventListener('change', async (event) => {
   fileInput.value = '';
 });
 
-// ✅ Nuevo bloque: polling para traer mensajes manuales
-async function actualizarMensajes() {
+async function checkSlackMessages() {
   const userId = getUserId();
   try {
-    const res = await fetch(`/api/conversaciones/${userId}`);
+    const res = await fetch(`/api/poll/${userId}`);
     const data = await res.json();
-    const yaMostrados = new Set(
-      Array.from(messagesDiv.querySelectorAll(".message"))
-        .map(msg => msg.textContent.trim())
-    );
-
-    data.forEach((msg) => {
-      const contenido = msg.message?.trim();
-      if (contenido && !yaMostrados.has(contenido)) {
-        const tipo = msg.tipo || "texto";
-        if (tipo === "imagen") {
-          addImageMessage(contenido, msg.from === "usuario" ? "user" : "assistant");
-        } else {
-          addMessage(contenido, msg.from === "usuario" ? "user" : "assistant");
-        }
-      }
-    });
-  } catch (err) {
-    console.error("❌ Error al actualizar mensajes:", err);
+    if (data && Array.isArray(data.mensajes)) {
+      data.mensajes.forEach((msg) => {
+        console.log("📨 Mensaje desde Slack recibido:", msg);
+        addMessage(msg, "assistant");
+        saveChat();
+      });
+    }
+  } catch (error) {
+    console.error("Error al obtener mensajes desde Slack:", error);
   }
 }
-setInterval(actualizarMensajes, 5000);
 
+setInterval(checkSlackMessages, 5000);
 restoreChat();
 getUserId();
 
