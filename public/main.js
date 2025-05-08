@@ -160,7 +160,6 @@ function avisarEscribiendo(texto) {
   });
 }
 
-// NUEVA FUNCIÓN: Notificar evento general
 async function notificarEvento(tipo) {
   const userId = getUserId();
   try {
@@ -185,7 +184,7 @@ function cerrarChatConfirmado() {
 }
 
 function abrirChat() {
-  window.location.reload(); // <<--- FUERZA RECARGA AL ABRIR
+  window.location.reload();
 }
 
 fileInput.addEventListener('change', async (event) => {
@@ -214,6 +213,24 @@ fileInput.addEventListener('change', async (event) => {
   fileInput.value = '';
 });
 
+async function checkManualMessages() {
+  const userId = getUserId();
+  try {
+    const res = await fetch(`/api/conversaciones/${userId}`);
+    const mensajes = await res.json();
+    mensajes.forEach((msg) => {
+      if (msg.from === "asistente" && msg.manual) {
+        const exists = Array.from(messagesDiv.children).some(el => el.textContent === msg.message);
+        if (!exists) {
+          addMessage(msg.message, "assistant");
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Error al obtener mensajes manuales:", error);
+  }
+}
+
 async function checkSlackMessages() {
   const userId = getUserId();
   try {
@@ -232,6 +249,7 @@ async function checkSlackMessages() {
 }
 
 setInterval(checkSlackMessages, 5000);
+setInterval(checkManualMessages, 5000);
 restoreChat();
 getUserId();
 
