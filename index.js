@@ -488,6 +488,7 @@ app.post("/api/evento", async (req, res) => {
     console.log(`📌 Evento recibido: ${tipo} para el usuario ${userId}`);
 
     if (tipo === "chat_cerrado") {
+      // Guardamos el mensaje de evento
       await db.collection("mensajes").add({
         idConversacion: userId,
         rol: "sistema",
@@ -495,6 +496,14 @@ app.post("/api/evento", async (req, res) => {
         tipo: "evento",
         timestamp: new Date().toISOString(),
       });
+
+      // ✅ Actualizamos el estado de la conversación a 'cerrada' (sin romper nada)
+      await db.collection("conversaciones").doc(userId).set(
+        {
+          estado: "cerrada",
+        },
+        { merge: true }
+      );
     }
 
     res.json({ ok: true });
