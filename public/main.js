@@ -213,7 +213,7 @@ fileInput.addEventListener('change', async (event) => {
   fileInput.value = '';
 });
 
-// ✅ CAMBIO: Cargar mensajes manuales y diferenciarlos visualmente
+// ✅ CAMBIO APLICADO: Cargar mensajes manuales y diferenciarlos visualmente
 async function checkPanelMessages() {
   const userId = getUserId();
   try {
@@ -222,8 +222,7 @@ async function checkPanelMessages() {
     if (data && Array.isArray(data.mensajes)) {
       data.mensajes.forEach((msg) => {
         console.log("📨 Mensaje manual recibido:", msg);
-        const senderClass = msg.manual ? "assistant manual" : "assistant";
-        addMessage(msg.mensaje, senderClass);
+        addMessage(msg.mensaje, "assistant");
         saveChat();
       });
     }
