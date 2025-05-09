@@ -136,55 +136,62 @@ app.post("/api/chat", async (req, res) => {
       },
       { merge: true }
     );
+await db.collection("conversaciones").doc(finalUserId).set(
+  {
+    idUsuario: finalUserId,
+    fechaInicio: new Date().toISOString(),
+    estado: "abierta",
+    idioma: idioma,
+    navegador: userAgent || "",
+    pais: pais || "",
+    historial: historial || [],
+    datosContexto: datosContexto || null,
+  },
+  { merge: true }
+);
 
-    await db.collection("conversaciones").doc(finalUserId).set(
-      {
-        idUsuario: finalUserId,
-        fechaInicio: new Date().toISOString(),
-        estado: "abierta",
-        idioma: idioma,
-        navegador: userAgent || "",
-        pais: pais || "",
-        historial: historial || [],
-        datosContexto: datosContexto || null,
-      },
-      { merge: true }
-    );
-const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
-const convData = convDoc.exists ? convDoc.data() : null;
+const traduccionUsuario = await traducir(message, "es");
 
-if (convData?.intervenida) {
-  console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
+await db.collection("mensajes").add({
+  idConversacion: finalUserId,
+  rol: "usuario",
+  mensaje: traduccionUsuario,
+  original: message,
+  idiomaDetectado: idioma,
+  tipo: "texto",
+  timestamp: new Date().toISOString(),
+});
+
+// ✅ Chequeo: si el último mensaje es manual, bloqueamos GPT
+const mensajesSnapshot = await db
+  .collection("mensajes")
+  .where("idConversacion", "==", finalUserId)
+  .orderBy("timestamp", "desc")
+  .limit(1)
+  .get();
+
+const ultimoMensaje = mensajesSnapshot.empty ? null : mensajesSnapshot.docs[0].data();
+
+if (ultimoMensaje?.manual) {
+  console.log(`🤖 GPT desactivado: último mensaje fue manual para ${finalUserId}`);
   return res.json({ reply: "" });
 }
-    
-    const traduccionUsuario = await traducir(message, "es");
 
-    await db.collection("mensajes").add({
-      idConversacion: finalUserId,
-      rol: "usuario",
-      mensaje: traduccionUsuario,
-      original: message,
-      idiomaDetectado: idioma,
-      tipo: "texto",
-      timestamp: new Date().toISOString(),
-    });
+if (shouldEscalateToHuman(message)) {
+  return res.json({
+    reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia.",
+  });
+}
 
-    if (shouldEscalateToHuman(message)) {
-      return res.json({
-        reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia.",
-      });
-    }
+const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
+  ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
+  : "";
 
-    const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
-      ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
-      : "";
-
-    const promptSystem = [
-      baseConocimiento,
-      datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
-      `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}". Si el usuario escribió en catalán, responde en catalán; si lo hizo en inglés, responde en inglés; si en español, responde en español. No traduzcas ni expliques nada adicional.`,
-    ].join("\n");
+const promptSystem = [
+  baseConocimiento,
+  datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
+  `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}". Si el usuario escribió en catalán, responde en catalán; si lo hizo en inglés, responde en inglés; si en español, responde en español. No traduzcas ni expliques nada adicional.`,
+].join("\n");
 
     const response = await openai.chat.completions.create({
       model: "gpt-4",
