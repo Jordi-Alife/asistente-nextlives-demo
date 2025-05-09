@@ -150,7 +150,14 @@ app.post("/api/chat", async (req, res) => {
       },
       { merge: true }
     );
+const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
+const convData = convDoc.exists ? convDoc.data() : null;
 
+if (convData?.intervenida) {
+  console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
+  return res.json({ reply: "" });
+}
+    
     const traduccionUsuario = await traducir(message, "es");
 
     await db.collection("mensajes").add({
