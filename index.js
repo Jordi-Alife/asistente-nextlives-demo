@@ -457,6 +457,33 @@ const mensajes = mensajesSnapshot.docs
   }
 });
 
+app.get("/api/poll/:userId", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const mensajesSnapshot = await db
+      .collection("mensajes")
+      .where("idConversacion", "==", userId)
+      .where("manual", "==", true)
+      .orderBy("timestamp")
+      .get();
+
+    const mensajes = mensajesSnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        mensaje: data.mensaje,
+        manual: data.manual || false,
+      };
+    });
+
+    res.json({ mensajes });
+  } catch (error) {
+    console.error("❌ Error en /api/poll:", error);
+    res.status(500).json({ error: "Error obteniendo mensajes manuales" });
+  }
+});
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
 });
