@@ -498,6 +498,23 @@ app.get("/api/poll/:userId", async (req, res) => {
   }
 });
 
+app.post("/api/liberar-conversacion", async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: "Falta userId" });
+
+  try {
+    await db.collection("conversaciones").doc(userId).set(
+      { intervenida: false },
+      { merge: true }
+    );
+    console.log(`✅ Conversación liberada para ${userId}`);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("❌ Error al liberar conversación:", error);
+    res.status(500).json({ error: "Error al liberar conversación" });
+  }
+});
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
 });
