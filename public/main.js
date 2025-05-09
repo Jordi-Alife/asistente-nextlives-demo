@@ -221,9 +221,20 @@ async function checkPanelMessages() {
     const data = await res.json();
     if (data && Array.isArray(data.mensajes)) {
       data.mensajes.forEach((msg) => {
-        console.log("📨 Mensaje manual recibido:", msg);
-        addMessage(msg.mensaje, "assistant");
-        saveChat();
+        // Solo añadimos si no está ya pintado en el DOM
+        if (!document.querySelector(`[data-panel-id="${msg.id}"]`)) {
+          console.log("📨 Mensaje manual recibido:", msg);
+          const messageDiv = document.createElement('div');
+          messageDiv.className = 'message assistant';
+          if (msg.manual) {
+            messageDiv.classList.add('manual');
+          }
+          messageDiv.dataset.panelId = msg.id;
+          messageDiv.innerText = msg.mensaje;
+          messagesDiv.appendChild(messageDiv);
+          scrollToBottom();
+          saveChat();
+        }
       });
     }
   } catch (error) {
