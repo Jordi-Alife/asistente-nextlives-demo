@@ -213,22 +213,21 @@ fileInput.addEventListener('change', async (event) => {
   fileInput.value = '';
 });
 
-// ✅ NUEVO BLOQUE: Traer todos los mensajes unificados (manuales y automáticos)
+// ✅ CAMBIO APLICADO: Cargar mensajes manuales y diferenciarlos visualmente
 async function checkPanelMessages() {
   const userId = getUserId();
   try {
-    const res = await fetch(`/api/conversaciones/${userId}`);
+    const res = await fetch(`/api/poll/${userId}`);
     const data = await res.json();
-    if (data && Array.isArray(data)) {
-      messagesDiv.innerHTML = ""; // limpiamos para evitar duplicados
-      data.forEach((msg) => {
-        console.log("📨 Mensaje recibido:", msg);
-        addMessage(msg.message, "assistant");
+    if (data && Array.isArray(data.mensajes)) {
+      data.mensajes.forEach((msg) => {
+        console.log("📨 Mensaje manual recibido:", msg);
+        addMessage(msg.mensaje, "assistant");
+        saveChat();
       });
-      saveChat();
     }
   } catch (error) {
-    console.error("Error al obtener mensajes unificados:", error);
+    console.error("Error al obtener mensajes manuales:", error);
   }
 }
 
