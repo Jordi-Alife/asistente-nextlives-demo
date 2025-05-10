@@ -174,6 +174,35 @@ async function notificarEvento(tipo) {
   }
 }
 
+async function mostrarModal() {
+  const userId = getUserId();
+  const textos = [
+    "¿Realmente quieres cerrar el chat? Esto borrará toda la conversación.",
+    "Cancelar",
+    "Cerrar el chat"
+  ];
+  let traducciones = textos;
+
+  if (userId) {
+    try {
+      const res = await fetch(`/api/traducir-modal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, textos })
+      });
+      const data = await res.json();
+      traducciones = data.traducciones || textos;
+    } catch (error) {
+      console.error("Error traduciendo modal:", error);
+    }
+  }
+
+  document.getElementById('modalText').innerHTML = traducciones[0];
+  document.getElementById('btnCancelar').innerText = traducciones[1];
+  document.getElementById('btnConfirmar').innerText = traducciones[2];
+  document.getElementById('modalConfirm').style.display = 'flex';
+}
+
 function cerrarChatConfirmado() {
   document.getElementById('chat-widget').style.display = 'none';
   document.getElementById('chat-toggle').style.display = 'flex';
