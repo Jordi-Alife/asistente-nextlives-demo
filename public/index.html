@@ -129,35 +129,49 @@
     }
 
     async function cerrarChatConfirmado() {
-      await notificarEvento("chat_cerrado");
-      localStorage.removeItem('chatMessages');
-      localStorage.setItem('chatEstado', 'cerrado');
-      document.getElementById('chat-widget').style.display = 'none';
-      document.getElementById('chat-toggle').style.display = 'flex';
-      document.getElementById('scrollToBottomBtn').style.display = 'none';
-      ocultarModal();
-    }
+  const userId = localStorage.getItem('userId');
 
-    function minimizarChat() {
-      localStorage.setItem('chatEstado', 'cerrado');
-      document.getElementById('chat-widget').style.display = 'none';
-      document.getElementById('chat-toggle').style.display = 'flex';
-      document.getElementById('scrollToBottomBtn').style.display = 'none';
-    }
+  await notificarEvento("chat_cerrado");
 
-    function abrirChat() {
-      localStorage.setItem('chatEstado', 'abierto');
-      document.getElementById('chat-widget').style.display = 'flex';
-      document.getElementById('chat-toggle').style.display = 'none';
+  // ✅ Guardar estado "cerrado" en Firestore
+  if (userId) {
+    try {
+      await fetch("/api/cerrar-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId })
+      });
+      console.log(`✅ Estado "cerrado" guardado para ${userId}`);
+    } catch (err) {
+      console.error("❌ Error al guardar estado cerrado:", err);
     }
+  }
 
-    window.addEventListener('load', () => {
-      if (localStorage.getItem('chatEstado') === 'abierto') {
-        abrirChat();
-      } else {
-        cerrarChatConfirmado();
-      }
-    });
-  </script>
-</body>
-</html>
+  localStorage.removeItem('chatMessages');
+  localStorage.setItem('chatEstado', 'cerrado');
+  document.getElementById('chat-widget').style.display = 'none';
+  document.getElementById('chat-toggle').style.display = 'flex';
+  document.getElementById('scrollToBottomBtn').style.display = 'none';
+  ocultarModal();
+}
+
+function minimizarChat() {
+  localStorage.setItem('chatEstado', 'cerrado');
+  document.getElementById('chat-widget').style.display = 'none';
+  document.getElementById('chat-toggle').style.display = 'flex';
+  document.getElementById('scrollToBottomBtn').style.display = 'none';
+}
+
+function abrirChat() {
+  localStorage.setItem('chatEstado', 'abierto');
+  document.getElementById('chat-widget').style.display = 'flex';
+  document.getElementById('chat-toggle').style.display = 'none';
+}
+
+window.addEventListener('load', () => {
+  if (localStorage.getItem('chatEstado') === 'abierto') {
+    abrirChat();
+  } else {
+    cerrarChatConfirmado();
+  }
+});
