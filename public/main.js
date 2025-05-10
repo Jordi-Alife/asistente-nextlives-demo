@@ -173,7 +173,6 @@ async function notificarEvento(tipo) {
     console.error(`❌ Error notificando evento "${tipo}"`, err);
   }
 }
-
 async function mostrarModal() {
   const userId = getUserId();
   const textos = [
@@ -226,7 +225,7 @@ async function cerrarChatConfirmado() {
   document.getElementById('chat-widget').style.display = 'none';
   document.getElementById('chat-toggle').style.display = 'flex';
   document.getElementById('scrollToBottomBtn').style.display = 'none';
-  ocultarModal();
+  document.getElementById('modalConfirm').style.display = 'none'; // ✅ CIERRA MODAL EXPLÍCITAMENTE
 }
 
 function abrirChat() {
@@ -259,7 +258,6 @@ fileInput.addEventListener('change', async (event) => {
   fileInput.value = '';
 });
 
-// ✅ CAMBIO APLICADO: Cargar mensajes manuales y diferenciarlos visualmente
 async function checkPanelMessages() {
   const userId = getUserId();
   try {
@@ -267,7 +265,6 @@ async function checkPanelMessages() {
     const data = await res.json();
     if (data && Array.isArray(data.mensajes)) {
       data.mensajes.forEach((msg) => {
-        // Solo añadimos si no está ya pintado en el DOM
         if (!document.querySelector(`[data-panel-id="${msg.id}"]`)) {
           console.log("📨 Mensaje manual recibido:", msg);
           const messageDiv = document.createElement('div');
@@ -312,8 +309,9 @@ input.addEventListener('focus', () => {
   setTimeout(() => scrollToBottom(), 300);
 });
 
-// ✅ Vincular evento al botón de confirmar cierre del chat (modal)
-const btnConfirmar = document.getElementById('btnConfirmar');
-if (btnConfirmar) {
-  btnConfirmar.addEventListener('click', cerrarChatConfirmado);
-}
+document.addEventListener('DOMContentLoaded', () => {
+  const btnConfirmar = document.getElementById('btnConfirmar');
+  if (btnConfirmar) {
+    btnConfirmar.addEventListener('click', cerrarChatConfirmado);
+  }
+});
