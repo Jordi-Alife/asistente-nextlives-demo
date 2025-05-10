@@ -311,3 +311,9 @@ input.addEventListener('input', () => {
 input.addEventListener('focus', () => {
   setTimeout(() => scrollToBottom(), 300);
 });
+
+// ✅ Vincular evento al botón de confirmar cierre del chat (modal)
+const btnConfirmar = document.getElementById('btnConfirmar');
+if (btnConfirmar) {
+  btnConfirmar.addEventListener('click', cerrarChatConfirmado);
+}
