@@ -514,6 +514,22 @@ app.post("/api/liberar-conversacion", async (req, res) => {
     res.status(500).json({ error: "Error al liberar conversación" });
   }
 });
+app.post("/api/cerrar-chat", async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: "Falta userId" });
+
+  try {
+    await db.collection("conversaciones").doc(userId).set(
+      { estado: "cerrado" },
+      { merge: true }
+    );
+    console.log(`✅ Estado "cerrado" guardado para ${userId}`);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("❌ Error al guardar estado cerrado:", error);
+    res.status(500).json({ error: "Error guardando estado cerrado" });
+  }
+});
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
