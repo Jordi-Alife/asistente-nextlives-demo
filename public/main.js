@@ -203,13 +203,30 @@ async function mostrarModal() {
   document.getElementById('modalConfirm').style.display = 'flex';
 }
 
-function cerrarChatConfirmado() {
+async function cerrarChatConfirmado() {
+  const userId = getUserId();
+
+  await notificarEvento("chat_cerrado");
+
+  if (userId) {
+    try {
+      await fetch("/api/cerrar-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId })
+      });
+      console.log(`✅ Estado "cerrado" guardado para ${userId}`);
+    } catch (err) {
+      console.error("❌ Error al guardar estado cerrado:", err);
+    }
+  }
+
+  localStorage.removeItem('chatMessages');
+  localStorage.setItem('chatEstado', 'cerrado');
   document.getElementById('chat-widget').style.display = 'none';
   document.getElementById('chat-toggle').style.display = 'flex';
   document.getElementById('scrollToBottomBtn').style.display = 'none';
-  localStorage.removeItem('chatMessages');
-  messagesDiv.innerHTML = '';
-  notificarEvento("chat_cerrado");
+  ocultarModal();
 }
 
 function abrirChat() {
