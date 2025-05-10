@@ -133,7 +133,7 @@
 
   await notificarEvento("chat_cerrado");
 
-  // ✅ Guardar estado "cerrado" en Firestore
+    // ✅ Guardar estado "cerrado" en Firestore
   if (userId) {
     try {
       await fetch("/api/cerrar-chat", {
