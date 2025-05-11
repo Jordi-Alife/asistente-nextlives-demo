@@ -393,16 +393,17 @@ app.get("/api/conversaciones", async (req, res) => {
             .get();
 
           mensajes = mensajesSnapshot.docs.map((d) => {
-            const m = d.data();
-            return {
-              from: m.rol,
-              lastInteraction: m.timestamp,
-              message: m.mensaje,
-              original: m.original || null,
-              tipo: m.tipo || "texto",
-              manual: m.manual || false,
-            };
-          });
+  const m = d.data();
+  return {
+    from: m.rol,
+    lastInteraction: m.timestamp,
+    message: m.mensaje,
+    original: m.original || null,
+    tipo: m.tipo || "texto",
+    manual: m.manual || false,
+    estado: m.estado || null  // << necesario para detectar etiquetas tipo "Traspasado a GPT"
+  };
+});
 
           if (mensajes[0]) {
             lastInteraction = mensajes[0].lastInteraction;
