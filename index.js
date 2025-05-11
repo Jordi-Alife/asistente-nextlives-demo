@@ -515,13 +515,11 @@ app.post("/api/liberar-conversacion", async (req, res) => {
 
     // 2. Añadir mensaje tipo "estado" para mostrar la etiqueta en el chat
     await db.collection("mensajes").add({
-      idConversacion: userId,
-      rol: "sistema",
-      tipo: "estado",
-      estado: "Traspasado a GPT",
-      mensaje: "La conversación ha sido liberada por un agente y transferida nuevamente al asistente.",
-      timestamp: new Date().toISOString(),
-    });
+  idConversacion: userId,
+  tipo: "estado",
+  estado: "Traspasado a GPT",
+  timestamp: new Date().toISOString(),
+});
 
     console.log(`✅ Conversación liberada y mensaje de estado añadido para ${userId}`);
     res.json({ ok: true });
