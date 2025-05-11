@@ -395,15 +395,15 @@ app.get("/api/conversaciones", async (req, res) => {
           mensajes = mensajesSnapshot.docs.map((d) => {
   const m = d.data();
   return {
-    from: m.rol,
-    lastInteraction: m.timestamp,
-    message: m.mensaje,
-    original: m.original || null,
-    tipo: m.tipo || "texto",
-    manual: m.manual || false,
-    estado: m.estado || null  // << necesario para detectar etiquetas tipo "Traspasado a GPT"
-  };
-});
+  userId,
+  lastInteraction: data.timestamp,
+  message: data.mensaje,
+  original: data.original || null,
+  from: data.rol,
+  tipo: data.tipo || "texto",
+  estado: data.estado || null,          // ✅ Añadir esta línea
+  manual: data.manual || false,
+};
 
           if (mensajes[0]) {
             lastInteraction = mensajes[0].lastInteraction;
