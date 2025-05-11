@@ -504,24 +504,22 @@ app.post("/api/liberar-conversacion", async (req, res) => {
   if (!userId) return res.status(400).json({ error: "Falta userId" });
 
   try {
-    // 1. Actualizar la conversación: quitar intervención y actualizar estado
+    // 1. Marcar como no intervenida en la conversación
     await db.collection("conversaciones").doc(userId).set(
-      {
-        intervenida: false,
-        estado: "Traspasado a GPT",
-      },
+      { intervenida: false },
       { merge: true }
     );
 
-    // 2. Añadir mensaje tipo "estado" para mostrar la etiqueta en el chat
+    // 2. Guardar mensaje de tipo estado para mostrar etiqueta
     await db.collection("mensajes").add({
-  idConversacion: userId,
-  tipo: "estado",
-  estado: "Traspasado a GPT",
-  timestamp: new Date().toISOString(),
-});
+      idConversacion: userId,
+      rol: "sistema",
+      tipo: "estado",
+      estado: "Traspasado a GPT", // Esta línea es imprescindible para que se muestre la etiqueta
+      timestamp: new Date().toISOString(),
+    });
 
-    console.log(`✅ Conversación liberada y mensaje de estado añadido para ${userId}`);
+    console.log(`✅ Conversación liberada para ${userId}`);
     res.json({ ok: true });
   } catch (error) {
     console.error("❌ Error al liberar conversación:", error);
