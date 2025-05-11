@@ -393,17 +393,18 @@ app.get("/api/conversaciones", async (req, res) => {
             .get();
 
           mensajes = mensajesSnapshot.docs.map((d) => {
-  const m = d.data();
-  return {
-  userId,
-  lastInteraction: data.timestamp,
-  message: data.mensaje,
-  original: data.original || null,
-  from: data.rol,
-  tipo: data.tipo || "texto",
-  estado: data.estado || null,          // ✅ Añadir esta línea
-  manual: data.manual || false,
-};
+            const m = d.data();
+            return {
+              userId,
+              lastInteraction: m.timestamp,
+              message: m.mensaje,
+              original: m.original || null,
+              from: m.rol,
+              tipo: m.tipo || "texto",
+              estado: m.estado || null,        // ✅ Corrección aplicada aquí
+              manual: m.manual || false,
+            };
+          });
 
           if (mensajes[0]) {
             lastInteraction = mensajes[0].lastInteraction;
