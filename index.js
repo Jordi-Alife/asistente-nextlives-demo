@@ -531,6 +531,22 @@ app.post("/api/cerrar-chat", async (req, res) => {
   }
 });
 
+app.get("/api/estado-conversacion/:userId", async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const doc = await db.collection("conversaciones").doc(userId).get();
+    if (!doc.exists) return res.status(404).json({ error: "No existe conversación" });
+    const data = doc.data();
+    res.json({
+      estado: data.estado || "abierta",
+      intervenida: data.intervenida || false,
+    });
+  } catch (err) {
+    console.error("❌ Error en /api/estado-conversacion:", err);
+    res.status(500).json({ error: "Error obteniendo estado" });
+  }
+});
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
 });
