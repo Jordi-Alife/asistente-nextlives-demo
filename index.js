@@ -450,10 +450,10 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
     const mensajes = mensajesSnapshot.docs
       .map((doc) => {
         const data = doc.data();
-        if (!data || !data.timestamp || !data.mensaje || !data.rol) {
-          console.error("⚠️ Mensaje inválido detectado:", doc.id, data);
-          return null;
-        }
+        if (!data || !data.timestamp || (!data.mensaje && data.tipo !== "estado")) {
+  console.error("⚠️ Mensaje inválido detectado:", doc.id, data);
+  return null;
+}
         return {
           userId,
           lastInteraction: data.timestamp,
