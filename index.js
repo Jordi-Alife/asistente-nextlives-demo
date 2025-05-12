@@ -533,10 +533,21 @@ app.post("/api/cerrar-chat", async (req, res) => {
   if (!userId) return res.status(400).json({ error: "Falta userId" });
 
   try {
+    // 1. Actualizar el estado de la conversación a "cerrado"
     await db.collection("conversaciones").doc(userId).set(
       { estado: "cerrado" },
       { merge: true }
     );
+
+    // 2. Añadir un mensaje de tipo estado para que se muestre en el historial
+    await db.collection("mensajes").add({
+      idConversacion: userId,
+      rol: "sistema",
+      tipo: "estado",
+      estado: "Cerrado",
+      timestamp: new Date().toISOString(),
+    });
+
     console.log(`✅ Estado "cerrado" guardado para ${userId}`);
     res.json({ ok: true });
   } catch (error) {
