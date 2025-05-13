@@ -490,7 +490,7 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
     let query = db
       .collection("mensajes")
       .where("idConversacion", "==", userId)
-      .orderBy("timestamp", "desc")
+      .orderBy("timestamp", "asc")
       .limit(25);
 
     if (desde) {
