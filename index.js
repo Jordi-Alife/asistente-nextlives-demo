@@ -253,6 +253,53 @@ res.json({ imageUrl });
   res.status(500).json({ error: "Error procesando la imagen" });
 }
 });
+app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
+
+  const imagePath = req.file.path;
+  const optimizedPath = `uploads/optimized-${req.file.filename}`;
+  const userId = req.body.userId || "desconocido";
+  const agenteUid = req.body.agenteUid || null;
+
+  try {
+    await sharp(imagePath)
+      .rotate()
+      .resize({ width: 800 })
+      .jpeg({ quality: 80 })
+      .toFile(optimizedPath);
+
+    const imageUrl = `${req.protocol}://${req.get("host")}/${optimizedPath}`;
+
+    await db.collection("mensajes").add({
+      idConversacion: userId,
+      rol: "asistente",
+      mensaje: imageUrl,
+      original: imageUrl,
+      tipo: "imagen",
+      idiomaDetectado: "es",
+      timestamp: new Date().toISOString(),
+      manual: true,
+      agenteUid,
+    });
+
+    await db.collection("conversaciones").doc(userId).set(
+      {
+        intervenida: true,
+        intervenidaPor: {
+          nombre: "Agente",
+          foto: "",
+          uid: agenteUid,
+        },
+      },
+      { merge: true }
+    );
+
+    res.json({ imageUrl });
+  } catch (error) {
+    console.error("❌ Error procesando imagen de agente:", error);
+    res.status(500).json({ error: "Error procesando imagen del agente" });
+  }
+});
 app.post("/api/send-to-user", async (req, res) => {
   const { userId, message, agente } = req.body;
   if (!userId || !message || !agente)
