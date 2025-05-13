@@ -484,22 +484,31 @@ app.get("/api/conversaciones", async (req, res) => {
 
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
+  const { startAfter, limit = 25 } = req.query;
 
   try {
-    const mensajesSnapshot = await db
-      .collection("mensajes")
+    let query = db.collection("mensajes")
       .where("idConversacion", "==", userId)
-      .orderBy("timestamp")
-      .get();
+      .orderBy("timestamp", "desc")
+      .limit(parseInt(limit));
 
-    const mensajes = mensajesSnapshot.docs
+    if (startAfter) {
+      const lastDoc = await db.collection("mensajes").doc(startAfter).get();
+      if (lastDoc.exists) {
+        query = query.startAfter(lastDoc);
+      }
+    }
+
+    const snapshot = await query.get();
+    const mensajes = snapshot.docs
       .map((doc) => {
         const data = doc.data();
         if (!data || !data.timestamp || (!data.mensaje && data.tipo !== "estado")) {
-  console.error("⚠️ Mensaje inválido detectado:", doc.id, data);
-  return null;
-}
+          console.error("⚠️ Mensaje inválido detectado:", doc.id, data);
+          return null;
+        }
         return {
+          id: doc.id,
           userId,
           lastInteraction: data.timestamp,
           message: data.mensaje,
@@ -507,18 +516,17 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
           from: data.rol,
           tipo: data.tipo || "texto",
           manual: data.manual || false,
-          estado: data.estado || null, // ✅ ESTA ES LA NUEVA LÍNEA
+          estado: data.estado || null,
         };
       })
       .filter((msg) => msg !== null);
 
     res.json(mensajes);
   } catch (error) {
-    console.error("❌ Error crítico obteniendo mensajes:", error);
-    res.status(500).json({ error: "Error crítico obteniendo mensajes" });
+    console.error("❌ Error paginando mensajes:", error);
+    res.status(500).json({ error: "Error obteniendo mensajes" });
   }
 });
-
 app.get("/api/poll/:userId", async (req, res) => {
   const { userId } = req.params;
 
