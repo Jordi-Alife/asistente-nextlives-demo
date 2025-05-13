@@ -239,25 +239,13 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
 
     await db.collection("mensajes").add({
   idConversacion: userId,
-  rol: "asistente",
+  rol: "usuario", // ✅ mensaje del usuario
   mensaje: imageUrl,
+  original: imageUrl,
   tipo: "imagen",
+  idiomaDetectado: "es",
   timestamp: new Date().toISOString(),
-  manual: true,
-  agenteUid: null,
 });
-
-await db.collection("conversaciones").doc(userId).set(
-  {
-    intervenida: true,
-    intervenidaPor: {
-      nombre: "Agente",
-      foto: "",
-      uid: null,
-    },
-  },
-  { merge: true }
-);
 
 res.json({ imageUrl });
 } catch (error) {
