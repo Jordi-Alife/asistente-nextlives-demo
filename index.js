@@ -230,9 +230,10 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
 
   try {
     await sharp(imagePath)
-      .resize({ width: 800 })
-      .jpeg({ quality: 80 })
-      .toFile(optimizedPath);
+  .rotate()
+  .resize({ width: 800 })
+  .jpeg({ quality: 80 })
+  .toFile(optimizedPath);
 
     const imageUrl = `${req.protocol}://${req.get("host")}/${optimizedPath}`;
 
