@@ -251,12 +251,18 @@ fileInput.addEventListener('change', async (event) => {
   const file = event.target.files[0];
   if (!file) return;
 
+  const userURL = URL.createObjectURL(file);
+  const tempId = `img-${Date.now()}`;
+  const tempMsg = document.createElement('div');
+  tempMsg.className = 'message user';
+  tempMsg.dataset.tempId = tempId;
+  tempMsg.innerHTML = `<img src="${userURL}" alt="Imagen temporal" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+  messagesDiv.appendChild(tempMsg);
+  scrollToBottom();
+
   const formData = new FormData();
   formData.append("file", file);
   formData.append("userId", getUserId());
-
-  const userURL = URL.createObjectURL(file);
-  addImageMessage(userURL, 'user');
 
   try {
     const res = await fetch("/api/upload", {
@@ -265,11 +271,17 @@ fileInput.addEventListener('change', async (event) => {
     });
 
     const result = await res.json();
-    addMessage(result.reply || "Imagen enviada correctamente.", "assistant");
+
+    // ✅ Reemplazar imagen temporal por la imagen real desde el servidor
+    tempMsg.innerHTML = `<img src="${result.imageUrl}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+    saveChat();
   } catch (err) {
-    addMessage("Hubo un problema al subir la imagen.", "assistant");
+    tempMsg.remove();
+    addMessage("❌ Hubo un problema al subir la imagen.", "assistant");
   }
 
+  fileInput.value = '';
+});
   fileInput.value = '';
 });
 
