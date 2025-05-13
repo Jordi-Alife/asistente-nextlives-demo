@@ -272,9 +272,9 @@ fileInput.addEventListener('change', async (event) => {
 
     const result = await res.json();
 
-    // ✅ Reemplazar imagen temporal por la imagen real desde el servidor
+    // ✅ Reemplazar la imagen temporal por la imagen real desde el servidor
     tempMsg.innerHTML = `<img src="${result.imageUrl}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
-        saveChat();
+    saveChat();
   } catch (err) {
     tempMsg.remove();
     addMessage("❌ Hubo un problema al subir la imagen.", "assistant");
