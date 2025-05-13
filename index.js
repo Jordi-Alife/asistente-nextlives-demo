@@ -261,14 +261,8 @@ app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
   const userId = req.body.userId || "desconocido";
   const agenteUid = req.body.agenteUid || null;
 
-  try {
-    await sharp(imagePath)
-      .rotate()
-      .resize({ width: 800 })
-      .jpeg({ quality: 80 })
-      .toFile(optimizedPath);
-
-    const imageUrl = `${req.protocol}://${req.get("host")}/${optimizedPath}`;
+    try {
+    const imageUrl = `${req.protocol}://${req.get("host")}/${imagePath}`;
 
     await db.collection("mensajes").add({
       idConversacion: userId,
@@ -296,9 +290,10 @@ app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
 
     res.json({ imageUrl });
   } catch (error) {
-    console.error("❌ Error procesando imagen de agente:", error);
+    console.error("❌ Error procesando imagen de agente:", error.message, error.stack);
     res.status(500).json({ error: "Error procesando imagen del agente" });
   }
+  
 });
 app.post("/api/send-to-user", async (req, res) => {
   const { userId, message, agente } = req.body;
