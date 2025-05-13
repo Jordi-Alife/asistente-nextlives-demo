@@ -299,23 +299,17 @@ app.post("/api/send-to-user", async (req, res) => {
   agenteUid: agente.uid || null,
 });
 
-    const convRef = db.collection("conversaciones").doc(userId);
-const convSnap = await convRef.get();
-const convData = convSnap.exists ? convSnap.data() : null;
-
-if (!convData?.intervenida) {
-  await convRef.set(
-    {
-      intervenida: true,
-      intervenidaPor: {
-        nombre: agente.nombre,
-        foto: agente.foto,
-        uid: agente.uid || null,
+    await db.collection("conversaciones").doc(userId).set(
+      {
+        intervenida: true,
+        intervenidaPor: {
+          nombre: agente.nombre,
+          foto: agente.foto,
+          uid: agente.uid || null,
+        },
       },
-    },
-    { merge: true }
-  );
-}
+      { merge: true }
+    );
 
     res.json({ ok: true });
   } catch (error) {
