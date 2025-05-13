@@ -237,18 +237,32 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     const imageUrl = `${req.protocol}://${req.get("host")}/${optimizedPath}`;
 
     await db.collection("mensajes").add({
-      idConversacion: userId,
-      rol: "usuario",
-      mensaje: imageUrl,
-      tipo: "imagen",
-      timestamp: new Date().toISOString(),
-    });
+  idConversacion: userId,
+  rol: "asistente",
+  mensaje: imageUrl,
+  tipo: "imagen",
+  timestamp: new Date().toISOString(),
+  manual: true,
+  agenteUid: null,
+});
 
-    res.json({ imageUrl });
-  } catch (error) {
-    console.error("❌ Error procesando imagen:", error);
-    res.status(500).json({ error: "Error procesando la imagen" });
-  }
+await db.collection("conversaciones").doc(userId).set(
+  {
+    intervenida: true,
+    intervenidaPor: {
+      nombre: "Agente",
+      foto: "",
+      uid: null,
+    },
+  },
+  { merge: true }
+);
+
+res.json({ imageUrl });
+} catch (error) {
+  console.error("❌ Error procesando imagen:", error);
+  res.status(500).json({ error: "Error procesando la imagen" });
+}
 });
 app.post("/api/send-to-user", async (req, res) => {
   const { userId, message, agente } = req.body;
