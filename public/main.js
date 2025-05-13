@@ -34,6 +34,14 @@ fetch("https://ipapi.co/json")
 
 function addMessage(text, sender, tempId = null) {
   if (!text.trim()) return null;
+
+  // ✅ Detectar si es una URL de imagen
+  const isImage = /\.(jpeg|jpg|png|gif|webp)$/i.test(text.trim());
+  if (isImage) {
+    addImageMessage(text.trim(), sender);
+    return tempId || null;
+  }
+
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
   if (tempId) msg.dataset.tempId = tempId;
