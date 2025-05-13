@@ -272,7 +272,7 @@ fileInput.addEventListener('change', async (event) => {
 
     const result = await res.json();
 
-    // ✅ Reemplazar imagen temporal por la imagen real desde el servidor
+    // ✅ Reemplazar la imagen temporal por la imagen real desde el servidor
     tempMsg.innerHTML = `<img src="${result.imageUrl}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
     saveChat();
   } catch (err) {
@@ -282,9 +282,6 @@ fileInput.addEventListener('change', async (event) => {
 
   fileInput.value = '';
 });
-  fileInput.value = '';
-});
-
 async function checkPanelMessages() {
   const userId = getUserId();
   try {
@@ -300,7 +297,14 @@ async function checkPanelMessages() {
             messageDiv.classList.add('manual');
           }
           messageDiv.dataset.panelId = msg.id;
-          messageDiv.innerText = msg.mensaje;
+
+          // ✅ Mostrar como imagen si la URL es de tipo imagen
+          if (/\.(jpeg|jpg|png|gif|webp)$/i.test(msg.mensaje)) {
+            messageDiv.innerHTML = `<img src="${msg.mensaje}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+          } else {
+            messageDiv.innerText = msg.mensaje;
+          }
+
           messagesDiv.appendChild(messageDiv);
           scrollToBottom();
           saveChat();
@@ -311,7 +315,6 @@ async function checkPanelMessages() {
     console.error("Error al obtener mensajes manuales:", error);
   }
 }
-
 setInterval(checkPanelMessages, 5000);
 restoreChat();
 getUserId();
