@@ -484,22 +484,21 @@ app.get("/api/conversaciones", async (req, res) => {
 
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
-  const { startAfter, limit = 25 } = req.query;
+  const desde = req.query.desde; // timestamp en formato ISO
 
   try {
-    let query = db.collection("mensajes")
+    let query = db
+      .collection("mensajes")
       .where("idConversacion", "==", userId)
       .orderBy("timestamp", "desc")
-      .limit(parseInt(limit));
+      .limit(25);
 
-    if (startAfter) {
-      const lastDoc = await db.collection("mensajes").doc(startAfter).get();
-      if (lastDoc.exists) {
-        query = query.startAfter(lastDoc);
-      }
+    if (desde) {
+      query = query.startAfter(new Date(desde));
     }
 
     const snapshot = await query.get();
+
     const mensajes = snapshot.docs
       .map((doc) => {
         const data = doc.data();
@@ -523,8 +522,8 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
 
     res.json(mensajes);
   } catch (error) {
-    console.error("❌ Error paginando mensajes:", error);
-    res.status(500).json({ error: "Error obteniendo mensajes" });
+    console.error("❌ Error crítico obteniendo mensajes:", error);
+    res.status(500).json({ error: "Error crítico obteniendo mensajes" });
   }
 });
 app.get("/api/poll/:userId", async (req, res) => {
