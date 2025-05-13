@@ -248,8 +248,6 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
 });
 
 res.json({ imageUrl });
-
-res.json({ imageUrl });
 } catch (error) {
   console.error("❌ Error procesando imagen:", error);
   res.status(500).json({ error: "Error procesando la imagen" });
