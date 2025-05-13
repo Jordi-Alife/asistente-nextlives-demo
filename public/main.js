@@ -60,12 +60,10 @@ function addTypingBubble(tempId) {
 function addImageMessage(fileURL, sender) {
   const msg = document.createElement('div');
   msg.className = 'message ' + sender;
-  const img = document.createElement('img');
-  img.src = fileURL;
-  img.alt = 'Imagen enviada';
-  img.style.maxWidth = '100%';
-  img.style.borderRadius = '12px';
-  msg.appendChild(img);
+
+  // ✅ Añadimos el atributo data-is-image para detectar en restoreChat()
+  msg.innerHTML = `<img src="${fileURL}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+
   messagesDiv.appendChild(msg);
   scrollToBottom();
   saveChat();
@@ -85,6 +83,16 @@ function restoreChat() {
   const saved = localStorage.getItem('chatMessages');
   if (saved) {
     messagesDiv.innerHTML = saved;
+
+    // ✅ Eliminar imágenes con blobs expirados (solo los temporales)
+    const images = messagesDiv.querySelectorAll('img[data-is-image="true"]');
+    images.forEach(img => {
+      if (img.src.startsWith('blob:')) {
+        img.parentElement.remove(); // elimina el mensaje si era imagen temporal
+      }
+    });
+
+    // ✅ Eliminar mensajes vacíos
     const allMessages = messagesDiv.querySelectorAll('.message');
     allMessages.forEach(msg => {
       const isEmpty = !msg.textContent.trim() && msg.children.length === 0;
@@ -97,7 +105,6 @@ function restoreChat() {
   }
   scrollToBottom(false);
 }
-
 function scrollToBottom(smooth = true) {
   messagesDiv.scrollTo({
     top: messagesDiv.scrollHeight,
