@@ -84,7 +84,15 @@ function removeMessageByTempId(tempId) {
 }
 
 function saveChat() {
-  localStorage.setItem('chatMessages', messagesDiv.innerHTML);
+  const allMessages = Array.from(messagesDiv.children).filter((el) =>
+    el.classList.contains("message")
+  );
+
+  const limitados = allMessages.slice(-50); // Solo los últimos 50
+  const tempContainer = document.createElement("div");
+  limitados.forEach((el) => tempContainer.appendChild(el.cloneNode(true)));
+
+  localStorage.setItem("chatMessages", tempContainer.innerHTML);
 }
 
 function restoreChat() {
