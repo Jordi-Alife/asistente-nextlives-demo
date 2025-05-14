@@ -47,6 +47,25 @@ function addMessage(text, sender, tempId = null) {
   if (tempId) msg.dataset.tempId = tempId;
   msg.innerText = text;
   messagesDiv.appendChild(msg);
+
+  // ✅ Limitar a los últimos 50 mensajes visibles
+  const visibles = messagesDiv.querySelectorAll('.message');
+  if (visibles.length > 50) {
+    for (let i = 0; i < visibles.length - 50; i++) {
+      visibles[i].remove();
+    }
+  }
+
+  scrollToBottom();
+  saveChat();
+  return tempId || null;
+}
+
+  const msg = document.createElement('div');
+  msg.className = 'message ' + sender;
+  if (tempId) msg.dataset.tempId = tempId;
+  msg.innerText = text;
+  messagesDiv.appendChild(msg);
   scrollToBottom();
   saveChat();
   return tempId || null;
