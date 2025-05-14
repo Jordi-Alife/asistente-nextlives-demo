@@ -494,12 +494,12 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
       .limit(100);
 
     if (desde) {
-  query = query.where("timestamp", ">", new Date(desde));
-}
+      query = query.where("timestamp", ">", new Date(desde));
+    }
 
     const snapshot = await query.get();
 
-    const mensajes = snapshot.docs
+    let mensajes = snapshot.docs
       .map((doc) => {
         const data = doc.data();
         if (!data || !data.timestamp || (!data.mensaje && data.tipo !== "estado")) {
@@ -519,6 +519,11 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
         };
       })
       .filter((msg) => msg !== null);
+
+    // ✅ Limitar a los últimos 50
+    if (mensajes.length > 50) {
+      mensajes = mensajes.slice(-50);
+    }
 
     res.json(mensajes);
   } catch (error) {
