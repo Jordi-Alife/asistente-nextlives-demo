@@ -338,7 +338,6 @@ async function checkPanelMessages() {
           }
           messageDiv.dataset.panelId = msg.id;
 
-          // ✅ Mostrar como imagen si la URL es de tipo imagen
           if (/\.(jpeg|jpg|png|gif|webp)$/i.test(msg.mensaje)) {
             messageDiv.innerHTML = `<img src="${msg.mensaje}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
           } else {
@@ -346,6 +345,15 @@ async function checkPanelMessages() {
           }
 
           messagesDiv.appendChild(messageDiv);
+
+          // ✅ Limitar a los últimos 50 mensajes
+          const todos = messagesDiv.querySelectorAll('.message');
+          if (todos.length > 50) {
+            for (let i = 0; i < todos.length - 50; i++) {
+              todos[i].remove();
+            }
+          }
+
           scrollToBottom();
           saveChat();
         }
