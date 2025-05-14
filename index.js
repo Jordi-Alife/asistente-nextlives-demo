@@ -491,7 +491,7 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
       .collection("mensajes")
       .where("idConversacion", "==", userId)
       .orderBy("timestamp", "asc")
-      .limit(40);
+      .limit(100);
 
     if (desde) {
   query = query.where("timestamp", ">", new Date(desde));
