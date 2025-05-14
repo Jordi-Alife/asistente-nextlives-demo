@@ -90,19 +90,32 @@ function saveChat() {
 function restoreChat() {
   const saved = localStorage.getItem('chatMessages');
   if (saved) {
-    messagesDiv.innerHTML = saved;
+    const tempContainer = document.createElement("div");
+    tempContainer.innerHTML = saved;
 
-    // ✅ Eliminar imágenes con blobs expirados (solo los temporales)
+    const mensajes = Array.from(tempContainer.children).filter((el) =>
+      el.classList.contains("message")
+    );
+
+    // ✅ Limitar a los últimos 50
+    if (mensajes.length > 50) {
+      mensajes.splice(0, mensajes.length - 50);
+    }
+
+    messagesDiv.innerHTML = "";
+    mensajes.forEach((el) => messagesDiv.appendChild(el));
+
+    // ✅ Eliminar imágenes con blobs expirados
     const images = messagesDiv.querySelectorAll('img[data-is-image="true"]');
-    images.forEach(img => {
-      if (img.src.startsWith('blob:')) {
-        img.parentElement.remove(); // elimina el mensaje si era imagen temporal
+    images.forEach((img) => {
+      if (img.src.startsWith("blob:")) {
+        img.parentElement.remove();
       }
     });
 
     // ✅ Eliminar mensajes vacíos
-    const allMessages = messagesDiv.querySelectorAll('.message');
-    allMessages.forEach(msg => {
+    const allMessages = messagesDiv.querySelectorAll(".message");
+    allMessages.forEach((msg) => {
       const isEmpty = !msg.textContent.trim() && msg.children.length === 0;
       if (isEmpty) msg.remove();
     });
