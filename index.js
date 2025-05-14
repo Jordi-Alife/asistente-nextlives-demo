@@ -494,8 +494,8 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
       .limit(25);
 
     if (desde) {
-      query = query.startAfter(new Date(desde));
-    }
+  query = query.where("timestamp", ">", new Date(desde));
+}
 
     const snapshot = await query.get();
 
