@@ -61,16 +61,6 @@ function addMessage(text, sender, tempId = null) {
   return tempId || null;
 }
 
-  const msg = document.createElement('div');
-  msg.className = 'message ' + sender;
-  if (tempId) msg.dataset.tempId = tempId;
-  msg.innerText = text;
-  messagesDiv.appendChild(msg);
-  scrollToBottom();
-  saveChat();
-  return tempId || null;
-}
-
 function addTypingBubble(tempId) {
   const msg = document.createElement('div');
   msg.className = 'message assistant';
