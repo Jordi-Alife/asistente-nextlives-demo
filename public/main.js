@@ -3,8 +3,6 @@ const input = document.getElementById('messageInput');
 const fileInput = document.getElementById('fileInput');
 const sendBtn = document.querySelector('.send-button');
 
-let imagenSeleccionada = null; // ✅ Imagen pendiente de enviar
-
 function getUserId() {
   let id = localStorage.getItem("userId");
   if (!id) {
@@ -154,59 +152,19 @@ function scrollToBottom(smooth = true) {
 
 async function sendMessage() {
   const text = input.value.trim();
+  if (!text) return;
+
   const userId = getUserId();
+  addMessage(text, 'user');
+  input.value = '';
+  sendBtn.classList.remove('active');
+  avisarEscribiendo("");
 
-  // ⛔ Si no hay texto ni imagen, no hacemos nada
-  if (!text && !imagenSeleccionada) return;
+  const tempId = `typing-${Date.now()}`;
+  addTypingBubble(tempId);
 
-  // ✅ Mostrar el mensaje del usuario si hay texto
-  if (text) {
-    addMessage(text, 'user');
-    input.value = '';
-    sendBtn.classList.remove('active');
-    avisarEscribiendo("");
-  }
-
-  // ✅ Si hay imagen pendiente de enviar, la subimos ahora
-  if (imagenSeleccionada) {
-    const tempId = `img-${Date.now()}`;
-    const userURL = URL.createObjectURL(imagenSeleccionada);
-    const tempMsg = document.createElement('div');
-    tempMsg.className = 'message user';
-    tempMsg.dataset.tempId = tempId;
-    tempMsg.innerHTML = `<img src="${userURL}" alt="Imagen temporal" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
-    messagesDiv.appendChild(tempMsg);
-    scrollToBottom();
-
-    const formData = new FormData();
-    formData.append("file", imagenSeleccionada);
-    formData.append("userId", userId);
-
-    try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData
-      });
-      const result = await res.json();
-      tempMsg.innerHTML = `<img src="${result.imageUrl}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
-      saveChat();
-    } catch (err) {
-      tempMsg.remove();
-      addMessage("❌ Hubo un problema al subir la imagen.", "assistant");
-    }
-
-    // ✅ Limpiar
-    imagenSeleccionada = null;
-    const preview = document.getElementById("imagePreview");
-    if (preview) preview.remove();
-    fileInput.value = '';
-  }
-
-  // ✅ Si hay texto, enviarlo al backend
-  if (text) {
-    const tempId = `typing-${Date.now()}`;
-    addTypingBubble(tempId);
-
+  const start = Date.now();
+  try {
     const bodyData = {
       message: text,
       userId,
@@ -215,24 +173,28 @@ async function sendMessage() {
       historial: metadata.historial
     };
 
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(bodyData)
-      });
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bodyData)
+    });
 
-      const data = await res.json();
-      const delay = Math.max(0, 1500 - (Date.now() - tempId.split('-')[1]));
+    const data = await res.json();
+    const elapsed = Date.now() - start;
+    const minDelay = 1500;
+    const remaining = Math.max(0, minDelay - elapsed);
 
-      setTimeout(() => {
-        removeMessageByTempId(tempId);
-        if (data.reply?.trim()) addMessage(data.reply, 'assistant');
-      }, delay);
-    } catch (err) {
-      removeMessageByTempId(tempId);
-      addMessage("Error al conectar con el servidor.", "assistant");
-    }
+    setTimeout(() => {
+  removeMessageByTempId(tempId);
+  if (data.reply?.trim()) {
+    addMessage(data.reply, 'assistant');
+  }
+  // Si no hay respuesta, no mostramos nada (caso: conversación intervenida)
+}, remaining);
+
+  } catch (err) {
+    removeMessageByTempId(tempId);
+    addMessage("Error al conectar con el servidor.", "assistant");
   }
 }
 
@@ -321,31 +283,37 @@ function abrirChat() {
 fileInput.addEventListener('change', async (event) => {
   const file = event.target.files[0];
   if (!file) return;
-  imagenSeleccionada = file;
 
-  const previewContainer = document.createElement("div");
-  previewContainer.id = "imagePreview";
-  previewContainer.style = "margin: 10px 12px; display: flex; gap: 10px; align-items: center;";
+  const userURL = URL.createObjectURL(file);
+  const tempId = `img-${Date.now()}`;
+  const tempMsg = document.createElement('div');
+  tempMsg.className = 'message user';
+  tempMsg.dataset.tempId = tempId;
+  tempMsg.innerHTML = `<img src="${userURL}" alt="Imagen temporal" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+  messagesDiv.appendChild(tempMsg);
+  scrollToBottom();
 
-  const img = document.createElement("img");
-  img.src = URL.createObjectURL(file);
-  img.style = "max-height: 100px; border-radius: 8px; border: 1px solid #ccc;";
-  previewContainer.appendChild(img);
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("userId", getUserId());
 
-  const quitarBtn = document.createElement("button");
-  quitarBtn.textContent = "Quitar imagen";
-  quitarBtn.style = "color: red; font-size: 14px; text-decoration: underline; background: none; border: none; cursor: pointer;";
-  quitarBtn.onclick = () => {
-    imagenSeleccionada = null;
-    previewContainer.remove();
-    fileInput.value = '';
-  };
+  try {
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData
+    });
 
-  previewContainer.appendChild(quitarBtn);
+    const result = await res.json();
 
-  const anterior = document.getElementById("imagePreview");
-  if (anterior) anterior.remove();
-  messagesDiv.parentElement.appendChild(previewContainer);
+    // ✅ Reemplazar la imagen temporal por la imagen real desde el servidor
+    tempMsg.innerHTML = `<img src="${result.imageUrl}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+    saveChat();
+  } catch (err) {
+    tempMsg.remove();
+    addMessage("❌ Hubo un problema al subir la imagen.", "assistant");
+  }
+
+  fileInput.value = '';
 });
 async function checkPanelMessages() {
   const userId = getUserId();
