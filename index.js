@@ -192,13 +192,15 @@ app.post("/api/chat", async (req, res) => {
       `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}". Si el usuario escribió en catalán, responde en catalán; si lo hizo en inglés, responde en inglés; si en español, responde en español. No traduzcas ni expliques nada adicional.`,
     ].join("\n");
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        { role: "system", content: promptSystem || `Eres un asistente de soporte funerario. Responde en el mismo idioma que el usuario.` },
-        { role: "user", content: message },
-      ],
-    });
+    const response = {
+  choices: [
+    {
+      message: {
+        content: "Simulación de respuesta del asistente.",
+      },
+    },
+  ],
+};
 
     const reply = response.choices[0].message.content;
     const traduccionRespuesta = await traducir(reply, "es");
