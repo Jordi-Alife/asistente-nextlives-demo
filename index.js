@@ -149,7 +149,6 @@ if (!idioma || idioma === "zxx") {
     console.log(`⚠️ Fallback total en /chat: se usa "es"`);
   }
 }
-
   try {
     // Guardar info usuario
     await db.collection("usuarios_chat").doc(finalUserId).set(
