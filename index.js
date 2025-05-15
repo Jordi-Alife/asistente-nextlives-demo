@@ -484,28 +484,25 @@ app.get("/api/conversaciones", async (req, res) => {
 
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
-  const desde = req.query.desde; // timestamp en formato ISO
+  const hasta = req.query.hasta; // timestamp ISO
 
   try {
     let query = db
       .collection("mensajes")
       .where("idConversacion", "==", userId)
-      .orderBy("timestamp", "asc")
-      .limit(100);
+      .orderBy("timestamp", "desc")
+      .limit(25);
 
-    if (desde) {
-      query = query.where("timestamp", ">", new Date(desde));
+    if (hasta) {
+      query = query.where("timestamp", "<", new Date(hasta)); // trae más antiguos
     }
 
     const snapshot = await query.get();
 
-    let mensajes = snapshot.docs
+    const mensajes = snapshot.docs
       .map((doc) => {
         const data = doc.data();
-        if (!data || !data.timestamp || (!data.mensaje && data.tipo !== "estado")) {
-          console.error("⚠️ Mensaje inválido detectado:", doc.id, data);
-          return null;
-        }
+        if (!data || !data.timestamp || (!data.mensaje && data.tipo !== "estado")) return null;
         return {
           id: doc.id,
           userId,
@@ -518,12 +515,8 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
           estado: data.estado || null,
         };
       })
-      .filter((msg) => msg !== null);
-
-    // ✅ Limitar a los últimos 50
-    if (mensajes.length > 50) {
-      mensajes = mensajes.slice(-50);
-    }
+      .filter((msg) => msg !== null)
+      .sort((a, b) => new Date(a.lastInteraction) - new Date(b.lastInteraction)); // orden ascendente
 
     res.json(mensajes);
   } catch (error) {
