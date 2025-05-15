@@ -124,35 +124,35 @@ app.post("/api/chat", async (req, res) => {
   const finalUserId = userId || "anon";
   let idioma = await detectarIdiomaGPT(message);
 
-// ✅ Fallback si el idioma no es válido
-if (!idioma || idioma === "zxx") {
-  const ultimos = await db.collection("mensajes")
-    .where("idConversacion", "==", finalUserId)
-    .where("rol", "==", "usuario")
-    .orderBy("timestamp", "desc")
-    .limit(10)
-    .get();
+  // ✅ Fallback si el idioma no es válido o es zxx
+  if (!idioma || idioma === "zxx") {
+    const ultimos = await db.collection("mensajes")
+      .where("idConversacion", "==", finalUserId)
+      .where("rol", "==", "usuario")
+      .orderBy("timestamp", "desc")
+      .limit(10)
+      .get();
 
-  const idiomaValido = ultimos.docs.find(doc => {
-    const msg = doc.data();
-    return msg.idiomaDetectado && msg.idiomaDetectado !== "zxx";
-  });
+    const idiomaValido = ultimos.docs.find(doc => {
+      const msg = doc.data();
+      return msg.idiomaDetectado && msg.idiomaDetectado !== "zxx";
+    });
 
-  if (idiomaValido) {
-    idioma = idiomaValido.data().idiomaDetectado;
-    console.log(`🌐 Fallback idioma en /chat: se usa anterior "${idioma}"`);
-  } else {
-    idioma = "es";
-    console.log(`⚠️ Fallback total en /chat: se usa "es"`);
+    if (idiomaValido) {
+      idioma = idiomaValido.data().idiomaDetectado;
+      console.log(`🌐 Fallback idioma en /chat: se usa anterior "${idioma}"`);
+    } else {
+      idioma = "es";
+      console.log(`⚠️ Fallback total en /chat: se usa "es"`);
+    }
   }
-}
 
   try {
     // Guardar info usuario
     await db.collection("usuarios_chat").doc(finalUserId).set(
       {
         nombre: "Invitado",
-        idioma: idioma,
+        idioma,
         ultimaConexion: new Date().toISOString(),
         navegador: userAgent || "",
         pais: pais || "",
@@ -167,7 +167,7 @@ if (!idioma || idioma === "zxx") {
         idUsuario: finalUserId,
         fechaInicio: new Date().toISOString(),
         estado: "abierta",
-        idioma: idioma,
+        idioma,
         navegador: userAgent || "",
         pais: pais || "",
         historial: historial || [],
@@ -189,10 +189,9 @@ if (!idioma || idioma === "zxx") {
       timestamp: new Date().toISOString(),
     });
 
-    // ✅ Chequeo: si la conversación está intervenida, bloquear GPT
+    // Bloquear si está intervenida
     const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
     const convData = convDoc.exists ? convDoc.data() : null;
-
     if (convData?.intervenida) {
       console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
       return res.json({ reply: "" });
@@ -204,7 +203,7 @@ if (!idioma || idioma === "zxx") {
       });
     }
 
-    // Preparar prompt y llamar a GPT
+    // Preparar prompt y lanzar a GPT
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
       : "";
@@ -218,7 +217,7 @@ if (!idioma || idioma === "zxx") {
     const response = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
-        { role: "system", content: promptSystem || `Eres un asistente de soporte funerario. Responde en el mismo idioma que el usuario.` },
+        { role: "system", content: promptSystem },
         { role: "user", content: message },
       ],
     });
@@ -226,7 +225,7 @@ if (!idioma || idioma === "zxx") {
     const reply = response.choices[0].message.content;
     const traduccionRespuesta = await traducir(reply, "es");
 
-    // Guardar respuesta GPT
+    // Guardar respuesta del asistente
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
       rol: "asistente",
@@ -242,39 +241,6 @@ if (!idioma || idioma === "zxx") {
     console.error("❌ Error general en /api/chat:", error);
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
   }
-});
-
-app.post("/api/upload", upload.single("file"), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
-
-  const imagePath = req.file.path;
-  const optimizedPath = `uploads/optimized-${req.file.filename}`;
-  const userId = req.body.userId || "desconocido";
-
-  try {
-    await sharp(imagePath)
-  .rotate()
-  .resize({ width: 800 })
-  .jpeg({ quality: 80 })
-  .toFile(optimizedPath);
-
-    const imageUrl = `${req.protocol}://${req.get("host")}/${optimizedPath}`;
-
-    await db.collection("mensajes").add({
-  idConversacion: userId,
-  rol: "usuario", // ✅ mensaje del usuario
-  mensaje: imageUrl,
-  original: imageUrl,
-  tipo: "imagen",
-  idiomaDetectado: "es",
-  timestamp: new Date().toISOString(),
-});
-
-res.json({ imageUrl });
-} catch (error) {
-  console.error("❌ Error procesando imagen:", error);
-  res.status(500).json({ error: "Error procesando la imagen" });
-}
 });
 app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
