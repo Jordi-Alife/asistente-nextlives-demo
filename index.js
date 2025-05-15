@@ -122,7 +122,26 @@ app.post("/api/traducir-modal", async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial, datosContexto } = req.body;
   const finalUserId = userId || "anon";
-  const idioma = await detectarIdiomaGPT(message);
+  let idioma = await detectarIdiomaGPT(message);
+
+// ✅ Fallback si el idioma no es válido
+if (!idioma || idioma === "zxx") {
+  const ultimos = await db.collection("mensajes")
+    .where("idConversacion", "==", finalUserId)
+    .where("rol", "==", "usuario")
+    .orderBy("timestamp", "desc")
+    .limit(1)
+    .get();
+
+  const anterior = ultimos.docs[0]?.data();
+  if (anterior?.idiomaDetectado && anterior.idiomaDetectado !== "zxx") {
+    idioma = anterior.idiomaDetectado;
+    console.log(`🌐 Idioma no detectado, se usa el anterior: ${idioma}`);
+  } else {
+    idioma = "es"; // Fallback total
+    console.log(`⚠️ Idioma no detectado ni en anterior, se usa español por defecto`);
+  }
+}
 
   try {
     // Guardar info usuario
@@ -192,15 +211,13 @@ app.post("/api/chat", async (req, res) => {
       `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}". Si el usuario escribió en catalán, responde en catalán; si lo hizo en inglés, responde en inglés; si en español, responde en español. No traduzcas ni expliques nada adicional.`,
     ].join("\n");
 
-    const response = {
-  choices: [
-    {
-      message: {
-        content: "Simulación de respuesta del asistente.",
-      },
-    },
-  ],
-};
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        { role: "system", content: promptSystem || `Eres un asistente de soporte funerario. Responde en el mismo idioma que el usuario.` },
+        { role: "user", content: message },
+      ],
+    });
 
     const reply = response.choices[0].message.content;
     const traduccionRespuesta = await traducir(reply, "es");
