@@ -124,7 +124,12 @@ app.post("/api/chat", async (req, res) => {
   const finalUserId = userId || "anon";
   let idioma = await detectarIdiomaGPT(message);
 
-  // ✅ Fallback si el idioma no es válido o es zxx
+  app.post("/api/chat", async (req, res) => {
+  const { message, system, userId, userAgent, pais, historial, datosContexto } = req.body;
+  const finalUserId = userId || "anon";
+  let idioma = await detectarIdiomaGPT(message);
+
+  // ✅ Fallback si el idioma no es válido o es "zxx"
   if (!idioma || idioma === "zxx") {
     const ultimos = await db.collection("mensajes")
       .where("idConversacion", "==", finalUserId)
@@ -176,9 +181,10 @@ app.post("/api/chat", async (req, res) => {
       { merge: true }
     );
 
-    // Traducir y guardar mensaje usuario
+    // Traducir mensaje para guardar en español (para el panel)
     const traduccionUsuario = await traducir(message, "es");
 
+    // Guardar mensaje del usuario
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
       rol: "usuario",
@@ -189,7 +195,7 @@ app.post("/api/chat", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
-    // Bloquear si está intervenida
+    // ✅ Si está intervenida, no responder
     const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
     const convData = convDoc.exists ? convDoc.data() : null;
     if (convData?.intervenida) {
@@ -197,13 +203,14 @@ app.post("/api/chat", async (req, res) => {
       return res.json({ reply: "" });
     }
 
+    // ✅ Si debe escalarse a humano
     if (shouldEscalateToHuman(message)) {
       return res.json({
         reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia.",
       });
     }
 
-    // Preparar prompt y lanzar a GPT
+    // Crear prompt con el idioma correcto
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
       : "";
@@ -214,6 +221,7 @@ app.post("/api/chat", async (req, res) => {
       `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}". Si el usuario escribió en catalán, responde en catalán; si lo hizo en inglés, responde en inglés; si en español, responde en español. No traduzcas ni expliques nada adicional.`,
     ].join("\n");
 
+    // Obtener respuesta del asistente
     const response = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
@@ -224,31 +232,9 @@ app.post("/api/chat", async (req, res) => {
 
     const reply = response.choices[0].message.content;
 
-    // 🔁 Validar idioma antes de traducir respuesta
-if (!idioma || idioma === "zxx") {
-  const ultimos = await db.collection("mensajes")
-    .where("idConversacion", "==", finalUserId)
-    .where("rol", "==", "usuario")
-    .orderBy("timestamp", "desc")
-    .limit(10)
-    .get();
-
-  const idiomaValido = ultimos.docs.find(doc => {
-    const msg = doc.data();
-    return msg.idiomaDetectado && msg.idiomaDetectado !== "zxx";
-  });
-
-  if (idiomaValido) {
-    idioma = idiomaValido.data().idiomaDetectado;
-    console.log(`🌐 Fallback idioma GPT reply: se usa anterior "${idioma}"`);
-  } else {
-    idioma = "es";
-    console.log(`⚠️ Fallback total GPT reply: se usa "es"`);
-  }
-}
+    // Traducir respuesta al español para guardarla para el panel
     const traduccionRespuesta = await traducir(reply, "es");
 
-    // Guardar respuesta del asistente
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
       rol: "asistente",
