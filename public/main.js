@@ -280,40 +280,38 @@ function abrirChat() {
   window.location.reload();
 }
 
-fileInput.addEventListener('change', async (event) => {
+let imagenSeleccionada = null;
+
+fileInput.addEventListener('change', (event) => {
   const file = event.target.files[0];
   if (!file) return;
 
-  const userURL = URL.createObjectURL(file);
-  const tempId = `img-${Date.now()}`;
-  const tempMsg = document.createElement('div');
-  tempMsg.className = 'message user';
-  tempMsg.dataset.tempId = tempId;
-  tempMsg.innerHTML = `<img src="${userURL}" alt="Imagen temporal" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
-  messagesDiv.appendChild(tempMsg);
-  scrollToBottom();
+  imagenSeleccionada = file;
 
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("userId", getUserId());
+  const anterior = document.getElementById("imagePreview");
+  if (anterior) anterior.remove();
 
-  try {
-    const res = await fetch("/api/upload", {
-      method: "POST",
-      body: formData
-    });
+  const previewContainer = document.createElement("div");
+  previewContainer.id = "imagePreview";
+  previewContainer.style = "margin: 10px 12px; display: flex; gap: 10px; align-items: center;";
 
-    const result = await res.json();
+  const img = document.createElement("img");
+  img.src = URL.createObjectURL(file);
+  img.style = "max-height: 100px; border-radius: 8px; border: 1px solid #ccc;";
+  previewContainer.appendChild(img);
 
-    // ✅ Reemplazar la imagen temporal por la imagen real desde el servidor
-    tempMsg.innerHTML = `<img src="${result.imageUrl}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
-    saveChat();
-  } catch (err) {
-    tempMsg.remove();
-    addMessage("❌ Hubo un problema al subir la imagen.", "assistant");
-  }
+  const quitarBtn = document.createElement("button");
+  quitarBtn.textContent = "Quitar imagen";
+  quitarBtn.style = "color: red; font-size: 14px; text-decoration: underline; background: none; border: none; cursor: pointer;";
+  quitarBtn.onclick = () => {
+    imagenSeleccionada = null;
+    previewContainer.remove();
+    fileInput.value = '';
+  };
 
-  fileInput.value = '';
+  previewContainer.appendChild(quitarBtn);
+
+  document.getElementById("chat-widget").appendChild(previewContainer);
 });
 async function checkPanelMessages() {
   const userId = getUserId();
