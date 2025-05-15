@@ -122,26 +122,7 @@ app.post("/api/traducir-modal", async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial, datosContexto } = req.body;
   const finalUserId = userId || "anon";
-  let idioma = await detectarIdiomaGPT(message);
-
-// ✅ Fallback si el idioma no es válido
-if (!idioma || idioma === "zxx") {
-  const ultimos = await db.collection("mensajes")
-    .where("idConversacion", "==", finalUserId)
-    .where("rol", "==", "usuario")
-    .orderBy("timestamp", "desc")
-    .limit(1)
-    .get();
-
-  const anterior = ultimos.docs[0]?.data();
-  if (anterior?.idiomaDetectado && anterior.idiomaDetectado !== "zxx") {
-    idioma = anterior.idiomaDetectado;
-    console.log(`🌐 Idioma no detectado, se usa el anterior: ${idioma}`);
-  } else {
-    idioma = "es"; // Fallback total
-    console.log(`⚠️ Idioma no detectado ni en anterior, se usa español por defecto`);
-  }
-}
+  const idioma = await detectarIdiomaGPT(message);
 
   try {
     // Guardar info usuario
@@ -374,26 +355,7 @@ app.post("/api/send", async (req, res) => {
   }
 
   try {
-    let idioma = await detectarIdiomaGPT(texto);
-
-    // ✅ Fallback si el idioma no es válido
-    if (!idioma || idioma === "zxx") {
-      const ultimos = await db.collection("mensajes")
-        .where("idConversacion", "==", userId)
-        .where("rol", "==", "usuario")
-        .orderBy("timestamp", "desc")
-        .limit(1)
-        .get();
-
-      const anterior = ultimos.docs[0]?.data();
-      if (anterior?.idiomaDetectado && anterior.idiomaDetectado !== "zxx") {
-        idioma = anterior.idiomaDetectado;
-        console.log(`🌐 Idioma no detectado en /send, se usa el anterior: ${idioma}`);
-      } else {
-        idioma = "es"; // Fallback total
-        console.log(`⚠️ Idioma no detectado en /send ni en anterior, se usa español`);
-      }
-    }
+    const idioma = await detectarIdiomaGPT(texto);
 
     await db.collection("mensajes").add({
       idConversacion: userId,
