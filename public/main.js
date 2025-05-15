@@ -152,19 +152,59 @@ function scrollToBottom(smooth = true) {
 
 async function sendMessage() {
   const text = input.value.trim();
-  if (!text) return;
-
   const userId = getUserId();
-  addMessage(text, 'user');
-  input.value = '';
-  sendBtn.classList.remove('active');
-  avisarEscribiendo("");
 
-  const tempId = `typing-${Date.now()}`;
-  addTypingBubble(tempId);
+  // ⛔ Si no hay texto ni imagen, no hacemos nada
+  if (!text && !imagenSeleccionada) return;
 
-  const start = Date.now();
-  try {
+  // ✅ Mostrar el mensaje del usuario si hay texto
+  if (text) {
+    addMessage(text, 'user');
+    input.value = '';
+    sendBtn.classList.remove('active');
+    avisarEscribiendo("");
+  }
+
+  // ✅ Si hay imagen pendiente de enviar, la subimos ahora
+  if (imagenSeleccionada) {
+    const tempId = `img-${Date.now()}`;
+    const userURL = URL.createObjectURL(imagenSeleccionada);
+    const tempMsg = document.createElement('div');
+    tempMsg.className = 'message user';
+    tempMsg.dataset.tempId = tempId;
+    tempMsg.innerHTML = `<img src="${userURL}" alt="Imagen temporal" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+    messagesDiv.appendChild(tempMsg);
+    scrollToBottom();
+
+    const formData = new FormData();
+    formData.append("file", imagenSeleccionada);
+    formData.append("userId", userId);
+
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData
+      });
+      const result = await res.json();
+      tempMsg.innerHTML = `<img src="${result.imageUrl}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+      saveChat();
+    } catch (err) {
+      tempMsg.remove();
+      addMessage("❌ Hubo un problema al subir la imagen.", "assistant");
+    }
+
+    // ✅ Limpiar
+    imagenSeleccionada = null;
+    const preview = document.getElementById("imagePreview");
+    if (preview) preview.remove();
+    fileInput.value = '';
+  }
+
+  // ✅ Si hay texto, enviar al backend
+  if (text) {
+    const tempId = `typing-${Date.now()}`;
+    addTypingBubble(tempId);
+
     const bodyData = {
       message: text,
       userId,
@@ -173,28 +213,24 @@ async function sendMessage() {
       historial: metadata.historial
     };
 
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(bodyData)
-    });
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bodyData)
+      });
 
-    const data = await res.json();
-    const elapsed = Date.now() - start;
-    const minDelay = 1500;
-    const remaining = Math.max(0, minDelay - elapsed);
+      const data = await res.json();
+      const delay = Math.max(0, 1500 - (Date.now() - parseInt(tempId.split('-')[1])));
 
-    setTimeout(() => {
-  removeMessageByTempId(tempId);
-  if (data.reply?.trim()) {
-    addMessage(data.reply, 'assistant');
-  }
-  // Si no hay respuesta, no mostramos nada (caso: conversación intervenida)
-}, remaining);
-
-  } catch (err) {
-    removeMessageByTempId(tempId);
-    addMessage("Error al conectar con el servidor.", "assistant");
+      setTimeout(() => {
+        removeMessageByTempId(tempId);
+        if (data.reply?.trim()) addMessage(data.reply, 'assistant');
+      }, delay);
+    } catch (err) {
+      removeMessageByTempId(tempId);
+      addMessage("Error al conectar con el servidor.", "assistant");
+    }
   }
 }
 
