@@ -285,25 +285,32 @@ function abrirChat() {
 fileInput.addEventListener('change', async (event) => {
   const file = event.target.files[0];
   if (!file) return;
+  imagenSeleccionada = file;
 
-  const userURL = URL.createObjectURL(file);
-  const tempId = `img-${Date.now()}`;
-  const tempMsg = document.createElement('div');
-  tempMsg.className = 'message user';
-  tempMsg.dataset.tempId = tempId;
-  tempMsg.innerHTML = `<img src="${userURL}" alt="Imagen temporal" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
-  messagesDiv.appendChild(tempMsg);
-  scrollToBottom();
+  const previewContainer = document.createElement("div");
+  previewContainer.id = "imagePreview";
+  previewContainer.style = "margin: 10px 12px; display: flex; gap: 10px; align-items: center;";
 
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("userId", getUserId());
+  const img = document.createElement("img");
+  img.src = URL.createObjectURL(file);
+  img.style = "max-height: 100px; border-radius: 8px; border: 1px solid #ccc;";
+  previewContainer.appendChild(img);
 
-  try {
-    const res = await fetch("/api/upload", {
-      method: "POST",
-      body: formData
-    });
+  const quitarBtn = document.createElement("button");
+  quitarBtn.textContent = "Quitar imagen";
+  quitarBtn.style = "color: red; font-size: 14px; text-decoration: underline; background: none; border: none; cursor: pointer;";
+  quitarBtn.onclick = () => {
+    imagenSeleccionada = null;
+    previewContainer.remove();
+    fileInput.value = '';
+  };
+
+  previewContainer.appendChild(quitarBtn);
+
+  const anterior = document.getElementById("imagePreview");
+  if (anterior) anterior.remove();
+  messagesDiv.parentElement.appendChild(previewContainer);
+});
 
     const result = await res.json();
 
