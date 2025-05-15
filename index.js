@@ -288,6 +288,34 @@ app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
   }
   
 });
+
+// ✅ NUEVO endpoint para subir imágenes desde el asistente (usuario)
+app.post("/api/upload", upload.single("file"), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
+
+  const imagePath = req.file.path;
+  const userId = req.body.userId || "desconocido";
+
+  try {
+    const imageUrl = `${req.protocol}://${req.get("host")}/${imagePath}`;
+
+    await db.collection("mensajes").add({
+      idConversacion: userId,
+      rol: "usuario",
+      mensaje: imageUrl,
+      original: imageUrl,
+      tipo: "imagen",
+      idiomaDetectado: "es",
+      timestamp: new Date().toISOString(),
+    });
+
+    res.json({ imageUrl });
+  } catch (error) {
+    console.error("❌ Error procesando imagen del usuario:", error.message, error.stack);
+    res.status(500).json({ error: "Error procesando imagen del usuario" });
+  }
+});
+
 app.post("/api/send-to-user", async (req, res) => {
   const { userId, message, agente } = req.body;
   if (!userId || !message || !agente)
