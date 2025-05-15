@@ -123,32 +123,33 @@ app.post("/api/traducir-modal", async (req, res) => {
   app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial, datosContexto } = req.body;
   const finalUserId = userId || "anon";
-  // 🧠 Detectar idioma del mensaje
-let idiomaDetectado = await detectarIdiomaGPT(message);
-let idioma = idiomaDetectado;
 
-// 🛡️ Fallback si no es válido
-if (!idioma || idioma === "zxx") {
-  const ultimos = await db.collection("mensajes")
-    .where("idConversacion", "==", finalUserId)
-    .where("rol", "==", "usuario")
-    .orderBy("timestamp", "desc")
-    .limit(10)
-    .get();
+  // 1. Detectar idioma original del mensaje
+  let idiomaDetectado = await detectarIdiomaGPT(message);
+  let idioma = idiomaDetectado;
 
-  const idiomaValido = ultimos.docs.find(doc => {
-    const msg = doc.data();
-    return msg.idiomaDetectado && msg.idiomaDetectado !== "zxx";
-  });
+  // 2. Fallback si no es válido
+  if (!idioma || idioma === "zxx") {
+    const ultimos = await db.collection("mensajes")
+      .where("idConversacion", "==", finalUserId)
+      .where("rol", "==", "usuario")
+      .orderBy("timestamp", "desc")
+      .limit(10)
+      .get();
 
-  if (idiomaValido) {
-    idioma = idiomaValido.data().idiomaDetectado;
-    console.log(`🌐 Fallback idioma en /chat: se usa anterior "${idioma}"`);
-  } else {
-    idioma = "es";
-    console.log(`⚠️ Fallback total en /chat: se usa "es"`);
+    const idiomaValido = ultimos.docs.find(doc => {
+      const msg = doc.data();
+      return msg.idiomaDetectado && msg.idiomaDetectado !== "zxx";
+    });
+
+    if (idiomaValido) {
+      idioma = idiomaValido.data().idiomaDetectado;
+      console.log(`🌐 Fallback idioma en /chat: se usa anterior "${idioma}"`);
+    } else {
+      idioma = "es";
+      console.log(`⚠️ Fallback total en /chat: se usa "es"`);
+    }
   }
-}
   try {
     // Guardar info usuario
     await db.collection("usuarios_chat").doc(finalUserId).set(
