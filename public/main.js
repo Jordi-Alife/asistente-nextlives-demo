@@ -185,9 +185,13 @@ async function sendMessage() {
     const remaining = Math.max(0, minDelay - elapsed);
 
     setTimeout(() => {
-      removeMessageByTempId(tempId);
-      addMessage(data.reply, 'assistant');
-    }, remaining);
+  removeMessageByTempId(tempId);
+  if (data.reply?.trim()) {
+    addMessage(data.reply, 'assistant');
+  } else {
+    addMessage("❌ No se recibió respuesta del asistente.", "assistant");
+  }
+}, remaining);
 
   } catch (err) {
     removeMessageByTempId(tempId);
