@@ -223,6 +223,29 @@ app.post("/api/chat", async (req, res) => {
     });
 
     const reply = response.choices[0].message.content;
+
+    // 🔁 Validar idioma antes de traducir respuesta
+if (!idioma || idioma === "zxx") {
+  const ultimos = await db.collection("mensajes")
+    .where("idConversacion", "==", finalUserId)
+    .where("rol", "==", "usuario")
+    .orderBy("timestamp", "desc")
+    .limit(10)
+    .get();
+
+  const idiomaValido = ultimos.docs.find(doc => {
+    const msg = doc.data();
+    return msg.idiomaDetectado && msg.idiomaDetectado !== "zxx";
+  });
+
+  if (idiomaValido) {
+    idioma = idiomaValido.data().idiomaDetectado;
+    console.log(`🌐 Fallback idioma GPT reply: se usa anterior "${idioma}"`);
+  } else {
+    idioma = "es";
+    console.log(`⚠️ Fallback total GPT reply: se usa "es"`);
+  }
+}
     const traduccionRespuesta = await traducir(reply, "es");
 
     // Guardar respuesta del asistente
