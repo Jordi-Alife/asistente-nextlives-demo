@@ -130,16 +130,20 @@ if (!idioma || idioma === "zxx") {
     .where("idConversacion", "==", finalUserId)
     .where("rol", "==", "usuario")
     .orderBy("timestamp", "desc")
-    .limit(1)
+    .limit(10)
     .get();
 
-  const anterior = ultimos.docs[0]?.data();
-  if (anterior?.idiomaDetectado && anterior.idiomaDetectado !== "zxx") {
-    idioma = anterior.idiomaDetectado;
-    console.log(`🌐 Idioma no detectado, se usa el anterior: ${idioma}`);
+  const idiomaValido = ultimos.docs.find(doc => {
+    const msg = doc.data();
+    return msg.idiomaDetectado && msg.idiomaDetectado !== "zxx";
+  });
+
+  if (idiomaValido) {
+    idioma = idiomaValido.data().idiomaDetectado;
+    console.log(`🌐 Fallback idioma en /chat: se usa anterior "${idioma}"`);
   } else {
-    idioma = "es"; // Fallback total
-    console.log(`⚠️ Idioma no detectado ni en anterior, se usa español por defecto`);
+    idioma = "es";
+    console.log(`⚠️ Fallback total en /chat: se usa "es"`);
   }
 }
 
