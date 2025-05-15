@@ -125,7 +125,7 @@ app.post("/api/traducir-modal", async (req, res) => {
   const finalUserId = userId || "anon";
   let idioma = await detectarIdiomaGPT(message);
 
-  // ✅ Fallback si el idioma no es válido o es "zxx"
+  // ✅ Fallback si no se detecta un idioma válido
   if (!idioma || idioma === "zxx") {
     const ultimos = await db.collection("mensajes")
       .where("idConversacion", "==", finalUserId)
@@ -180,18 +180,17 @@ app.post("/api/traducir-modal", async (req, res) => {
     // Traducir mensaje para guardar en español (para el panel)
     const traduccionUsuario = await traducir(message, "es");
 
-    // Guardar mensaje del usuario
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
       rol: "usuario",
-      mensaje: traduccionUsuario,
-      original: message,
+      mensaje: traduccionUsuario,     // ✅ lo que se ve en el panel
+      original: message,              // ✅ lo que escribió el usuario
       idiomaDetectado: idioma,
       tipo: "texto",
       timestamp: new Date().toISOString(),
     });
 
-    // ✅ Si está intervenida, no responder
+    // Intervención activa: no responder
     const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
     const convData = convDoc.exists ? convDoc.data() : null;
     if (convData?.intervenida) {
@@ -199,14 +198,13 @@ app.post("/api/traducir-modal", async (req, res) => {
       return res.json({ reply: "" });
     }
 
-    // ✅ Si debe escalarse a humano
     if (shouldEscalateToHuman(message)) {
       return res.json({
         reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia.",
       });
     }
 
-    // Crear prompt con el idioma correcto
+    // Preparar prompt
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
       : "";
@@ -217,7 +215,7 @@ app.post("/api/traducir-modal", async (req, res) => {
       `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}". Si el usuario escribió en catalán, responde en catalán; si lo hizo en inglés, responde en inglés; si en español, responde en español. No traduzcas ni expliques nada adicional.`,
     ].join("\n");
 
-    // Obtener respuesta del asistente
+    // Llamada a GPT
     const response = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
@@ -228,20 +226,20 @@ app.post("/api/traducir-modal", async (req, res) => {
 
     const reply = response.choices[0].message.content;
 
-    // Traducir respuesta al español para guardarla para el panel
+    // Traducir al español para guardar en Firestore (para el panel)
     const traduccionRespuesta = await traducir(reply, "es");
 
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
       rol: "asistente",
-      mensaje: traduccionRespuesta,
-      original: reply,
+      mensaje: traduccionRespuesta,  // ✅ para panel
+      original: reply,               // ✅ lo que dijo GPT realmente
       idiomaDetectado: idioma,
       tipo: "texto",
       timestamp: new Date().toISOString(),
     });
 
-    res.json({ reply });
+    res.json({ reply }); // ✅ mostrar al usuario sin traducir
   } catch (error) {
     console.error("❌ Error general en /api/chat:", error);
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
