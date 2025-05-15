@@ -123,8 +123,11 @@ app.post("/api/traducir-modal", async (req, res) => {
   app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial, datosContexto } = req.body;
   const finalUserId = userId || "anon";
-  let idioma = await detectarIdiomaGPT(message);
+  // 🧠 Detectar idioma del mensaje
+let idiomaDetectado = await detectarIdiomaGPT(message);
+let idioma = idiomaDetectado;
 
+// 🛡️ Fallback si no es válido
 if (!idioma || idioma === "zxx") {
   const ultimos = await db.collection("mensajes")
     .where("idConversacion", "==", finalUserId)
