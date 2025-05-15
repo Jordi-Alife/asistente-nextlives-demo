@@ -3,6 +3,8 @@ const input = document.getElementById('messageInput');
 const fileInput = document.getElementById('fileInput');
 const sendBtn = document.querySelector('.send-button');
 
+let imagenSeleccionada = null; // ✅ Imagen pendiente de enviar
+
 function getUserId() {
   let id = localStorage.getItem("userId");
   if (!id) {
