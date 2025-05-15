@@ -188,9 +188,8 @@ async function sendMessage() {
   removeMessageByTempId(tempId);
   if (data.reply?.trim()) {
     addMessage(data.reply, 'assistant');
-  } else {
-    addMessage("❌ No se recibió respuesta del asistente.", "assistant");
   }
+  // Si no hay respuesta, no mostramos nada (caso: conversación intervenida)
 }, remaining);
 
   } catch (err) {
