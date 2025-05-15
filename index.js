@@ -374,7 +374,26 @@ app.post("/api/send", async (req, res) => {
   }
 
   try {
-    const idioma = await detectarIdiomaGPT(texto);
+    let idioma = await detectarIdiomaGPT(texto);
+
+    // ✅ Fallback si el idioma no es válido
+    if (!idioma || idioma === "zxx") {
+      const ultimos = await db.collection("mensajes")
+        .where("idConversacion", "==", userId)
+        .where("rol", "==", "usuario")
+        .orderBy("timestamp", "desc")
+        .limit(1)
+        .get();
+
+      const anterior = ultimos.docs[0]?.data();
+      if (anterior?.idiomaDetectado && anterior.idiomaDetectado !== "zxx") {
+        idioma = anterior.idiomaDetectado;
+        console.log(`🌐 Idioma no detectado en /send, se usa el anterior: ${idioma}`);
+      } else {
+        idioma = "es"; // Fallback total
+        console.log(`⚠️ Idioma no detectado en /send ni en anterior, se usa español`);
+      }
+    }
 
     await db.collection("mensajes").add({
       idConversacion: userId,
