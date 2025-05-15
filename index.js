@@ -119,10 +119,6 @@ app.post("/api/traducir-modal", async (req, res) => {
     res.status(500).json({ error: "Error traduciendo modal" });
   }
 });
-app.post("/api/chat", async (req, res) => {
-  const { message, system, userId, userAgent, pais, historial, datosContexto } = req.body;
-  const finalUserId = userId || "anon";
-  let idioma = await detectarIdiomaGPT(message);
 
   app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial, datosContexto } = req.body;
