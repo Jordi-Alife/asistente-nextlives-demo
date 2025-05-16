@@ -1,49 +1,141 @@
-P: ¿Qué es el canal digital?
-R: El canal digital es una web informativa y conmemorativa que nuestra funeraria pone a disposición de los familiares. En ella se muestran todos los detalles del funeral, puede compartirse con más familiares o allegados, y permite publicar mensajes, fotografías o vídeos, entre otras opciones.
-Además, es un canal de comunicación que, mediante el registro como usuario, mantiene informadas a todas las personas sobre cualquier cambio de fechas, horarios, estado de compras, streaming u otra información de interés.
+# Base de conocimiento: Canal Digital
 
-P: ¿Puedo publicar un mensaje en el canal digital?
-R: Sí. Cualquier persona registrada puede publicar un mensaje (de texto, audio o dibujo) en la zona pública del canal. Para publicar solo es necesario registrarse o iniciar sesión.
+Esta base de conocimiento describe las funcionalidades, permisos y opciones del Canal Digital ofrecido por la funeraria a los familiares y allegados. Sirve como guía para asistentes virtuales, agentes de soporte o procesos automatizados.
 
-P: ¿Qué es la zona familiar?
-R: Es una zona privada dentro del canal digital, accesible solo para familiares que cuenten con permiso. Permite publicar contenido más personal, como fotos, vídeos externos, textos largos y frases. Los usuarios pueden interactuar con “me gusta” o comentarios.
-Si no tienes permiso, puedes solicitarlo, y en cuanto uno de los familiares administradores lo apruebe, podrás acceder.
+---
 
-P: ¿Puedo subir una foto o vídeo?
-R: Sí. Las fotos o vídeos se pueden subir desde la zona familiar. Si aún no tienes acceso, puedes solicitar permiso desde la propia zona familiar, que verás en tu menú inferior.
+## ¿Qué es el canal digital?
 
-P: ¿Quién da permiso a la zona familiar?
-R: Los usuarios administradores pueden invitar directamente o aprobar las solicitudes de acceso a la zona familiar.
+**Funcionalidad:** Información conmemorativa online  
+**Descripción:** Es una web creada por la funeraria para compartir todos los detalles del funeral. Permite ver el evento, compartir mensajes, subir fotos o vídeos, y mantenerse informado de cambios. Requiere registro para acceder a algunas funciones.  
 
-P: ¿Quiénes son los usuarios administradores?
-R: El administrador principal es la persona que gestiona todo con la empresa funeraria. Además de esta persona, puede haber otros administradores que hayan sido añadidos por la empresa funeraria a petición del administrador principal, o nombrados directamente por otro administrador.
+---
 
-P: ¿Puedo ver el canal digital en la TV?
-R: Sí. El canal digital está optimizado para que puedas ver mensajes de texto, dibujos o fotografías en un Smart TV. Si el centro que gestiona el servicio funerario dispone de Smart TV en sus salas de velación y aún no lo ha conectado, puedes solicitar que lo activen.
+## ¿Puedo publicar un mensaje en el canal digital?
 
-P: ¿Cómo se compran o envían flores?
-R: En el canal digital existe una opción muy fácil para enviar flores. Solo tienes que acceder a la sección Envío de flores y, si el centro dispone del servicio integrado, podrás seleccionar el producto, añadir un mensaje personalizado (opcional) y completar el pago.
-Después, el propio sistema te informará del estado de tu pedido.
-En caso de que el centro no tenga el servicio integrado, el botón Enviar flores te llevará a la web externa desde donde podrás finalizar la compra y el envío.
+**Funcionalidad:** Publicación de mensajes públicos  
+**Requisitos:** Estar registrado o haber iniciado sesión  
+**Formatos permitidos:** Texto, audio, dibujo  
+**Ubicación:** Zona pública del canal digital  
 
-P: ¿Se puede cambiar la foto del difunto?
-R: Sí, cualquiera de los administradores puede editar la foto principal de la persona fallecida desde el icono del lápiz que aparece junto a la imagen, en la página principal del canal digital.
+---
 
-P: ¿Hay transmisión en vivo (streaming)?
-R: Si el centro que gestiona este servicio dispone de equipos de streaming y la familia ha solicitado la retransmisión, verás un aviso junto al evento que será transmitido.
-Para verlo, solo necesitas estar registrado. Una vez comience, recibirás un aviso por WhatsApp informándote de que la transmisión ha empezado, junto con un enlace directo para acceder.
+## ¿Qué es la zona familiar?
 
-P: ¿Puedo cambiar el idioma?
-R: Sí. Puedes hacerlo desde tu perfil, accediendo al icono que encontrarás en la parte superior de la web. Una vez dentro, ve a Datos personales y allí podrás seleccionar el idioma que desees.
+**Funcionalidad:** Área privada para familiares autorizados  
+**Acceso:** Solo con permiso de un administrador  
+**Permite:** Publicar contenido más personal como fotos, vídeos, frases, textos largos  
+**Interacciones:** Me gusta, comentarios  
+**Solicitud de acceso:** Disponible desde el menú inferior si aún no se tiene permiso  
 
-P: ¿Por qué no puedo publicar?
-R: Es posible que no estés registrado, que no hayas iniciado sesión o que estés intentando publicar en la zona familiar, donde necesitas el permiso de un administrador para hacerlo.
+---
 
-P: ¿Quién da soporte?
-R: El canal digital está gestionado por la funeraria, aunque las respuestas sobre el uso de este canal están impulsadas por inteligencia artificial. Si necesitas contactar con la funeraria por cualquier duda relacionada con el servicio funerario, puedo ponerte en contacto ahora mismo. Pero desde aquí, solo podemos ayudarte con las funcionalidades de este sitio web.
+## ¿Puedo subir una foto o vídeo?
 
-P: ¿Qué datos personales se muestran?
-R: El único dato que se mostrará será tu nombre de usuario, y solo en el caso de que publiques algo o participes en la zona familiar. Fuera de estas dos situaciones, tus datos no aparecerán en ningún lugar.
+**Funcionalidad:** Subida de multimedia  
+**Ubicación:** Dentro de la zona familiar  
+**Requisitos:** Tener acceso autorizado por un administrador  
 
-P: ¿Puedo eliminar el canal digital?
-R: Solo el administrador principal o responsables de la funeraria pueden solicitar la baja o eliminación del canal.
+---
+
+## ¿Quién da permiso a la zona familiar?
+
+**Funcionalidad:** Gestión de accesos  
+**Rol autorizado:** Usuarios administradores  
+**Acción:** Pueden aprobar solicitudes o invitar directamente desde su panel  
+
+---
+
+## ¿Quiénes son los usuarios administradores?
+
+**Funcionalidad:** Administración del canal  
+**Administrador principal:** Persona designada por la funeraria  
+**Otros administradores:** Añadidos por la funeraria a petición del administrador principal, o nombrados por otro administrador  
+**Responsabilidades:** Otorgar accesos, modificar contenido principal, gestionar la zona familiar  
+
+---
+
+## ¿Puedo ver el canal digital en la TV?
+
+**Funcionalidad:** Visualización en Smart TV  
+**Compatibilidad:** Compatible con televisores inteligentes  
+**Ubicación:** Salas de velación que dispongan del servicio conectado  
+**Acción sugerida:** Si el centro aún no lo ha activado, se puede solicitar  
+
+---
+
+## ¿Hay transmisión en vivo (streaming)?
+
+**Funcionalidad:** Retransmisión en directo del evento  
+**Requisitos:** Que la familia lo haya solicitado y el centro tenga el equipo necesario  
+**Registro:** Obligatorio para ver el evento  
+**Notificación:** Se envía un aviso por WhatsApp cuando empieza, con enlace directo  
+
+---
+
+## ¿Cómo se compran o envían flores?
+
+**Funcionalidad:** Envío de flores desde el canal  
+**Ubicación:** Sección “Envío de flores”  
+**Pasos:**  
+1. Elegir producto  
+2. Añadir mensaje personalizado (opcional)  
+3. Finalizar pago  
+**Integración:**  
+- Si el centro tiene el servicio integrado, todo ocurre dentro del canal  
+- Si no, se redirige a una web externa  
+**Seguimiento:** Se informa al usuario del estado del pedido  
+
+---
+
+## ¿Se puede cambiar la foto del difunto?
+
+**Funcionalidad:** Edición de la foto principal  
+**Rol autorizado:** Solo los administradores  
+**Acción:** Hacer clic en el icono de lápiz junto a la imagen en la página principal del canal  
+
+---
+
+## ¿Puedo cambiar el idioma?
+
+**Funcionalidad:** Configuración de idioma  
+**Ubicación:** Icono de perfil (parte superior de la web) > Datos personales > Idioma  
+**Acción:** Seleccionar idioma deseado desde la lista  
+
+---
+
+## ¿Por qué no puedo publicar?
+
+**Funcionalidad:** Restricción de publicaciones  
+**Causas comunes:**  
+- No estás registrado  
+- No has iniciado sesión  
+- Intentas publicar en la zona familiar sin permisos  
+**Solución:** Verifica que tengas acceso y permisos correspondientes  
+
+---
+
+## ¿Quién da soporte?
+
+**Funcionalidad:** Asistencia y resolución de dudas  
+**Responsable técnico:** Asistente virtual basado en inteligencia artificial  
+**Responsable del servicio:** La funeraria que gestiona el canal  
+**Acciones posibles:**  
+- El asistente puede ayudarte con el uso del sitio  
+- Si necesitas ayuda sobre el servicio funerario, puede ponerte en contacto con la funeraria  
+
+---
+
+## ¿Qué datos personales se muestran?
+
+**Funcionalidad:** Privacidad de usuario  
+**Datos visibles:** Solo tu nombre de usuario, y únicamente si publicas contenido o interactúas en la zona familiar  
+**Datos ocultos:** Cualquier otra información personal permanece privada  
+
+---
+
+## ¿Puedo eliminar el canal digital?
+
+**Funcionalidad:** Eliminación del canal  
+**Rol autorizado:** Administrador principal o la funeraria  
+**Proceso:** Debe solicitarse directamente a la funeraria responsable del servicio  
