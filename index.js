@@ -666,6 +666,31 @@ app.get("/api/estado-conversacion/:userId", async (req, res) => {
   }
 });
 
+async function obtenerUltimosMensajesUsuario(userId, limite = 6) {
+  const snapshot = await db
+    .collection("mensajes")
+    .where("idConversacion", "==", userId)
+    .orderBy("timestamp", "desc")
+    .limit(limite)
+    .get();
+
+  const mensajes = snapshot.docs.map(doc => doc.data());
+
+  // Ordenar de más antiguos a más recientes
+  return mensajes.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+}
+
+app.get("/api/test-historial/:userId", async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const ultimos = await obtenerUltimosMensajesUsuario(userId);
+    res.json(ultimos);
+  } catch (e) {
+    console.error("❌ Error al obtener historial:", e);
+    res.status(500).json({ error: "Error consultando historial" });
+  }
+});
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
 });
