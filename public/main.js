@@ -429,3 +429,7 @@ function minimizarChat() {
   document.getElementById('scrollToBottomBtn').style.display = 'none';
 }
 window.minimizarChat = minimizarChat;
+function ocultarModal() {
+  document.getElementById('modalConfirm').style.display = 'none';
+}
+window.ocultarModal = ocultarModal;
