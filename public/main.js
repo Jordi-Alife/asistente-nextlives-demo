@@ -394,7 +394,12 @@ async function checkPanelMessages() {
   }
 }
 setInterval(checkPanelMessages, 5000);
-restoreChat();
+
+const estadoChat = localStorage.getItem('chatEstado');
+if (estadoChat === 'abierto' || estadoChat === 'minimizado') {
+  restoreChat();
+}
+
 getUserId();
 
 const scrollBtn = document.getElementById('scrollToBottomBtn');
