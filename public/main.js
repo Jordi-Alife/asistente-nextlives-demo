@@ -404,6 +404,8 @@ messagesDiv.addEventListener('scroll', () => {
   scrollBtn.style.display = isNearBottom ? 'none' : 'flex';
 });
 
+let blurActivo = false; // ✅ Marca si el teclado se ha cerrado
+
 input.addEventListener('input', () => {
   avisarEscribiendo(input.value);
   if (input.value.trim() !== "") {
@@ -416,14 +418,20 @@ input.addEventListener('input', () => {
 input.addEventListener('focus', () => {
   setTimeout(() => scrollToBottom(), 300);
 
-  // ✅ Ajuste fino para iOS: centra el input en pantalla tras abrir teclado
+  // ✅ Ajuste fino para iOS al volver a enfocar
   setTimeout(() => {
     input.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    // ✅ Si venimos de un blur (teclado cerrado), forzamos scroll superior para evitar hueco
+    if (blurActivo) {
+      window.scrollTo({ top: 0 });
+      blurActivo = false;
+    }
   }, 500);
 });
 
-// ✅ Detectar cierre del teclado (ej. al pulsar "OK") y corregir el hueco
 input.addEventListener('blur', () => {
+  blurActivo = true;
   setTimeout(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, 200);
