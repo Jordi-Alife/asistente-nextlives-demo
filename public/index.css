@@ -1,24 +1,44 @@
+/* ==================== */
+/* Estilos generales    */
+/* ==================== */
 body {
   font-family: sans-serif;
   background-color: #f4f4f4;
   margin: 0;
   padding: 2rem;
+  height: 100vh; /* ✅ permite adaptar altura a la ventana visible */
+  overflow: auto; /* ✅ necesario para iOS cuando se abre el teclado */
+  -webkit-overflow-scrolling: touch; /* ✅ mejora el scroll en Safari */
 }
 
+/* ==================== */
+/* Contenedor principal */
+/* ==================== */
 #chat {
   max-width: 500px;
   margin: auto;
   background: white;
   padding: 1rem;
   border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 4rem); /* ✅ adapta a pantalla menos el padding del body */
+  box-sizing: border-box;
 }
 
+/* ==================== */
+/* Zona de mensajes     */
+/* ==================== */
 #messages {
-  min-height: 150px;
+  flex: 1;
+  overflow-y: auto;
   margin-bottom: 1rem;
+  scroll-behavior: smooth;
 }
 
-/* ✅ Estilo para mensajes normales del asistente */
+/* =============================== */
+/* Estilo para mensajes del bot   */
+/* =============================== */
 .message.assistant {
   background-color: #e0e0e0;
   color: #000;
@@ -28,7 +48,7 @@ body {
   max-width: 80%;
 }
 
-/* ✅ Estilo para mensajes manuales enviados desde el panel */
+/* Mensaje manual enviado desde panel */
 .message.assistant.manual {
   background-color: #d0ebff;
   color: #004085;
@@ -37,4 +57,35 @@ body {
   border-left: 4px solid #007bff;
   border-radius: 12px;
   max-width: 80%;
+}
+
+/* =============================== */
+/* Caja de escritura (input/chat) */
+/* =============================== */
+#input-area {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-bottom: env(safe-area-inset-bottom); /* ✅ soporte para iPhone con notch */
+}
+
+/* Input de texto */
+#input-area input {
+  flex: 1;
+  padding: 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  outline: none;
+}
+
+/* Botón de enviar */
+#input-area button {
+  padding: 0 1rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
 }
