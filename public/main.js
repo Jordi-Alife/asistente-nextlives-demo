@@ -300,19 +300,19 @@ async function cerrarChatConfirmado() {
     }
   }
 
-  // ✅ En vez de borrar todo, reiniciamos el historial con un mensaje limpio
-  const container = document.createElement("div");
-  const saludo = document.createElement("div");
-  saludo.className = "message assistant";
-  saludo.innerText = "Hola, ¿en qué puedo ayudarte?";
-  container.appendChild(saludo);
-  localStorage.setItem("chatMessages", container.innerHTML);
+// ✅ Eliminar historial por completo antes de guardar solo el saludo
+localStorage.removeItem("chatMessages");
 
-  localStorage.setItem('chatEstado', 'cerrado');
-  document.getElementById('chat-widget').style.display = 'none';
-  document.getElementById('chat-toggle').style.display = 'flex';
-  document.getElementById('scrollToBottomBtn').style.display = 'none';
-  document.getElementById('modalConfirm').style.display = 'none'; // ✅ CIERRA MODAL EXPLÍCITAMENTE
+const saludo = document.createElement("div");
+saludo.className = "message assistant";
+saludo.innerText = "Hola, ¿en qué puedo ayudarte?";
+localStorage.setItem("chatMessages", saludo.outerHTML);
+
+localStorage.setItem('chatEstado', 'cerrado');
+document.getElementById('chat-widget').style.display = 'none';
+document.getElementById('chat-toggle').style.display = 'flex';
+document.getElementById('scrollToBottomBtn').style.display = 'none';
+document.getElementById('modalConfirm').style.display = 'none'; // ✅ CIERRA MODAL EXPLÍCITAMENTE
 }
 
 function abrirChat() {
