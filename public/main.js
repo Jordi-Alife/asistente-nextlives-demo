@@ -415,6 +415,11 @@ input.addEventListener('input', () => {
 
 input.addEventListener('focus', () => {
   setTimeout(() => scrollToBottom(), 300);
+
+  // ✅ Ajuste fino para iOS: centra el input en pantalla tras abrir teclado
+  setTimeout(() => {
+    input.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, 500);
 });
 
 document.addEventListener('DOMContentLoaded', () => {
