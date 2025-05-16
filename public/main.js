@@ -422,6 +422,13 @@ input.addEventListener('focus', () => {
   }, 500);
 });
 
+// ✅ Detectar cierre del teclado (ej. al pulsar "OK") y corregir el hueco
+input.addEventListener('blur', () => {
+  setTimeout(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 200);
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   const btnConfirmar = document.getElementById('btnConfirmar');
   if (btnConfirmar) {
