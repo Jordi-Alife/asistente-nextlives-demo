@@ -353,6 +353,9 @@ fileInput.addEventListener('change', (event) => {
   document.getElementById("chat-widget").appendChild(previewContainer);
 });
 async function checkPanelMessages() {
+  const estado = localStorage.getItem('chatEstado');
+  if (estado === 'cerrado') return;
+
   const userId = getUserId();
   try {
     const res = await fetch(`/api/poll/${userId}`);
