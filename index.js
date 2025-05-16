@@ -210,22 +210,28 @@ if (!idioma || idioma === "zxx") {
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
       : "";
 
-    const promptSystem = [
-      baseConocimiento,
-      datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
-      `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}". Si el usuario escribió en catalán, responde en catalán; si lo hizo en inglés, responde en inglés; si en español, responde en español. No traduzcas ni expliques nada adicional.`,
-    ].join("\n");
+    // Obtener últimos 6 mensajes de la conversación
+const historialMensajes = await obtenerUltimosMensajesUsuario(finalUserId);
+const historialFormateado = formatearHistorialParaPrompt(historialMensajes);
 
-    // Llamada a GPT
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        { role: "system", content: promptSystem },
-        { role: "user", content: message },
-      ],
-    });
+// Construir prompt con base de conocimiento + historial + contexto
+const promptSystem = [
+  baseConocimiento,
+  `\nHistorial reciente de conversación:\n${historialFormateado}`,
+  datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
+  `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}". Si el usuario escribió en catalán, responde en catalán; si lo hizo en inglés, responde en inglés; si en español, responde en español. No traduzcas ni expliques nada adicional.`,
+].join("\n");
 
-    const reply = response.choices[0].message.content;
+// Llamada a GPT
+const response = await openai.chat.completions.create({
+  model: "gpt-4",
+  messages: [
+    { role: "system", content: promptSystem },
+    { role: "user", content: message },
+  ],
+});
+
+const reply = response.choices[0].message.content;
 
     // Traducir al español para guardar en Firestore (para el panel)
     const traduccionRespuesta = await traducir(reply, "es");
