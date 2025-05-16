@@ -680,6 +680,14 @@ async function obtenerUltimosMensajesUsuario(userId, limite = 6) {
   return mensajes.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 }
 
+// NUEVA función para formatear historial como texto tipo diálogo
+function formatearHistorialParaPrompt(mensajes) {
+  return mensajes.map(msg => {
+    const autor = msg.rol === 'usuario' ? 'Usuario' : 'Asistente';
+    return `${autor}: ${msg.mensaje}`;
+  }).join('\n');
+}
+
 app.get("/api/test-historial/:userId", async (req, res) => {
   const { userId } = req.params;
   try {
@@ -690,7 +698,6 @@ app.get("/api/test-historial/:userId", async (req, res) => {
     res.status(500).json({ error: "Error consultando historial" });
   }
 });
-
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
 });
