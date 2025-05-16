@@ -172,6 +172,7 @@ function minimizarChat() {
   document.getElementById('chat-toggle').style.display = 'flex';
   document.getElementById('scrollToBottomBtn').style.display = 'none';
 }
+window.minimizarChat = minimizarChat;
 
 function abrirChat() {
   const estadoAnterior = localStorage.getItem('chatEstado');
