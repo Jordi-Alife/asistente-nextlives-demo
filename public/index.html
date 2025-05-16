@@ -193,7 +193,7 @@ window.addEventListener('load', () => {
   const estado = localStorage.getItem('chatEstado');
 
   if (estado === 'abierto' || estado === 'minimizado') {
-    abrirChat();
+    window.abrirChat();
   } else {
     // estado === null o 'cerrado'
     document.getElementById('chat-widget').style.display = 'none';
