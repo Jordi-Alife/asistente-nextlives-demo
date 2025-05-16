@@ -396,8 +396,14 @@ async function checkPanelMessages() {
 setInterval(checkPanelMessages, 5000);
 
 const estadoChat = localStorage.getItem('chatEstado');
-if (estadoChat === 'abierto' || estadoChat === 'minimizado') {
+if (estadoChat !== 'cerrado') {
   restoreChat();
+} else {
+  // ✅ Mostrar solo el mensaje de saludo guardado
+  const saved = localStorage.getItem('chatMessages');
+  if (saved) {
+    messagesDiv.innerHTML = saved;
+  }
 }
 
 getUserId();
