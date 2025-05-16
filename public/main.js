@@ -136,10 +136,6 @@ function restoreChat() {
       const isEmpty = !msg.textContent.trim() && msg.children.length === 0;
       if (isEmpty) msg.remove();
     });
-  } else {
-    setTimeout(() => {
-      addMessage("Hola, ¿cómo puedo ayudarte?", "assistant");
-    }, 500);
   }
   scrollToBottom(false);
 }
