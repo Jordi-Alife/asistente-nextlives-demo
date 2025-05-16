@@ -420,3 +420,12 @@ document.addEventListener('DOMContentLoaded', () => {
     btnConfirmar.addEventListener('click', cerrarChatConfirmado);
   }
 });
+
+// ✅ AÑADIR AQUÍ
+function minimizarChat() {
+  localStorage.setItem('chatEstado', 'minimizado');
+  document.getElementById('chat-widget').style.display = 'none';
+  document.getElementById('chat-toggle').style.display = 'flex';
+  document.getElementById('scrollToBottomBtn').style.display = 'none';
+}
+window.minimizarChat = minimizarChat;
