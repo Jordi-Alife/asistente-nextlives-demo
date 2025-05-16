@@ -167,22 +167,33 @@
 }
 
 function minimizarChat() {
-  localStorage.setItem('chatEstado', 'cerrado');
+  localStorage.setItem('chatEstado', 'minimizado');
   document.getElementById('chat-widget').style.display = 'none';
   document.getElementById('chat-toggle').style.display = 'flex';
   document.getElementById('scrollToBottomBtn').style.display = 'none';
 }
 
 function abrirChat() {
+  const estadoAnterior = localStorage.getItem('chatEstado');
+
+  if (estadoAnterior === 'cerrado') {
+    localStorage.removeItem('chatMessages');
+    localStorage.removeItem('userId');
+  }
+
   localStorage.setItem('chatEstado', 'abierto');
   document.getElementById('chat-widget').style.display = 'flex';
   document.getElementById('chat-toggle').style.display = 'none';
 }
 
 window.addEventListener('load', () => {
-  if (localStorage.getItem('chatEstado') === 'abierto') {
+  const estado = localStorage.getItem('chatEstado');
+
+  if (estado === 'abierto' || estado === 'minimizado') {
     abrirChat();
   } else {
-    cerrarChatConfirmado();
+    // estado === null o 'cerrado'
+    document.getElementById('chat-widget').style.display = 'none';
+    document.getElementById('chat-toggle').style.display = 'flex';
   }
 });
