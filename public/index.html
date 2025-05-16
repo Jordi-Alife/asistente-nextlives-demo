@@ -173,6 +173,7 @@ function minimizarChat() {
   document.getElementById('chat-toggle').style.display = 'flex';
   document.getElementById('scrollToBottomBtn').style.display = 'none';
 }
+window.minimizarChat = minimizarChat;
 
 function abrirChat() {
   const estadoAnterior = localStorage.getItem('chatEstado');
@@ -186,6 +187,7 @@ function abrirChat() {
   document.getElementById('chat-widget').style.display = 'flex';
   document.getElementById('chat-toggle').style.display = 'none';
 }
+window.abrirChat = abrirChat;
 
 window.addEventListener('load', () => {
   const estado = localStorage.getItem('chatEstado');
