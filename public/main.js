@@ -304,7 +304,14 @@ async function cerrarChatConfirmado() {
     }
   }
 
-  localStorage.removeItem('chatMessages');
+  // ✅ En vez de borrar todo, reiniciamos el historial con un mensaje limpio
+  const container = document.createElement("div");
+  const saludo = document.createElement("div");
+  saludo.className = "message assistant";
+  saludo.innerText = "Hola, ¿en qué puedo ayudarte?";
+  container.appendChild(saludo);
+  localStorage.setItem("chatMessages", container.innerHTML);
+
   localStorage.setItem('chatEstado', 'cerrado');
   document.getElementById('chat-widget').style.display = 'none';
   document.getElementById('chat-toggle').style.display = 'flex';
