@@ -190,8 +190,12 @@ function abrirChat() {
 window.addEventListener('load', () => {
   const estado = localStorage.getItem('chatEstado');
 
-  if (estado === 'abierto' || estado === 'minimizado') {
+  if (estado === 'abierto') {
     abrirChat();
+  } else if (estado === 'minimizado') {
+    // no abrimos el chat, solo mostramos el botón de burbuja
+    document.getElementById('chat-widget').style.display = 'none';
+    document.getElementById('chat-toggle').style.display = 'flex';
   } else {
     // estado === null o 'cerrado'
     document.getElementById('chat-widget').style.display = 'none';
