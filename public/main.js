@@ -450,7 +450,7 @@ input.addEventListener('focus', () => {
     // ✅ Refuerzo extra para prevenir saltos visuales en iOS
     document.body.scrollTop = 0;
     document.documentElement.scrollTop = 0;
-  }, 500);
+  }, 300); // bajamos el timeout a 300ms para más rapidez
 });
 
 input.addEventListener('blur', () => {
