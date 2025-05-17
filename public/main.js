@@ -446,20 +446,7 @@ input.addEventListener('focus', () => {
     document.body.scrollTop = 0;
     document.documentElement.scrollTop = 0;
 
-    // ✅ NUEVO: Forzar mantener el foco en iOS Safari y Chrome
-    if (/iP(ad|hone|od)/.test(navigator.userAgent) && /Safari|CriOS/.test(navigator.userAgent)) {
-      const tmp = document.createElement('input');
-      tmp.style.position = 'absolute';
-      tmp.style.opacity = 0;
-      tmp.style.height = 0;
-      tmp.style.fontSize = '16px';
-      document.body.appendChild(tmp);
-      tmp.focus();
-      setTimeout(() => {
-        tmp.remove();
-        input.focus();
-      }, 50);
-    }
+    // ⛔️ Quitado: focus adicional que causaba scroll infinito
   }, 500);
 });
 
