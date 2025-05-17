@@ -422,7 +422,7 @@ let blurActivo = false; // ✅ Marca si el teclado se ha cerrado
 
 input.addEventListener('input', () => {
   avisarEscribiendo(input.value);
-  if (input.value.trim() !== "") {
+  if (input.value.trim() !== "" || imagenSeleccionada) {
     sendBtn.classList.add('active');
   } else {
     sendBtn.classList.remove('active');
