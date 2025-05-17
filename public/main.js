@@ -441,6 +441,10 @@ input.addEventListener('focus', () => {
       window.scrollTo({ top: 0 });
       blurActivo = false;
     }
+
+    // ✅ Refuerzo extra para prevenir saltos visuales en iOS
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
   }, 500);
 });
 
