@@ -84,7 +84,14 @@
     <div class="chat-messages" id="messages"></div>
     <div id="userIdDisplay"></div>
     <div class="chat-input">
-      <input id="messageInput" type="text" placeholder="Escribe un mensaje..." oninput="avisarEscribiendo(this.value)" />
+      <input
+  id="messageInput"
+  name="no-login"
+  type="text"
+  placeholder="Escribe un mensaje..."
+  oninput="avisarEscribiendo(this.value)"
+  autocomplete="off"
+/>
       <button class="file-button" onclick="document.getElementById('fileInput').click()" title="Adjuntar archivo">
         <svg width="20" height="20" viewBox="0 0 24 24" stroke="black" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5" ry="5" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" /></svg>
       </button>
