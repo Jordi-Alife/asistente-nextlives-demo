@@ -434,7 +434,12 @@ input.addEventListener('focus', () => {
 
   // ✅ Ajuste fino para iOS al volver a enfocar
   setTimeout(() => {
-    input.scrollIntoView({ behavior: "smooth", block: "center" });
+    // ✅ Recolocar el input en el viewport visible si hace falta (sin bucles)
+    if (typeof input.scrollIntoViewIfNeeded === "function") {
+      input.scrollIntoViewIfNeeded(true);
+    } else {
+      input.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
 
     // ✅ Si venimos de un blur (teclado cerrado), forzamos scroll superior para evitar hueco
     if (blurActivo) {
@@ -445,8 +450,6 @@ input.addEventListener('focus', () => {
     // ✅ Refuerzo extra para prevenir saltos visuales en iOS
     document.body.scrollTop = 0;
     document.documentElement.scrollTop = 0;
-
-    // ⛔️ Quitado: focus adicional que causaba scroll infinito
   }, 500);
 });
 
