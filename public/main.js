@@ -346,11 +346,17 @@ fileInput.addEventListener('change', (event) => {
     imagenSeleccionada = null;
     previewContainer.remove();
     fileInput.value = '';
+    sendBtn.classList.remove('active'); // ✅ Desactivar botón si se elimina la imagen y no hay texto
   };
 
   previewContainer.appendChild(quitarBtn);
 
   document.getElementById("chat-widget").appendChild(previewContainer);
+
+  // ✅ Activar botón de enviar si hay imagen cargada
+  if (imagenSeleccionada || input.value.trim() !== "") {
+    sendBtn.classList.add('active');
+  }
 });
 async function checkPanelMessages() {
   const estado = localStorage.getItem('chatEstado');
