@@ -596,13 +596,16 @@ app.get("/api/poll/:userId", async (req, res) => {
       .get();
 
     const mensajes = mensajesSnapshot.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        mensaje: data.mensaje,
-        manual: data.manual || false,
-      };
-    });
+  const data = doc.data();
+  return {
+    id: doc.id,
+    mensaje: data.mensaje,
+    manual: data.manual || false,
+    rol: data.rol || 'asistente',
+    tipo: data.tipo || 'texto',
+    original: data.original || null
+  };
+});
 
     res.json({ mensajes });
   } catch (error) {
