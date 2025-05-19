@@ -486,35 +486,16 @@ app.get("/api/conversaciones", async (req, res) => {
         let lastMessageText = "";
         let mensajes = [];
 
-        try {
-          const mensajesSnapshot = await db
-            .collection("mensajes")
-            .where("idConversacion", "==", userId)
-            .orderBy("timestamp", "desc")
-            .limit(20)
-            .get();
+        mensajes = []; // ✅ Ya no se cargan mensajes desde Firestore aquí
 
-          mensajes = mensajesSnapshot.docs.map((d) => {
-            const m = d.data();
-            return {
-              userId,
-              lastInteraction: m.timestamp,
-              message: m.mensaje,
-              original: m.original || null,
-              from: m.rol,
-              tipo: m.tipo || "texto",
-              estado: m.estado || null,        // ✅ Corrección aplicada aquí
-              manual: m.manual || false,
-            };
-          });
-
-          if (mensajes[0]) {
-            lastInteraction = mensajes[0].lastInteraction;
-            lastMessageText = mensajes[0].message;
-          }
-        } catch (e) {
-          console.warn(`⚠️ No se pudo cargar mensajes para ${userId}`);
-        }
+if (data.lastMessage) {
+  lastMessageText = data.lastMessage;
+}
+if (data.ultimaRespuesta) {
+  lastInteraction = data.ultimaRespuesta;
+} else {
+  lastInteraction = data.fechaInicio; // fallback
+}
 
         return {
           userId,
