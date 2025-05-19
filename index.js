@@ -259,14 +259,13 @@ if (reply) {
   });
 
   await db.collection("conversaciones").doc(finalUserId).set(
-    {
-      lastMessage: reply,
-      historialFormateado,
-    },
-    { merge: true }
-  );
-}
-
+  {
+    lastMessage: reply,
+    historialFormateado,
+    ultimaRespuesta: new Date().toISOString(),
+  },
+  { merge: true }
+);
 res.json({ reply }); // ✅ responder al frontend aunque no se guarde
 } catch (error) {
   console.error("❌ Error general en /api/chat:", error);
