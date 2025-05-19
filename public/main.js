@@ -407,6 +407,7 @@ setInterval(checkPanelMessages, 5000);
 const estadoChat = localStorage.getItem('chatEstado');
 if (estadoChat !== 'cerrado') {
   restoreChat();
+  checkPanelMessages(); // ✅ Forzar carga de mensajes manuales al iniciar
 } else {
   // ✅ Mostrar solo el mensaje de saludo guardado
   const saved = localStorage.getItem('chatMessages');
