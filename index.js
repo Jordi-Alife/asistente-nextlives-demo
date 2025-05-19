@@ -238,26 +238,40 @@ if (!idioma || idioma === "zxx") {
     ],
   });
 
-const reply = response.choices[0].message.content;
+const reply = response.choices[0].message.content?.trim() || "";
 
-    // Traducir al español para guardar en Firestore (para el panel)
-    const traduccionRespuesta = await traducir(reply, "es");
-
-    await db.collection("mensajes").add({
-      idConversacion: finalUserId,
-      rol: "asistente",
-      mensaje: traduccionRespuesta,  // ✅ para panel
-      original: reply,               // ✅ lo que dijo GPT realmente
-      idiomaDetectado: idioma,
-      tipo: "texto",
-      timestamp: new Date().toISOString(),
-    });
-
-    res.json({ reply }); // ✅ mostrar al usuario sin traducir
-  } catch (error) {
-    console.error("❌ Error general en /api/chat:", error);
-    res.status(500).json({ reply: "Lo siento, ocurrió un error." });
+if (reply) {
+  let traduccionRespuesta = reply;
+  try {
+    traduccionRespuesta = await traducir(reply, "es");
+  } catch (err) {
+    console.warn("⚠️ No se pudo traducir la respuesta de GPT:", err.message);
   }
+
+  await db.collection("mensajes").add({
+    idConversacion: finalUserId,
+    rol: "asistente",
+    mensaje: traduccionRespuesta,  // ✅ para el panel
+    original: reply,               // ✅ lo que dijo GPT realmente
+    idiomaDetectado: idioma,
+    tipo: "texto",
+    timestamp: new Date().toISOString(),
+  });
+
+  await db.collection("conversaciones").doc(finalUserId).set(
+    {
+      lastMessage: reply,
+      historialFormateado,
+    },
+    { merge: true }
+  );
+}
+
+res.json({ reply }); // ✅ responder al frontend aunque no se guarde
+} catch (error) {
+  console.error("❌ Error general en /api/chat:", error);
+  res.status(500).json({ reply: "Lo siento, ocurrió un error." });
+}
 });
 app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
