@@ -366,19 +366,37 @@ async function checkPanelMessages() {
   try {
     const res = await fetch(`/api/poll/${userId}`);
     const data = await res.json();
-    console.log("📥 checkPanelMessages: mensajes recibidos", data.mensajes);
-
     if (data && Array.isArray(data.mensajes)) {
-      data.mensajes.forEach((msg, index) => {
-        // ✅ Mostrar todos los mensajes sin condiciones, para verificar
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'message assistant';
-        messageDiv.innerText = `[${index + 1}] ${msg.mensaje}`;
-        messagesDiv.appendChild(messageDiv);
-      });
+      data.mensajes.forEach((msg) => {
+        if (!document.querySelector(`[data-panel-id="${msg.id}"]`)) {
+          console.log("📨 Mensaje manual recibido:", msg);
+          const messageDiv = document.createElement('div');
+          messageDiv.className = 'message assistant';
+          if (msg.manual) {
+            messageDiv.classList.add('manual');
+          }
+          messageDiv.dataset.panelId = msg.id;
 
-      scrollToBottom();
-      saveChat();
+          if (/\.(jpeg|jpg|png|gif|webp)$/i.test(msg.mensaje)) {
+            messageDiv.innerHTML = `<img src="${msg.mensaje}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+          } else {
+            messageDiv.innerText = msg.mensaje;
+          }
+
+          messagesDiv.appendChild(messageDiv);
+
+          // ✅ Limitar a los últimos 50 mensajes
+          const todos = messagesDiv.querySelectorAll('.message');
+          if (todos.length > 50) {
+            for (let i = 0; i < todos.length - 50; i++) {
+              todos[i].remove();
+            }
+          }
+
+          scrollToBottom();
+          saveChat();
+        }
+      });
     }
   } catch (error) {
     console.error("Error al obtener mensajes manuales:", error);
@@ -389,7 +407,6 @@ setInterval(checkPanelMessages, 5000);
 const estadoChat = localStorage.getItem('chatEstado');
 if (estadoChat !== 'cerrado') {
   restoreChat();
-  checkPanelMessages(); // ✅ Forzar carga de mensajes manuales al iniciar
 } else {
   // ✅ Mostrar solo el mensaje de saludo guardado
   const saved = localStorage.getItem('chatMessages');
