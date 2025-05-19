@@ -179,22 +179,17 @@ if (!idioma || idioma === "zxx") {
     );
 
     // Traducir mensaje para guardar en español (para el panel)
-const traduccionUsuario = await traducir(message, "es");
+    const traduccionUsuario = await traducir(message, "es");
 
-await db.collection("mensajes").add({
-  idConversacion: finalUserId,
-  rol: "usuario",
-  mensaje: traduccionUsuario,
-  original: message,
-  idiomaDetectado: idioma,
-  tipo: "texto",
-  timestamp: new Date().toISOString(),
-});
-
-// Obtener últimos 6 mensajes de la conversación
-const historialMensajes = await obtenerUltimosMensajesUsuario(finalUserId);
-const historialFormateado = formatearHistorialParaPrompt(historialMensajes);
-
+    await db.collection("mensajes").add({
+      idConversacion: finalUserId,
+      rol: "usuario",
+      mensaje: traduccionUsuario,     // ✅ lo que se ve en el panel
+      original: message,              // ✅ lo que escribió el usuario
+      idiomaDetectado: idioma,
+      tipo: "texto",
+      timestamp: new Date().toISOString(),
+    });
 
     // Intervención activa: no responder
     const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
@@ -215,6 +210,10 @@ const historialFormateado = formatearHistorialParaPrompt(historialMensajes);
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
       : "";
 
+    // Obtener últimos 6 mensajes de la conversación
+const historialMensajes = await obtenerUltimosMensajesUsuario(finalUserId);
+const historialFormateado = formatearHistorialParaPrompt(historialMensajes);
+
 // Construir prompt con base de conocimiento + historial + contexto
 const promptSystem = [
   baseConocimiento,
@@ -234,15 +233,6 @@ const response = await openai.chat.completions.create({
 
 const reply = response.choices[0].message.content;
 
-    // ⬇️ Solo actualizamos resumen si GPT respondió (no si está intervenido)
-await db.collection("conversaciones").doc(finalUserId).set(
-  {
-    lastMessage: reply,
-    historialFormateado,
-  },
-  { merge: true }
-);
-    
     // Traducir al español para guardar en Firestore (para el panel)
     const traduccionRespuesta = await traducir(reply, "es");
 
@@ -596,17 +586,13 @@ app.get("/api/poll/:userId", async (req, res) => {
       .get();
 
     const mensajes = mensajesSnapshot.docs.map((doc) => {
-  const data = doc.data();
-  return {
-    id: doc.id,
-    mensaje: data.mensaje,
-    manual: data.manual || false,
-    rol: data.rol || 'asistente',
-    tipo: data.tipo || 'texto',
-    original: data.original || null,
-    timestamp: data.timestamp || null   // ⬅️ Aquí añades la hora
-  };
-});
+      const data = doc.data();
+      return {
+        id: doc.id,
+        mensaje: data.mensaje,
+        manual: data.manual || false,
+      };
+    });
 
     res.json({ mensajes });
   } catch (error) {
