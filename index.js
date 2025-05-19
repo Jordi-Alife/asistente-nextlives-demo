@@ -164,19 +164,21 @@ if (!idioma || idioma === "zxx") {
     );
 
     // Guardar info conversación
-    await db.collection("conversaciones").doc(finalUserId).set(
-      {
-        idUsuario: finalUserId,
-        fechaInicio: new Date().toISOString(),
-        estado: "abierta",
-        idioma,
-        navegador: userAgent || "",
-        pais: pais || "",
-        historial: historial || [],
-        datosContexto: datosContexto || null,
-      },
-      { merge: true }
-    );
+await db.collection("conversaciones").doc(finalUserId).set(
+  {
+    idUsuario: finalUserId,
+    fechaInicio: new Date().toISOString(),
+    ultimaRespuesta: new Date().toISOString(),        // ✅ NUEVO
+    lastMessage: message,                             // ✅ NUEVO
+    estado: "abierta",
+    idioma,
+    navegador: userAgent || "",
+    pais: pais || "",
+    historial: historial || [],
+    datosContexto: datosContexto || null,
+  },
+  { merge: true }
+);
 
     // Traducir mensaje para guardar en español (para el panel)
     const traduccionUsuario = await traducir(message, "es");
