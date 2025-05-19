@@ -469,37 +469,36 @@ app.get("/api/vistas", async (req, res) => {
 app.get("/api/conversaciones", async (req, res) => {
   try {
     const snapshot = await db.collection("conversaciones").get();
-    const conversaciones = await Promise.all(
-      snapshot.docs.map(async (doc) => {
-        const data = doc.data();
-        const userId = data.idUsuario;
-        if (!userId) return null;
+    const conversaciones = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      const userId = data.idUsuario;
+      if (!userId) return null;
 
-        let lastInteraction = data.fechaInicio;
-        let lastMessageText = "";
-        let mensajes = [];
+      // ✅ Usamos los campos ya guardados en el documento
+      const lastInteraction = data.ultimaRespuesta || data.fechaInicio || new Date().toISOString();
+      const lastMessageText = data.lastMessage || "";
+      const mensajes = []; // ✅ evitamos lecturas adicionales
 
-        try {
-          const mensajesSnapshot = await db
-            .collection("mensajes")
-            .where("idConversacion", "==", userId)
-            .orderBy("timestamp", "desc")
-            .limit(20)
-            .get();
+      return {
+        userId,
+        lastInteraction,
+        estado: data.estado || "abierta",
+        intervenida: data.intervenida || false,
+        intervenidaPor: data.intervenidaPor || null,
+        pais: data.pais || "🌐",
+        navegador: data.navegador || "Desconocido",
+        historial: data.historial || [],
+        message: lastMessageText,
+        mensajes,
+      };
+    }).filter((c) => !!c); // limpiamos nulos
 
-          mensajes = mensajesSnapshot.docs.map((d) => {
-            const m = d.data();
-            return {
-              userId,
-              lastInteraction: m.timestamp,
-              message: m.mensaje,
-              original: m.original || null,
-              from: m.rol,
-              tipo: m.tipo || "texto",
-              estado: m.estado || null,        // ✅ Corrección aplicada aquí
-              manual: m.manual || false,
-            };
-          });
+    res.json(conversaciones);
+  } catch (error) {
+    console.error("❌ Error obteniendo conversaciones:", error);
+    res.status(500).json({ error: "Error obteniendo conversaciones" });
+  }
+});
 
           if (mensajes[0]) {
             lastInteraction = mensajes[0].lastInteraction;
