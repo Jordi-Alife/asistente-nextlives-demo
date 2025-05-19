@@ -504,12 +504,7 @@ app.get("/api/conversaciones", async (req, res) => {
 if (data.lastMessage) {
   lastMessageText = data.lastMessage;
 }
-if (data.ultimaRespuesta) {
-  lastInteraction = data.ultimaRespuesta;
-} else {
-  lastInteraction = data.fechaInicio; // fallback
-}
-
+lastInteraction = data.ultimaRespuesta || data.fechaInicio || new Date().toISOString();
         return {
           userId,
           lastInteraction,
