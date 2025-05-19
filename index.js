@@ -361,16 +361,18 @@ app.post("/api/send-to-user", async (req, res) => {
 });
 
     await db.collection("conversaciones").doc(userId).set(
-      {
-        intervenida: true,
-        intervenidaPor: {
-          nombre: agente.nombre,
-          foto: agente.foto,
-          uid: agente.uid || null,
-        },
-      },
-      { merge: true }
-    );
+  {
+    intervenida: true,
+    intervenidaPor: {
+      nombre: agente.nombre,
+      foto: agente.foto,
+      uid: agente.uid || null,
+    },
+    ultimaRespuesta: new Date().toISOString(),  // ✅ nuevo campo
+    lastMessage: traduccion,                    // ✅ nuevo campo
+  },
+  { merge: true }
+);
 
     res.json({ ok: true });
   } catch (error) {
