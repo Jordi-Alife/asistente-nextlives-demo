@@ -481,24 +481,20 @@ app.get("/api/conversaciones", async (req, res) => {
       const userId = data.idUsuario;
       if (!userId) return null;
 
-      // ✅ Usamos solo los campos guardados, sin consultas extra
-      const lastInteraction = data.ultimaRespuesta || data.fechaInicio || new Date().toISOString();
-      const lastMessageText = data.lastMessage || "";
-      const mensajes = []; // ✅ ya no se incluyen los mensajes directamente
-
       return {
         userId,
-        lastInteraction,
+        lastInteraction: data.ultimaRespuesta || data.fechaInicio || new Date().toISOString(),
         estado: data.estado || "abierta",
         intervenida: data.intervenida || false,
         intervenidaPor: data.intervenidaPor || null,
         pais: data.pais || "🌐",
         navegador: data.navegador || "Desconocido",
         historial: data.historial || [],
-        message: lastMessageText,
-        mensajes,
+        message: data.lastMessage || "",
+        mensajes: [],
+        noVistos: data.noVistos || 0, // ✅ añadimos aquí
       };
-    }).filter((c) => !!c); // ✅ eliminamos posibles null
+    }).filter((c) => !!c);
 
     res.json(conversaciones);
   } catch (error) {
