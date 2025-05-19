@@ -565,7 +565,7 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
     const mensajes = snapshot.docs
       .map((doc) => {
         const data = doc.data();
-        if (!data || !data.timestamp || (!data.mensaje && data.tipo !== "estado")) return null;
+        if (!data || !data.timestamp || (!data.mensaje && data.tipo !== "estado" && data.tipo !== "imagen")) return null;
         return {
           id: doc.id,
           userId,
