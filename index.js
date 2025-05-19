@@ -245,20 +245,28 @@ const reply = response.choices[0].message.content;
     const traduccionRespuesta = await traducir(reply, "es");
 
     await db.collection("mensajes").add({
-      idConversacion: finalUserId,
-      rol: "asistente",
-      mensaje: traduccionRespuesta,  // ✅ para panel
-      original: reply,               // ✅ lo que dijo GPT realmente
-      idiomaDetectado: idioma,
-      tipo: "texto",
-      timestamp: new Date().toISOString(),
-    });
+  idConversacion: finalUserId,
+  rol: "asistente",
+  mensaje: traduccionRespuesta,  // ✅ para panel
+  original: reply,               // ✅ lo que dijo GPT realmente
+  idiomaDetectado: idioma,
+  tipo: "texto",
+  timestamp: new Date().toISOString(),
+});
 
-    res.json({ reply }); // ✅ mostrar al usuario sin traducir
-  } catch (error) {
-    console.error("❌ Error general en /api/chat:", error);
-    res.status(500).json({ reply: "Lo siento, ocurrió un error." });
-  }
+// ✅ NUEVO: guardar la fecha de última actividad real
+await db.collection("conversaciones").doc(finalUserId).set(
+  {
+    ultimaActualizacion: new Date().toISOString(),
+  },
+  { merge: true }
+);
+
+res.json({ reply }); // ✅ mostrar al usuario sin traducir
+} catch (error) {
+  console.error("❌ Error general en /api/chat:", error);
+  res.status(500).json({ reply: "Lo siento, ocurrió un error." });
+}
 });
 app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
