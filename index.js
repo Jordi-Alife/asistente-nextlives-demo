@@ -500,29 +500,6 @@ app.get("/api/conversaciones", async (req, res) => {
   }
 });
 
-        return {
-          userId,
-          lastInteraction,
-          estado: data.estado || "abierta",
-          intervenida: data.intervenida || false,
-          intervenidaPor: data.intervenidaPor || null,
-          pais: data.pais || "🌐",
-          navegador: data.navegador || "Desconocido",
-          historial: data.historial || [],
-          message: lastMessageText,
-          mensajes,
-        };
-      })
-    );
-
-    const limpias = conversaciones.filter((c) => !!c);
-    res.json(limpias);
-  } catch (error) {
-    console.error("❌ Error obteniendo conversaciones:", error);
-    res.status(500).json({ error: "Error obteniendo conversaciones" });
-  }
-});
-
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
   const hasta = req.query.hasta; // timestamp ISO
