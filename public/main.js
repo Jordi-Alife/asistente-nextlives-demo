@@ -377,6 +377,16 @@ async function checkPanelMessages() {
           }
           messageDiv.dataset.panelId = msg.id;
 
+          // ⏰ Añadir timestamp si viene del backend
+          if (msg.timestamp) {
+            messageDiv.dataset.timestamp = msg.timestamp;
+            const hora = new Date(msg.timestamp).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+            messageDiv.title = `Enviado a las ${hora}`;
+          }
+
           if (/\.(jpeg|jpg|png|gif|webp)$/i.test(msg.mensaje)) {
             messageDiv.innerHTML = `<img src="${msg.mensaje}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
           } else {
