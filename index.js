@@ -474,10 +474,10 @@ app.get("/api/conversaciones", async (req, res) => {
       const userId = data.idUsuario;
       if (!userId) return null;
 
-      // ✅ Usamos los campos ya guardados en el documento
+      // ✅ Usamos solo los campos guardados, sin consultas extra
       const lastInteraction = data.ultimaRespuesta || data.fechaInicio || new Date().toISOString();
       const lastMessageText = data.lastMessage || "";
-      const mensajes = []; // ✅ evitamos lecturas adicionales
+      const mensajes = []; // ✅ ya no se incluyen los mensajes directamente
 
       return {
         userId,
@@ -491,7 +491,7 @@ app.get("/api/conversaciones", async (req, res) => {
         message: lastMessageText,
         mensajes,
       };
-    }).filter((c) => !!c); // limpiamos nulos
+    }).filter((c) => !!c); // ✅ eliminamos posibles null
 
     res.json(conversaciones);
   } catch (error) {
@@ -499,14 +499,6 @@ app.get("/api/conversaciones", async (req, res) => {
     res.status(500).json({ error: "Error obteniendo conversaciones" });
   }
 });
-
-          if (mensajes[0]) {
-            lastInteraction = mensajes[0].lastInteraction;
-            lastMessageText = mensajes[0].message;
-          }
-        } catch (e) {
-          console.warn(`⚠️ No se pudo cargar mensajes para ${userId}`);
-        }
 
         return {
           userId,
