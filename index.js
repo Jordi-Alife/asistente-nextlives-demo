@@ -278,16 +278,18 @@ app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
     });
 
     await db.collection("conversaciones").doc(userId).set(
-      {
-        intervenida: true,
-        intervenidaPor: {
-          nombre: "Agente",
-          foto: "",
-          uid: agenteUid,
-        },
-      },
-      { merge: true }
-    );
+  {
+    intervenida: true,
+    intervenidaPor: {
+      nombre: "Agente",
+      foto: "",
+      uid: agenteUid,
+    },
+    ultimaRespuesta: new Date().toISOString(),   // ✅ nuevo campo
+    lastMessage: imageUrl,                       // ✅ nuevo campo
+  },
+  { merge: true }
+);
 
     res.json({ imageUrl });
   } catch (error) {
