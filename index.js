@@ -603,7 +603,8 @@ app.get("/api/poll/:userId", async (req, res) => {
     manual: data.manual || false,
     rol: data.rol || 'asistente',
     tipo: data.tipo || 'texto',
-    original: data.original || null
+    original: data.original || null,
+    timestamp: data.timestamp || null   // ⬅️ Aquí añades la hora
   };
 });
 
