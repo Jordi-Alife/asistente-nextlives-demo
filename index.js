@@ -195,14 +195,6 @@ await db.collection("mensajes").add({
 const historialMensajes = await obtenerUltimosMensajesUsuario(finalUserId);
 const historialFormateado = formatearHistorialParaPrompt(historialMensajes);
 
-// ⬇️ Actualizar resumen en la conversación
-await db.collection("conversaciones").doc(finalUserId).set(
-  {
-    lastMessage: traduccionUsuario,
-    historialFormateado,
-  },
-  { merge: true }
-);
 
     // Intervención activa: no responder
     const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
@@ -242,6 +234,15 @@ const response = await openai.chat.completions.create({
 
 const reply = response.choices[0].message.content;
 
+    // ⬇️ Solo actualizamos resumen si GPT respondió (no si está intervenido)
+await db.collection("conversaciones").doc(finalUserId).set(
+  {
+    lastMessage: reply,
+    historialFormateado,
+  },
+  { merge: true }
+);
+    
     // Traducir al español para guardar en Firestore (para el panel)
     const traduccionRespuesta = await traducir(reply, "es");
 
