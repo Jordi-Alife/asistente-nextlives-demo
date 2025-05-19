@@ -433,13 +433,36 @@ if (!idioma || idioma === "zxx") {
 
 app.post("/api/marcar-visto", async (req, res) => {
   const { userId } = req.body;
-  if (!userId)
-    return res.status(400).json({ error: "Falta el userId" });
+  if (!userId) return res.status(400).json({ error: "Falta el userId" });
+
+  const now = new Date().toISOString();
 
   try {
-    await db.collection("vistas_globales").doc(userId).set({
-      timestamp: new Date().toISOString(),
-    });
+    // 1. Guardar timestamp de vista global
+    await db.collection("vistas_globales").doc(userId).set({ timestamp: now });
+
+    // 2. Contar mensajes no vistos (últimos 50)
+    const mensajesSnapshot = await db
+      .collection("mensajes")
+      .where("idConversacion", "==", userId)
+      .where("rol", "==", "usuario")
+      .orderBy("timestamp", "desc")
+      .limit(50)
+      .get();
+
+    let noVistos = 0;
+    for (const doc of mensajesSnapshot.docs) {
+      const msg = doc.data();
+      if (msg.timestamp > now) {
+        noVistos++;
+      }
+    }
+
+    // 3. Guardar conteo en la conversación
+    await db.collection("conversaciones").doc(userId).set(
+      { noVistos: noVistos },
+      { merge: true }
+    );
 
     return res.json({ ok: true });
   } catch (e) {
