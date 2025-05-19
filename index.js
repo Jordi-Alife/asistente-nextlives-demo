@@ -121,182 +121,94 @@ app.post("/api/traducir-modal", async (req, res) => {
 });
 
   app.post("/api/chat", async (req, res) => {
-  const { message, system, userId, userAgent, pais, historial, datosContexto } = req.body;
+  const { message, userId, userAgent, pais, historial, datosContexto } = req.body;
   const finalUserId = userId || "anon";
-  // 🧠 Detectar idioma del mensaje
-let idiomaDetectado = await detectarIdiomaGPT(message);
-let idioma = idiomaDetectado;
 
-// 🛡️ Fallback si no es válido
-if (!idioma || idioma === "zxx") {
-  const ultimos = await db.collection("mensajes")
-    .where("idConversacion", "==", finalUserId)
-    .where("rol", "==", "usuario")
-    .orderBy("timestamp", "desc")
-    .limit(10)
-    .get();
+  let idioma = await detectarIdiomaGPT(message);
+  if (!idioma || idioma === "zxx") idioma = "es";
 
-  const idiomaValido = ultimos.docs.find(doc => {
-    const msg = doc.data();
-    return msg.idiomaDetectado && msg.idiomaDetectado !== "zxx";
-  });
-
-  if (idiomaValido) {
-    idioma = idiomaValido.data().idiomaDetectado;
-    console.log(`🌐 Fallback idioma en /chat: se usa anterior "${idioma}"`);
-  } else {
-    idioma = "es";
-    console.log(`⚠️ Fallback total en /chat: se usa "es"`);
-  }
-}
   try {
-  // Guardar info usuario
-  await db.collection("usuarios_chat").doc(finalUserId).set(
-    {
-      nombre: "Invitado",
+    // Guardar usuario y conversación
+    await db.collection("usuarios_chat").doc(finalUserId).set({
       idioma,
       ultimaConexion: new Date().toISOString(),
       navegador: userAgent || "",
       pais: pais || "",
-      historial: historial || [],
-    },
-    { merge: true }
-  );
+    }, { merge: true });
 
-  // Guardar info conversación
-  await db.collection("conversaciones").doc(finalUserId).set(
-    {
+    await db.collection("conversaciones").doc(finalUserId).set({
       idUsuario: finalUserId,
-      fechaInicio: new Date().toISOString(),
       estado: "abierta",
       idioma,
-      navegador: userAgent || "",
-      pais: pais || "",
       historial: historial || [],
       datosContexto: datosContexto || null,
-    },
-    { merge: true }
-  );
+      fechaInicio: new Date().toISOString(),
+    }, { merge: true });
 
-  // Traducir mensaje para guardar en español (para el panel)
-  const traduccionUsuario = await traducir(message, "es");
-
-  await db.collection("mensajes").add({
-    idConversacion: finalUserId,
-    rol: "usuario",
-    mensaje: traduccionUsuario,
-    original: message,
-    idiomaDetectado: idioma,
-    tipo: "texto",
-    timestamp: new Date().toISOString(),
-  });
-
-  // Obtener últimos 6 mensajes para el historial formateado
-  const historialMensajes = await obtenerUltimosMensajesUsuario(finalUserId);
-  const historialFormateado = formatearHistorialParaPrompt(historialMensajes);
-
-  await db.collection("conversaciones").doc(finalUserId).set(
-    {
-      lastMessage: message,
-      historialFormateado,
-    },
-    { merge: true }
-  );
-
-  // Intervención activa: no responder
-  const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
-  const convData = convDoc.exists ? convDoc.data() : null;
-  if (convData?.intervenida) {
-    console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
-    return res.json({ reply: "" });
-  }
-
-  if (shouldEscalateToHuman(message)) {
-    return res.json({
-      reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia.",
+    // Guardar mensaje del usuario
+    const traducido = await traducir(message, "es");
+    await db.collection("mensajes").add({
+      idConversacion: finalUserId,
+      rol: "usuario",
+      mensaje: traducido,
+      original: message,
+      idiomaDetectado: idioma,
+      tipo: "texto",
+      timestamp: new Date().toISOString(),
     });
-  }
 
-  // Preparar prompt
-  const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
-    ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
-    : "";
+    // Revisar intervención
+    const conv = await db.collection("conversaciones").doc(finalUserId).get();
+    if (conv.exists && conv.data()?.intervenida) {
+      return res.json({ reply: "" });
+    }
 
-  const promptSystem = [
-    baseConocimiento,
-    `\nHistorial reciente de conversación:\n${historialFormateado}`,
-    datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
-    `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}". Si el usuario escribió en catalán, responde en catalán; si lo hizo en inglés, responde en inglés; si en español, responde en español. No traduzcas ni expliques nada adicional.`,
-  ].join("\n");
+    // Preguntar a GPT
+    const historialMensajes = await obtenerUltimosMensajesUsuario(finalUserId);
+    const historialFormateado = formatearHistorialParaPrompt(historialMensajes);
+    const promptSystem = [
+      fs.existsSync("./base_conocimiento_actualizado.txt")
+        ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
+        : "",
+      `\nHistorial reciente:\n${historialFormateado}`,
+      datosContexto ? `\nContexto:\n${JSON.stringify(datosContexto)}` : "",
+      `IMPORTANTE: Responde en el idioma del usuario: "${idioma}".`
+    ].join("\n");
 
-  // Llamada a GPT
-  const response = await openai.chat.completions.create({
-    model: "gpt-4",
-    messages: [
-      { role: "system", content: promptSystem },
-      { role: "user", content: message },
-    ],
-  });
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        { role: "system", content: promptSystem },
+        { role: "user", content: message }
+      ],
+    });
 
-let reply = "";
+    const reply = response.choices?.[0]?.message?.content?.trim() || "";
+    if (!reply) return res.json({ reply: "" });
 
-try {
-  reply = response.choices?.[0]?.message?.content?.trim() || "";
-} catch (e) {
-  console.error("❌ Error extrayendo reply de GPT:", e);
-}
+    const traduccionRespuesta = await traducir(reply, "es");
 
-console.log("🧠 Respuesta de GPT:", reply);
+    await db.collection("mensajes").add({
+      idConversacion: finalUserId,
+      rol: "asistente",
+      mensaje: traduccionRespuesta,
+      original: reply,
+      idiomaDetectado: idioma,
+      tipo: "texto",
+      timestamp: new Date().toISOString(),
+    });
 
-if (reply.length === 0) {
-  console.warn("⚠️ GPT no devolvió respuesta válida");
-  return res.json({ reply: "" });
-}
-    
-if (reply.length > 0) {
-  let traduccionRespuesta = reply;
-  try {
-    traduccionRespuesta = await traducir(reply, "es");
-  } catch (err) {
-    console.warn("⚠️ No se pudo traducir la respuesta de GPT:", err.message);
-  }
-
-  try {
-  await db.collection("mensajes").add({
-    idConversacion: finalUserId,
-    rol: "asistente",
-    mensaje: traduccionRespuesta,  // ✅ para el panel
-    original: reply,               // ✅ lo que dijo GPT realmente
-    idiomaDetectado: idioma,
-    tipo: "texto",
-    timestamp: new Date().toISOString(),
-  });
-
-  await db.collection("conversaciones").doc(finalUserId).set(
-    {
+    await db.collection("conversaciones").doc(finalUserId).set({
       lastMessage: reply,
-      historialFormateado,
       ultimaRespuesta: new Date().toISOString(),
-    },
-    { merge: true }
-  );
+    }, { merge: true });
 
-      console.log("✅ Respuesta GPT guardada en Firestore");
-  } catch (e) {
-    console.error("❌ Error guardando mensaje de GPT en Firestore:", e);
+    res.json({ reply });
+  } catch (err) {
+    console.error("❌ Error en /api/chat:", err);
+    res.status(500).json({ reply: "Lo siento, hubo un error." });
   }
-} else {
-  console.warn("⚠️ GPT no devolvió respuesta válida");
-}
-
-res.json({ reply }); // ✅ respuesta al frontend
-
-} catch (error) {
-  console.error("❌ Error general en /api/chat:", error);
-  res.status(500).json({ reply: "Lo siento, ocurrió un error." });
-} // 👈 cierre del try principal
-}); // 👈 cierre correcto del endpoint /api/chat
-
+});
 // Continúa con el siguiente endpoint
 app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
