@@ -505,18 +505,18 @@ app.get("/api/conversaciones", async (req, res) => {
       if (!userId) return null;
 
       return {
-        userId,
-        lastInteraction: data.ultimaRespuesta || data.fechaInicio || new Date().toISOString(),
-        estado: data.estado || "abierta",
-        intervenida: data.intervenida || false,
-        intervenidaPor: data.intervenidaPor || null,
-        pais: data.pais || "🌐",
-        navegador: data.navegador || "Desconocido",
-        historial: data.historial || [],
-        message: data.lastMessage || "",
-        mensajes: [],
-        noVistos: data.noVistos || 0, // ✅ añadimos aquí
-      };
+  userId,
+  lastInteraction: data.ultimaRespuesta || data.fechaInicio || new Date().toISOString(),
+  estado: data.estado || "abierta",
+  intervenida: data.intervenida || false,
+  intervenidaPor: data.intervenidaPor || null,
+  pais: data.pais || "🌐",
+  navegador: data.navegador || "Desconocido",
+  historial: data.historial || [],
+  message: data.lastMessage || "",
+  mensajes: [],
+  nuevos: data.noVistos || 0, // ✅ este es el campo que debe usar el frontend
+};
     }).filter((c) => !!c);
 
     res.json(conversaciones);
