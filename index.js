@@ -121,95 +121,137 @@ app.post("/api/traducir-modal", async (req, res) => {
 });
 
   app.post("/api/chat", async (req, res) => {
-  const { message, userId, userAgent, pais, historial, datosContexto } = req.body;
+  const { message, system, userId, userAgent, pais, historial, datosContexto } = req.body;
   const finalUserId = userId || "anon";
+  // 🧠 Detectar idioma del mensaje
+let idiomaDetectado = await detectarIdiomaGPT(message);
+let idioma = idiomaDetectado;
 
-  let idioma = await detectarIdiomaGPT(message);
-  if (!idioma || idioma === "zxx") idioma = "es";
+// 🛡️ Fallback si no es válido
+if (!idioma || idioma === "zxx") {
+  const ultimos = await db.collection("mensajes")
+    .where("idConversacion", "==", finalUserId)
+    .where("rol", "==", "usuario")
+    .orderBy("timestamp", "desc")
+    .limit(10)
+    .get();
 
+  const idiomaValido = ultimos.docs.find(doc => {
+    const msg = doc.data();
+    return msg.idiomaDetectado && msg.idiomaDetectado !== "zxx";
+  });
+
+  if (idiomaValido) {
+    idioma = idiomaValido.data().idiomaDetectado;
+    console.log(`🌐 Fallback idioma en /chat: se usa anterior "${idioma}"`);
+  } else {
+    idioma = "es";
+    console.log(`⚠️ Fallback total en /chat: se usa "es"`);
+  }
+}
   try {
-    // Guardar usuario y conversación
-    await db.collection("usuarios_chat").doc(finalUserId).set({
-      idioma,
-      ultimaConexion: new Date().toISOString(),
-      navegador: userAgent || "",
-      pais: pais || "",
-    }, { merge: true });
+    // Guardar info usuario
+    await db.collection("usuarios_chat").doc(finalUserId).set(
+      {
+        nombre: "Invitado",
+        idioma,
+        ultimaConexion: new Date().toISOString(),
+        navegador: userAgent || "",
+        pais: pais || "",
+        historial: historial || [],
+      },
+      { merge: true }
+    );
 
-    await db.collection("conversaciones").doc(finalUserId).set({
-      idUsuario: finalUserId,
-      estado: "abierta",
-      idioma,
-      historial: historial || [],
-      datosContexto: datosContexto || null,
-      fechaInicio: new Date().toISOString(),
-    }, { merge: true });
+    // Guardar info conversación
+    await db.collection("conversaciones").doc(finalUserId).set(
+      {
+        idUsuario: finalUserId,
+        fechaInicio: new Date().toISOString(),
+        estado: "abierta",
+        idioma,
+        navegador: userAgent || "",
+        pais: pais || "",
+        historial: historial || [],
+        datosContexto: datosContexto || null,
+      },
+      { merge: true }
+    );
 
-    // Guardar mensaje del usuario
-    const traducido = await traducir(message, "es");
+    // Traducir mensaje para guardar en español (para el panel)
+    const traduccionUsuario = await traducir(message, "es");
+
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
       rol: "usuario",
-      mensaje: traducido,
-      original: message,
+      mensaje: traduccionUsuario,     // ✅ lo que se ve en el panel
+      original: message,              // ✅ lo que escribió el usuario
       idiomaDetectado: idioma,
       tipo: "texto",
       timestamp: new Date().toISOString(),
     });
 
-    // Revisar intervención
-    const conv = await db.collection("conversaciones").doc(finalUserId).get();
-    if (conv.exists && conv.data()?.intervenida) {
+    // Intervención activa: no responder
+    const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
+    const convData = convDoc.exists ? convDoc.data() : null;
+    if (convData?.intervenida) {
+      console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
       return res.json({ reply: "" });
     }
 
-    // Preguntar a GPT
-    const historialMensajes = await obtenerUltimosMensajesUsuario(finalUserId);
-    const historialFormateado = formatearHistorialParaPrompt(historialMensajes);
-    const promptSystem = [
-      fs.existsSync("./base_conocimiento_actualizado.txt")
-        ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
-        : "",
-      `\nHistorial reciente:\n${historialFormateado}`,
-      datosContexto ? `\nContexto:\n${JSON.stringify(datosContexto)}` : "",
-      `IMPORTANTE: Responde en el idioma del usuario: "${idioma}".`
-    ].join("\n");
+    if (shouldEscalateToHuman(message)) {
+      return res.json({
+        reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia.",
+      });
+    }
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        { role: "system", content: promptSystem },
-        { role: "user", content: message }
-      ],
-    });
+    // Preparar prompt
+    const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
+      ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
+      : "";
 
-    const reply = response.choices?.[0]?.message?.content?.trim() || "";
-    if (!reply) return res.json({ reply: "" });
+    // Obtener últimos 6 mensajes de la conversación
+const historialMensajes = await obtenerUltimosMensajesUsuario(finalUserId);
+const historialFormateado = formatearHistorialParaPrompt(historialMensajes);
 
+// Construir prompt con base de conocimiento + historial + contexto
+const promptSystem = [
+  baseConocimiento,
+  `\nHistorial reciente de conversación:\n${historialFormateado}`,
+  datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
+  `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}". Si el usuario escribió en catalán, responde en catalán; si lo hizo en inglés, responde en inglés; si en español, responde en español. No traduzcas ni expliques nada adicional.`,
+].join("\n");
+
+// Llamada a GPT
+const response = await openai.chat.completions.create({
+  model: "gpt-4",
+  messages: [
+    { role: "system", content: promptSystem },
+    { role: "user", content: message },
+  ],
+});
+
+const reply = response.choices[0].message.content;
+
+    // Traducir al español para guardar en Firestore (para el panel)
     const traduccionRespuesta = await traducir(reply, "es");
 
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
       rol: "asistente",
-      mensaje: traduccionRespuesta,
-      original: reply,
+      mensaje: traduccionRespuesta,  // ✅ para panel
+      original: reply,               // ✅ lo que dijo GPT realmente
       idiomaDetectado: idioma,
       tipo: "texto",
       timestamp: new Date().toISOString(),
     });
 
-    await db.collection("conversaciones").doc(finalUserId).set({
-      lastMessage: reply,
-      ultimaRespuesta: new Date().toISOString(),
-    }, { merge: true });
-
-    res.json({ reply });
-  } catch (err) {
-    console.error("❌ Error en /api/chat:", err);
-    res.status(500).json({ reply: "Lo siento, hubo un error." });
+    res.json({ reply }); // ✅ mostrar al usuario sin traducir
+  } catch (error) {
+    console.error("❌ Error general en /api/chat:", error);
+    res.status(500).json({ reply: "Lo siento, ocurrió un error." });
   }
 });
-// Continúa con el siguiente endpoint
 app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
@@ -218,7 +260,7 @@ app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
   const userId = req.body.userId || "desconocido";
   const agenteUid = req.body.agenteUid || null;
 
-  try {
+    try {
     const imageUrl = `${req.protocol}://${req.get("host")}/${imagePath}`;
 
     await db.collection("mensajes").add({
@@ -433,12 +475,39 @@ app.get("/api/conversaciones", async (req, res) => {
         const userId = data.idUsuario;
         if (!userId) return null;
 
-        // ✅ Evitar cargar mensajes desde aquí
+        let lastInteraction = data.fechaInicio;
+        let lastMessageText = "";
         let mensajes = [];
 
-        // ✅ Usar valores seguros y consistentes
-        const lastMessageText = data.lastMessage || "";
-        const lastInteraction = data.ultimaRespuesta || data.fechaInicio || new Date().toISOString();
+        try {
+          const mensajesSnapshot = await db
+            .collection("mensajes")
+            .where("idConversacion", "==", userId)
+            .orderBy("timestamp", "desc")
+            .limit(20)
+            .get();
+
+          mensajes = mensajesSnapshot.docs.map((d) => {
+            const m = d.data();
+            return {
+              userId,
+              lastInteraction: m.timestamp,
+              message: m.mensaje,
+              original: m.original || null,
+              from: m.rol,
+              tipo: m.tipo || "texto",
+              estado: m.estado || null,        // ✅ Corrección aplicada aquí
+              manual: m.manual || false,
+            };
+          });
+
+          if (mensajes[0]) {
+            lastInteraction = mensajes[0].lastInteraction;
+            lastMessageText = mensajes[0].message;
+          }
+        } catch (e) {
+          console.warn(`⚠️ No se pudo cargar mensajes para ${userId}`);
+        }
 
         return {
           userId,
@@ -462,6 +531,7 @@ app.get("/api/conversaciones", async (req, res) => {
     res.status(500).json({ error: "Error obteniendo conversaciones" });
   }
 });
+
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
   const hasta = req.query.hasta; // timestamp ISO
@@ -482,7 +552,7 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
     const mensajes = snapshot.docs
       .map((doc) => {
         const data = doc.data();
-        if (!data || !data.timestamp || (!data.mensaje && data.tipo !== "estado" && data.tipo !== "imagen")) return null;
+        if (!data || !data.timestamp || (!data.mensaje && data.tipo !== "estado")) return null;
         return {
           id: doc.id,
           userId,
