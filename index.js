@@ -280,28 +280,29 @@ app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
     const imageUrl = `${req.protocol}://${req.get("host")}/${imagePath}`;
 
     await db.collection("mensajes").add({
-      idConversacion: userId,
-      rol: "asistente",
-      mensaje: imageUrl,
-      original: imageUrl,
-      tipo: "imagen",
-      idiomaDetectado: "es",
-      timestamp: new Date().toISOString(),
-      manual: true,
-      agenteUid,
-    });
+  idConversacion: userId,
+  rol: "asistente",
+  mensaje: imageUrl,
+  original: imageUrl,
+  tipo: "imagen",
+  idiomaDetectado: "es",
+  timestamp: new Date().toISOString(),
+  manual: true,
+  agenteUid,
+});
 
-    await db.collection("conversaciones").doc(userId).set(
-      {
-        intervenida: true,
-        intervenidaPor: {
-          nombre: "Agente",
-          foto: "",
-          uid: agenteUid,
-        },
-      },
-      { merge: true }
-    );
+await db.collection("conversaciones").doc(userId).set(
+  {
+    intervenida: true,
+    intervenidaPor: {
+      nombre: "Agente",
+      foto: "",
+      uid: agenteUid,
+    },
+    ultimaActualizacion: new Date().toISOString(), // ✅ NUEVO: actividad reciente
+  },
+  { merge: true }
+);
 
     res.json({ imageUrl });
   } catch (error) {
