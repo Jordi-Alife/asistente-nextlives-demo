@@ -179,9 +179,9 @@ if (!idioma || idioma === "zxx") {
     );
 
     // Traducir mensaje para guardar en español (para el panel)
-    const traduccionUsuario = await traducir(message, "es");
+const traduccionUsuario = await traducir(message, "es");
 
-    await db.collection("mensajes").add({
+await db.collection("mensajes").add({
   idConversacion: finalUserId,
   rol: "usuario",
   mensaje: traduccionUsuario,
@@ -191,7 +191,11 @@ if (!idioma || idioma === "zxx") {
   timestamp: new Date().toISOString(),
 });
 
-// ⬇️ Añadimos esta actualización extra en la colección conversaciones
+// Obtener últimos 6 mensajes de la conversación
+const historialMensajes = await obtenerUltimosMensajesUsuario(finalUserId);
+const historialFormateado = formatearHistorialParaPrompt(historialMensajes);
+
+// ⬇️ Actualizar resumen en la conversación
 await db.collection("conversaciones").doc(finalUserId).set(
   {
     lastMessage: traduccionUsuario,
