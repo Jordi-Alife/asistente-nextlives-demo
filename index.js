@@ -495,16 +495,13 @@ app.get("/api/conversaciones", async (req, res) => {
         const userId = data.idUsuario;
         if (!userId) return null;
 
-        let lastInteraction = data.fechaInicio;
-        let lastMessageText = "";
+        // ✅ Evitar cargar mensajes desde aquí
         let mensajes = [];
 
-        mensajes = []; // ✅ Ya no se cargan mensajes desde Firestore aquí
+        // ✅ Usar valores seguros y consistentes
+        const lastMessageText = data.lastMessage || "";
+        const lastInteraction = data.ultimaRespuesta || data.fechaInicio || new Date().toISOString();
 
-if (data.lastMessage) {
-  lastMessageText = data.lastMessage;
-}
-lastInteraction = data.ultimaRespuesta || data.fechaInicio || new Date().toISOString();
         return {
           userId,
           lastInteraction,
@@ -527,7 +524,6 @@ lastInteraction = data.ultimaRespuesta || data.fechaInicio || new Date().toISOSt
     res.status(500).json({ error: "Error obteniendo conversaciones" });
   }
 });
-
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
   const hasta = req.query.hasta; // timestamp ISO
