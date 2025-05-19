@@ -257,34 +257,38 @@ if (reply.length > 0) {
   }
 
   try {
-    await db.collection("mensajes").add({
-      idConversacion: finalUserId,
-      rol: "asistente",
-      mensaje: traduccionRespuesta,  // ✅ para el panel
-      original: reply,               // ✅ lo que dijo GPT realmente
-      idiomaDetectado: idioma,
-      tipo: "texto",
-      timestamp: new Date().toISOString(),
-    });
+  await db.collection("mensajes").add({
+    idConversacion: finalUserId,
+    rol: "asistente",
+    mensaje: traduccionRespuesta,  // ✅ para el panel
+    original: reply,               // ✅ lo que dijo GPT realmente
+    idiomaDetectado: idioma,
+    tipo: "texto",
+    timestamp: new Date().toISOString(),
+  });
 
-    await db.collection("conversaciones").doc(finalUserId).set(
-      {
-        lastMessage: reply,
-        historialFormateado,
-        ultimaRespuesta: new Date().toISOString(),
-      },
-      { merge: true }
-    );
+  await db.collection("conversaciones").doc(finalUserId).set(
+    {
+      lastMessage: reply,
+      historialFormateado,
+      ultimaRespuesta: new Date().toISOString(),
+    },
+    { merge: true }
+  );
 
-    console.log("✅ Respuesta GPT guardada en Firestore");
-  } catch (e) {
-    console.error("❌ Error guardando mensaje de GPT en Firestore:", e);
-  }
+  console.log("✅ Respuesta GPT guardada en Firestore");
+} catch (e) {
+  console.error("❌ Error guardando mensaje de GPT en Firestore:", e);
+}
 } else {
   console.warn("⚠️ GPT no devolvió respuesta válida");
 }
 
-res.json({ reply });
+res.json({ reply }); // ✅ respuesta al frontend
+
+}); // 👈 cierre correcto del endpoint /api/chat
+
+// Continúa con el siguiente endpoint
 app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
@@ -293,7 +297,7 @@ app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
   const userId = req.body.userId || "desconocido";
   const agenteUid = req.body.agenteUid || null;
 
-    try {
+  try {
     const imageUrl = `${req.protocol}://${req.get("host")}/${imagePath}`;
 
     await db.collection("mensajes").add({
