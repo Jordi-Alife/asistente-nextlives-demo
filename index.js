@@ -248,6 +248,11 @@ try {
 
 console.log("🧠 Respuesta de GPT:", reply);
 
+if (reply.length === 0) {
+  console.warn("⚠️ GPT no devolvió respuesta válida");
+  return res.json({ reply: "" });
+}
+    
 if (reply.length > 0) {
   let traduccionRespuesta = reply;
   try {
