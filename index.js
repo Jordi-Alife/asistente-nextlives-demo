@@ -168,14 +168,15 @@ await db.collection("conversaciones").doc(finalUserId).set(
   {
     idUsuario: finalUserId,
     fechaInicio: new Date().toISOString(),
-    ultimaRespuesta: new Date().toISOString(),        // ✅ NUEVO
-    lastMessage: message,                             // ✅ NUEVO
+    ultimaRespuesta: new Date().toISOString(),
+    lastMessage: message,
     estado: "abierta",
     idioma,
     navegador: userAgent || "",
     pais: pais || "",
     historial: historial || [],
     datosContexto: datosContexto || null,
+    noVistos: admin.firestore.FieldValue.increment(1), // ✅ nuevo campo optimizado
   },
   { merge: true }
 );
