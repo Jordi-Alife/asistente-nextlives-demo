@@ -363,45 +363,44 @@ async function checkPanelMessages() {
   if (estado === 'cerrado') return;
 
   const userId = getUserId();
-try {
-  const res = await fetch(`/api/poll/${userId}`);
-  const data = await res.json();
-  if (data && Array.isArray(data.mensajes)) {
-    data.mensajes.forEach((msg) => {
-      const panelId = msg.id || `${msg.timestamp}-${msg.mensaje}`;
-      if (!document.querySelector(`[data-panel-id="${panelId}"]`)) {
-        console.log("📨 Mensaje manual recibido:", msg);
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'message assistant';
-        if (msg.manual) {
-          messageDiv.classList.add('manual');
-        }
-        messageDiv.dataset.panelId = panelId;
-
-        if (/\.(jpeg|jpg|png|gif|webp)$/i.test(msg.mensaje)) {
-          messageDiv.innerHTML = `<img src="${msg.mensaje}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
-        } else {
-          messageDiv.innerText = msg.mensaje;
-        }
-
-        messagesDiv.appendChild(messageDiv);
-
-        // ✅ Limitar a los últimos 50 mensajes
-        const todos = messagesDiv.querySelectorAll('.message');
-        if (todos.length > 50) {
-          for (let i = 0; i < todos.length - 50; i++) {
-            todos[i].remove();
+  try {
+    const res = await fetch(`/api/poll/${userId}`);
+    const data = await res.json();
+    if (data && Array.isArray(data.mensajes)) {
+      data.mensajes.forEach((msg) => {
+        if (!document.querySelector(`[data-panel-id="${msg.id}"]`)) {
+          console.log("📨 Mensaje manual recibido:", msg);
+          const messageDiv = document.createElement('div');
+          messageDiv.className = 'message assistant';
+          if (msg.manual) {
+            messageDiv.classList.add('manual');
           }
-        }
+          messageDiv.dataset.panelId = msg.id;
 
-        scrollToBottom();
-        saveChat();
-      }
-    });
+          if (/\.(jpeg|jpg|png|gif|webp)$/i.test(msg.mensaje)) {
+            messageDiv.innerHTML = `<img src="${msg.mensaje}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+          } else {
+            messageDiv.innerText = msg.mensaje;
+          }
+
+          messagesDiv.appendChild(messageDiv);
+
+          // ✅ Limitar a los últimos 50 mensajes
+          const todos = messagesDiv.querySelectorAll('.message');
+          if (todos.length > 50) {
+            for (let i = 0; i < todos.length - 50; i++) {
+              todos[i].remove();
+            }
+          }
+
+          scrollToBottom();
+          saveChat();
+        }
+      });
+    }
+  } catch (error) {
+    console.error("Error al obtener mensajes manuales:", error);
   }
-} catch (error) {
-  console.error("Error al obtener mensajes manuales:", error);
-}
 }
 setInterval(checkPanelMessages, 5000);
 
