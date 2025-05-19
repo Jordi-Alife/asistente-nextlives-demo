@@ -238,9 +238,17 @@ if (!idioma || idioma === "zxx") {
     ],
   });
 
-const reply = response.choices[0].message.content?.trim() || "";
+let reply = "";
 
-if (reply) {
+try {
+  reply = response.choices?.[0]?.message?.content?.trim() || "";
+} catch (e) {
+  console.error("❌ Error extrayendo reply de GPT:", e);
+}
+
+console.log("🧠 Respuesta de GPT:", reply);
+
+if (reply.length > 0) {
   let traduccionRespuesta = reply;
   try {
     traduccionRespuesta = await traducir(reply, "es");
@@ -248,30 +256,35 @@ if (reply) {
     console.warn("⚠️ No se pudo traducir la respuesta de GPT:", err.message);
   }
 
-  await db.collection("mensajes").add({
-    idConversacion: finalUserId,
-    rol: "asistente",
-    mensaje: traduccionRespuesta,  // ✅ para el panel
-    original: reply,               // ✅ lo que dijo GPT realmente
-    idiomaDetectado: idioma,
-    tipo: "texto",
-    timestamp: new Date().toISOString(),
-  });
+  try {
+    await db.collection("mensajes").add({
+      idConversacion: finalUserId,
+      rol: "asistente",
+      mensaje: traduccionRespuesta,  // ✅ para el panel
+      original: reply,               // ✅ lo que dijo GPT realmente
+      idiomaDetectado: idioma,
+      tipo: "texto",
+      timestamp: new Date().toISOString(),
+    });
 
-  await db.collection("conversaciones").doc(finalUserId).set(
-  {
-    lastMessage: reply,
-    historialFormateado,
-    ultimaRespuesta: new Date().toISOString(),
-  },
-  { merge: true }
-);
-res.json({ reply }); // ✅ responder al frontend aunque no se guarde
-} catch (error) {
-  console.error("❌ Error general en /api/chat:", error);
-  res.status(500).json({ reply: "Lo siento, ocurrió un error." });
+    await db.collection("conversaciones").doc(finalUserId).set(
+      {
+        lastMessage: reply,
+        historialFormateado,
+        ultimaRespuesta: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+
+    console.log("✅ Respuesta GPT guardada en Firestore");
+  } catch (e) {
+    console.error("❌ Error guardando mensaje de GPT en Firestore:", e);
+  }
+} else {
+  console.warn("⚠️ GPT no devolvió respuesta válida");
 }
-});
+
+res.json({ reply });
 app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
 
