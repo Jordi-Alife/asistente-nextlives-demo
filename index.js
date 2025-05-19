@@ -182,14 +182,22 @@ if (!idioma || idioma === "zxx") {
     const traduccionUsuario = await traducir(message, "es");
 
     await db.collection("mensajes").add({
-      idConversacion: finalUserId,
-      rol: "usuario",
-      mensaje: traduccionUsuario,     // ✅ lo que se ve en el panel
-      original: message,              // ✅ lo que escribió el usuario
-      idiomaDetectado: idioma,
-      tipo: "texto",
-      timestamp: new Date().toISOString(),
-    });
+  idConversacion: finalUserId,
+  rol: "usuario",
+  mensaje: traduccionUsuario,     // ✅ lo que se ve en el panel
+  original: message,              // ✅ lo que escribió el usuario
+  idiomaDetectado: idioma,
+  tipo: "texto",
+  timestamp: new Date().toISOString(),
+});
+
+// ✅ NUEVO: actualizar última actividad
+await db.collection("conversaciones").doc(finalUserId).set(
+  {
+    ultimaActualizacion: new Date().toISOString(),
+  },
+  { merge: true }
+);
 
     // Intervención activa: no responder
     const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
