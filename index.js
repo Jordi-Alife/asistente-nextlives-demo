@@ -223,10 +223,6 @@ await db.collection("conversaciones").doc(finalUserId).set(
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
       : "";
 
-    // Obtener últimos 6 mensajes de la conversación
-const historialMensajes = await obtenerUltimosMensajesUsuario(finalUserId);
-const historialFormateado = formatearHistorialParaPrompt(historialMensajes);
-
 // Construir prompt con base de conocimiento + historial + contexto
 const promptSystem = [
   baseConocimiento,
