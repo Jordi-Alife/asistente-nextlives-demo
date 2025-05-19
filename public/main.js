@@ -366,6 +366,10 @@ async function checkPanelMessages() {
   try {
     const res = await fetch(`/api/poll/${userId}`);
     const data = await res.json();
+
+    // ⬇️ Añade esta línea justo después del fetch:
+    console.log("📥 checkPanelMessages: mensajes recibidos", data.mensajes);
+
     if (data && Array.isArray(data.mensajes)) {
       data.mensajes.forEach((msg) => {
         if (!document.querySelector(`[data-panel-id="${msg.id}"]`)) {
