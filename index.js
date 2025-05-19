@@ -276,16 +276,20 @@ if (reply.length > 0) {
     { merge: true }
   );
 
-  console.log("✅ Respuesta GPT guardada en Firestore");
-} catch (e) {
-  console.error("❌ Error guardando mensaje de GPT en Firestore:", e);
-}
+      console.log("✅ Respuesta GPT guardada en Firestore");
+  } catch (e) {
+    console.error("❌ Error guardando mensaje de GPT en Firestore:", e);
+  }
 } else {
   console.warn("⚠️ GPT no devolvió respuesta válida");
 }
 
 res.json({ reply }); // ✅ respuesta al frontend
 
+} catch (error) {
+  console.error("❌ Error general en /api/chat:", error);
+  res.status(500).json({ reply: "Lo siento, ocurrió un error." });
+} // 👈 cierre del try principal
 }); // 👈 cierre correcto del endpoint /api/chat
 
 // Continúa con el siguiente endpoint
