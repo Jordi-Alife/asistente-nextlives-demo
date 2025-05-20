@@ -203,10 +203,15 @@ await db.collection("conversaciones").doc(finalUserId).set(
     }
 
     if (shouldEscalateToHuman(message)) {
-      return res.json({
-        reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia.",
-      });
-    }
+  await db.collection("conversaciones").doc(finalUserId).set(
+    { pendienteIntervencion: true },
+    { merge: true }
+  );
+
+  return res.json({
+    reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
+  });
+}
 
     // Preparar prompt
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
