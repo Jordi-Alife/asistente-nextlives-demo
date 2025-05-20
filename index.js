@@ -205,7 +205,7 @@ if (convData?.intervenida) {
 // 🔍 DEBUG: Verificar mensaje recibido
 console.log("🧪 Mensaje recibido:", message);
 
-    if (shouldEscalateToHuman(message)) {
+if (shouldEscalateToHuman(message)) {
   console.log("🚨 Escalada activada por mensaje:", message);
 
   const convRef = db.collection("conversaciones").doc(finalUserId);
@@ -230,10 +230,21 @@ console.log("🧪 Mensaje recibido:", message);
     console.log("📦 ENV TOKEN:", token);
   }
 
-  const smsUrl = `http://api.smsarena.es/http/sms.php?id=1361&auth=${encodeURIComponent(token)}&to=${encodeURIComponent(telefonoAgente)}&text=${encodeURIComponent(texto)}`;
+  const params = new URLSearchParams();
+  params.append("id", "1361");
+  params.append("auth", token);
+  params.append("to", telefonoAgente);
+  params.append("text", texto);
 
   try {
-    const response = await fetch(smsUrl);
+    const response = await fetch("http://api.smsarena.es/http/sms.php", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: params.toString()
+    });
+
     const respuestaSMS = await response.text();
     console.log("✅ SMS Arena respuesta:", respuestaSMS);
   } catch (err) {
