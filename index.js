@@ -212,45 +212,55 @@ if (shouldEscalateToHuman(message)) {
   const convSnap = await convRef.get();
   const convData = convSnap.exists ? convSnap.data() : {};
 
-  await convRef.set(
-    {
-      pendienteIntervencion: true,
-      smsIntervencionEnviado: true,
-    },
-    { merge: true }
-  );
+  const esNuevaSolicitud =
+    !convData.intervenida && !convData.smsIntervencionEnviado;
 
-  const telefonoAgente = "34673976486";
-const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir.`;
-const token = process.env.SMS_ARENA_KEY;
+  const esRecordatorio =
+    convData.intervenida === true &&
+    ["inactiva", "archivado"].includes((convData.estado || "").toLowerCase()) &&
+    !convData.smsIntervencionEnviado;
 
-if (!token) {
-  console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
-} else {
-  console.log("📦 ENV TOKEN:", token);
-}
+  if (esNuevaSolicitud || esRecordatorio) {
+    await convRef.set(
+      {
+        pendienteIntervencion: true,
+        smsIntervencionEnviado: true,
+      },
+      { merge: true }
+    );
 
-const params = new URLSearchParams();
-params.append("id", "1361");
-params.append("auth_key", token); // CORRECTO
-params.append("from", "NextLives"); // MUY IMPORTANTE: esto es obligatorio
-params.append("to", telefonoAgente);
-params.append("text", texto);
+    const telefonoAgente = "34673976486";
+    const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir.`;
+    const token = process.env.SMS_ARENA_KEY;
 
-try {
-  const response = await fetch("http://api.smsarena.es/http/sms.php", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: params.toString()
-  });
+    if (!token) {
+      console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
+    } else {
+      console.log("📦 ENV TOKEN:", token);
 
-  const respuestaSMS = await response.text();
-  console.log("✅ SMS Arena respuesta:", respuestaSMS);
-} catch (err) {
-  console.warn("❌ Error al enviar SMS Arena:", err);
-}
+      const params = new URLSearchParams();
+      params.append("id", "1361");
+      params.append("auth_key", token);
+      params.append("from", "NextLives");
+      params.append("to", telefonoAgente);
+      params.append("text", texto);
+
+      try {
+        const response = await fetch("http://api.smsarena.es/http/sms.php", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: params.toString()
+        });
+
+        const respuestaSMS = await response.text();
+        console.log("✅ SMS Arena respuesta:", respuestaSMS);
+      } catch (err) {
+        console.warn("❌ Error al enviar SMS Arena:", err);
+      }
+    }
+  }
 
   return res.json({
     reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
