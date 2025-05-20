@@ -216,18 +216,15 @@ if (shouldEscalateToHuman(message)) {
   const convSnap = await convRef.get();
   const convData = convSnap.exists ? convSnap.data() : {};
 
-  const estado = (convData.estado || "").toLowerCase();
-  const intervenida = convData.intervenida === true;
+  const necesitaEscalada =
+    (!convData.intervenida) ||
+    (convData.intervenida === true &&
+     ["inactiva", "archivado"].includes((convData.estado || "").toLowerCase()));
 
-  const debeEnviarSMS =
-    (!intervenida) ||
-    (intervenida && (estado === "inactiva" || estado === "archivado"));
-
-  if (debeEnviarSMS) {
+  if (necesitaEscalada) {
     await convRef.set(
       {
         pendienteIntervencion: true,
-        smsIntervencionEnviado: false, // Ya no se usa como limitante
       },
       { merge: true }
     );
@@ -242,6 +239,8 @@ if (shouldEscalateToHuman(message)) {
       console.log("📦 ENV TOKEN:", token);
 
       const params = new URLSearchParams();
+      const smsId = `id-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+      params.append("id", smsId); // ID aleatorio para evitar duplicados
       params.append("auth_key", token);
       params.append("from", "NextLives");
       params.append("to", telefonoAgente);
@@ -262,6 +261,10 @@ if (shouldEscalateToHuman(message)) {
         console.warn("❌ Error al enviar SMS Arena:", err);
       }
     }
+
+    return res.json({
+      reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
+    });
   }
 }
     // Preparar prompt
