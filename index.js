@@ -250,17 +250,6 @@ if (shouldEscalateToHuman(message) && !convData.smsIntervencionEnviado) {
     }
   }
 
-  // También guardamos la respuesta predefinida como si fuera GPT
-  await db.collection("mensajes").add({
-    idConversacion: finalUserId,
-    rol: "asistente",
-    mensaje: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
-    original: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
-    idiomaDetectado: idioma,
-    tipo: "texto",
-    timestamp: new Date().toISOString(),
-  });
-}
     // Preparar prompt
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
