@@ -239,6 +239,7 @@ if (shouldEscalateToHuman(message)) {
       console.log("📦 ENV TOKEN:", token);
 
       const params = new URLSearchParams();
+      params.append("id", "1361");
       params.append("auth_key", token);
       params.append("from", "NextLives");
       params.append("to", telefonoAgente);
@@ -657,12 +658,9 @@ app.post("/api/liberar-conversacion", async (req, res) => {
   if (!userId) return res.status(400).json({ error: "Falta userId" });
 
   try {
-    // 1. Marcar como no intervenida y permitir futuros SMS
+    // 1. Marcar como no intervenida en la conversación
     await db.collection("conversaciones").doc(userId).set(
-      {
-        intervenida: false,
-        smsIntervencionEnviado: false, // ✅ Reinicia para permitir nuevos SMS
-      },
+      { intervenida: false },
       { merge: true }
     );
 
@@ -671,7 +669,7 @@ app.post("/api/liberar-conversacion", async (req, res) => {
       idConversacion: userId,
       rol: "sistema",
       tipo: "estado",
-      estado: "Traspasado a GPT",
+      estado: "Traspasado a GPT", // Esta línea es imprescindible para que se muestre la etiqueta
       timestamp: new Date().toISOString(),
     });
 
