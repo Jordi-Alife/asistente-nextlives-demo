@@ -226,7 +226,7 @@ if (shouldEscalateToHuman(message)) {
     const telefonoAgente = "34673976486";
     const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir.`;
 
-    const token = process.env.SMS_ARENA_KEY;
+    const token = (process.env.SMS_ARENA_KEY || "").trim();
 
     if (!token) {
       console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
