@@ -239,14 +239,13 @@ if (shouldEscalateToHuman(message)) {
       console.log("📦 ENV TOKEN:", token);
 
       const params = new URLSearchParams();
-      const smsId = `msg-${Date.now()}-${Math.floor(Math.random() * 10000)}`; // ID único
-      params.append("id", smsId);                       // ✅ ID generado dinámicamente
-      params.append("auth_key", token);                 // ✅ Token correcto
-      params.append("from", "NextLives");               // ✅ Remitente registrado en SMS Arena
+      params.append("id", "1361");                     // ✅ ID fijo que funcionó
+      params.append("auth_key", token);                // ✅ Token correcto
+      params.append("from", "NextLives");              // ✅ Remitente registrado
       params.append("to", telefonoAgente);
       params.append("text", texto);
 
-      console.log("➡️ Enviando SMS con ID:", smsId);
+      console.log("➡️ Enviando SMS con ID: 1361");
       console.log("➡️ Body:", params.toString());
 
       try {
