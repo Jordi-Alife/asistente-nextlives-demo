@@ -239,7 +239,6 @@ if (shouldEscalateToHuman(message)) {
       console.log("📦 ENV TOKEN:", token);
 
       const params = new URLSearchParams();
-      params.append("id", "1361");
       params.append("auth_key", token);
       params.append("from", "NextLives");
       params.append("to", telefonoAgente);
