@@ -93,7 +93,11 @@ function shouldEscalateToHuman(message) {
     lower.includes("necesito ayuda humana") ||
     lower.includes("pasame con un humano") ||
     lower.includes("quiero hablar con alguien") ||
-    lower.includes("agente humano")
+    lower.includes("agente humano") || // ✅ aquí va la coma
+    lower.includes("hablar con persona humana") ||
+    lower.includes("hablar con un agente") ||
+    lower.includes("hablar con humano") ||
+    lower.includes("quiero una persona")
   );
 }
 
