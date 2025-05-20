@@ -249,6 +249,7 @@ if (shouldEscalateToHuman(message) && !convData.smsIntervencionEnviado) {
       console.warn("❌ Error al enviar SMS Arena:", err);
     }
   }
+}
 
     // Preparar prompt
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
