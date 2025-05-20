@@ -239,13 +239,14 @@ if (shouldEscalateToHuman(message)) {
       console.log("📦 ENV TOKEN:", token);
 
       const params = new URLSearchParams();
-      params.append("id", "1361");                     // ✅ ID fijo que funcionó
-      params.append("auth_key", token);                // ✅ Token correcto
-      params.append("from", "NextLives");              // ✅ Remitente registrado
+      const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`; // ✅ ID numérico único
+      params.append("id", smsId);
+      params.append("auth_key", token);
+      params.append("from", "NextLives");
       params.append("to", telefonoAgente);
       params.append("text", texto);
 
-      console.log("➡️ Enviando SMS con ID: 1361");
+      console.log("➡️ Enviando SMS con ID:", smsId);
       console.log("➡️ Body:", params.toString());
 
       try {
@@ -268,8 +269,7 @@ if (shouldEscalateToHuman(message)) {
       reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
     });
   }
-}
-    // Preparar prompt
+}    // Preparar prompt
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
       : "";
