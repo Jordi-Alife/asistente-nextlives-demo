@@ -212,19 +212,18 @@ if (shouldEscalateToHuman(message)) {
   const convSnap = await convRef.get();
   const convData = convSnap.exists ? convSnap.data() : {};
 
-  const esNuevaSolicitud =
-    !convData.intervenida && !convData.smsIntervencionEnviado;
+  const estado = (convData.estado || "").toLowerCase();
+  const intervenida = convData.intervenida === true;
 
-  const esRecordatorio =
-    convData.intervenida === true &&
-    ["inactiva", "archivado"].includes((convData.estado || "").toLowerCase()) &&
-    !convData.smsIntervencionEnviado;
+  const debeEnviarSMS =
+    (!intervenida) ||
+    (intervenida && (estado === "inactiva" || estado === "archivado"));
 
-  if (esNuevaSolicitud || esRecordatorio) {
+  if (debeEnviarSMS) {
     await convRef.set(
       {
         pendienteIntervencion: true,
-        smsIntervencionEnviado: true,
+        smsIntervencionEnviado: false, // Ya no se usa como limitante
       },
       { merge: true }
     );
@@ -260,10 +259,6 @@ if (shouldEscalateToHuman(message)) {
       }
     }
   }
-
-  return res.json({
-    reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
-  });
 }
     // Preparar prompt
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
