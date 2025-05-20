@@ -251,7 +251,7 @@ if (shouldEscalateToHuman(message)) {
       console.log("➡️ Params a enviar:", params.toString());
 
       try {
-        const response = await fetch("http://api.smsarena.es/http/sms.php", {
+        const response = await fetch("https://api.smsarena.es/http/send.php", {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded"
