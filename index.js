@@ -249,6 +249,8 @@ if (shouldEscalateToHuman(message) && !convData.smsIntervencionEnviado) {
       console.warn("❌ Error al enviar SMS Arena:", err);
     }
   }
+
+  // ❌ NO ponemos return aquí. Dejamos que el flujo de GPT continúe.
 }
 
     // Preparar prompt
