@@ -195,63 +195,18 @@ await db.collection("conversaciones").doc(finalUserId).set(
     });
 
     // Intervención activa: no responder
-const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
-const convData = convDoc.exists ? convDoc.data() : null;
-if (convData?.intervenida) {
-  console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
-  return res.json({ reply: "" });
-}
-
-// 🔍 DEBUG: Verificar mensaje recibido
-console.log("🧪 Mensaje recibido:", message);
-
-if (shouldEscalateToHuman(message) && !convData.smsIntervencionEnviado) {
-  console.log("🚨 Escalada activada por mensaje:", message);
-
-  const convRef = db.collection("conversaciones").doc(finalUserId);
-
-  await convRef.set(
-    {
-      pendienteIntervencion: true,
-      smsIntervencionEnviado: true,
-    },
-    { merge: true }
-  );
-
-  const telefonoAgente = "34673976486";
-  const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir.`;
-  const token = process.env.SMS_ARENA_KEY;
-
-  if (!token) {
-    console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
-  } else {
-    console.log("📦 ENV TOKEN:", token);
-
-    const params = new URLSearchParams();
-    params.append("id", "1361");
-    params.append("auth_key", token);
-    params.append("from", "NextLives");
-    params.append("to", telefonoAgente);
-    params.append("text", texto);
-
-    try {
-      const response = await fetch("http://api.smsarena.es/http/sms.php", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded"
-        },
-        body: params.toString()
-      });
-
-      const respuestaSMS = await response.text();
-      console.log("✅ SMS Arena respuesta:", respuestaSMS);
-    } catch (err) {
-      console.warn("❌ Error al enviar SMS Arena:", err);
+    const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
+    const convData = convDoc.exists ? convDoc.data() : null;
+    if (convData?.intervenida) {
+      console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
+      return res.json({ reply: "" });
     }
-  }
 
-  // ❌ NO ponemos return aquí. Dejamos que el flujo de GPT continúe.
-}
+    if (shouldEscalateToHuman(message)) {
+      return res.json({
+        reply: "Voy a derivar tu solicitud a un agente humano. Por favor, espera mientras se realiza la transferencia.",
+      });
+    }
 
     // Preparar prompt
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
