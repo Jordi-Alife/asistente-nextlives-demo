@@ -239,9 +239,7 @@ if (shouldEscalateToHuman(message)) {
       console.log("📦 ENV TOKEN:", token);
 
       const smsId = `msg-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-
-      // Construcción manual asegurando orden: id va al final
-      const body = `auth_key=${encodeURIComponent(token)}&from=NextLives&to=${encodeURIComponent(telefonoAgente)}&text=${encodeURIComponent(texto)}&id=${encodeURIComponent(smsId)}`;
+      const body = `auth_key=${encodeURIComponent(token)}&to=${encodeURIComponent(telefonoAgente)}&text=${encodeURIComponent(texto)}&id=${encodeURIComponent(smsId)}`;
 
       console.log("➡️ Enviando SMS con ID:", smsId);
       console.log("➡️ Body a enviar:", body);
@@ -266,6 +264,7 @@ if (shouldEscalateToHuman(message)) {
       reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
     });
   }
+}
 }
     // Preparar prompt
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
