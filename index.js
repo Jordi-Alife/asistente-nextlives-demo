@@ -206,13 +206,12 @@ if (convData?.intervenida) {
 console.log("🧪 Mensaje recibido:", message);
 
     if (shouldEscalateToHuman(message)) {
-    console.log("🚨 Escalada activada por mensaje:", message);
+  console.log("🚨 Escalada activada por mensaje:", message);
 
   const convRef = db.collection("conversaciones").doc(finalUserId);
   const convSnap = await convRef.get();
   const convData = convSnap.exists ? convSnap.data() : {};
 
-  // Guardar estado de intervención (sin condicional mientras pruebas)
   await convRef.set(
     {
       pendienteIntervencion: true,
@@ -231,7 +230,7 @@ console.log("🧪 Mensaje recibido:", message);
     console.log("📦 ENV TOKEN:", token);
   }
 
-  const smsUrl = `http://api.smsarena.es/http/sms.php?auth_key=${token}&id=1361&from=NextLives&to=${telefonoAgente}&text=${encodeURIComponent(texto)}`;
+  const smsUrl = `http://api.smsarena.es/http/sms.php?id=1361&auth=${encodeURIComponent(token)}&to=${encodeURIComponent(telefonoAgente)}&text=${encodeURIComponent(texto)}`;
 
   try {
     const response = await fetch(smsUrl);
@@ -244,6 +243,7 @@ console.log("🧪 Mensaje recibido:", message);
   return res.json({
     reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
   });
+}
     // Preparar prompt
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
