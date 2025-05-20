@@ -240,23 +240,19 @@ if (shouldEscalateToHuman(message)) {
 
       const smsId = `msg-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
-      const params = new URLSearchParams();
-      params.append("id", String(smsId));
-      params.append("auth_key", String(token));
-      params.append("from", "NextLives");
-      params.append("to", String(telefonoAgente));
-      params.append("text", String(texto));
+      // Construcción manual asegurando orden: id va al final
+      const body = `auth_key=${encodeURIComponent(token)}&from=NextLives&to=${encodeURIComponent(telefonoAgente)}&text=${encodeURIComponent(texto)}&id=${encodeURIComponent(smsId)}`;
 
       console.log("➡️ Enviando SMS con ID:", smsId);
-      console.log("➡️ Params a enviar:", params.toString());
+      console.log("➡️ Body a enviar:", body);
 
       try {
-        const response = await fetch("https://api.smsarena.es/http/send.php", {
+        const response = await fetch("https://api.smsarena.es/http/sms.php", {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded"
           },
-          body: params.toString()
+          body
         });
 
         const respuestaSMS = await response.text();
