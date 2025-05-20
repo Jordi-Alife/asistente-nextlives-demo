@@ -195,14 +195,14 @@ await db.collection("conversaciones").doc(finalUserId).set(
     });
 
     // Intervención activa: no responder
-    const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
-    const convData = convDoc.exists ? convDoc.data() : null;
-    if (convData?.intervenida) {
-      console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
-      return res.json({ reply: "" });
-    }
+const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
+const convData = convDoc.exists ? convDoc.data() : null;
+if (convData?.intervenida) {
+  console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
+  return res.json({ reply: "" });
+}
 
-    if (shouldEscalateToHuman(message)) {
+if (shouldEscalateToHuman(message)) {
   const convRef = db.collection("conversaciones").doc(finalUserId);
   const convSnap = await convRef.get();
   const convData = convSnap.exists ? convSnap.data() : {};
@@ -217,26 +217,30 @@ await db.collection("conversaciones").doc(finalUserId).set(
       { merge: true }
     );
 
-    // Enviar SMS al agente (ajusta teléfono o lógica según el sistema real)
+    // Enviar SMS al agente
+    const telefonoAgente = "34673976486"; // ✅ número de pruebas
+    const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir.`;
+
     const body = new URLSearchParams({
-  id: "1361", // ID real de SMS Arena
-  auth: "xtGIgr2UrDRrtwmcmcVR3RWT5zJrKxhDY", // Token real
-  to: telefonoAgente,
-  text: texto,
-});
+      id: "1361", // ID real de SMS Arena
+      auth: "xtGIgr2UrDRrtwmcmcVR3RWT5zJrKxhDY", // Token real
+      to: telefonoAgente,
+      text: texto,
+    });
 
-try {
-  const res = await fetch("http://api.smsarena.es/http/sms.php", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
+    try {
+      const res = await fetch("http://api.smsarena.es/http/sms.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+      });
 
-  const respuestaSMS = await res.text();
-  console.log("✅ SMS Arena respuesta:", respuestaSMS);
-} catch (err) {
-  console.warn("❌ Error al enviar SMS Arena:", err);
-}
+      const respuestaSMS = await res.text();
+      console.log("✅ SMS Arena respuesta:", respuestaSMS);
+    } catch (err) {
+      console.warn("❌ Error al enviar SMS Arena:", err);
+    }
+  }
 
   return res.json({
     reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
