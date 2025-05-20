@@ -221,35 +221,36 @@ if (shouldEscalateToHuman(message)) {
   );
 
   const telefonoAgente = "34673976486";
-  const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir.`;
-  const token = process.env.SMS_ARENA_KEY;
+const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir.`;
+const token = process.env.SMS_ARENA_KEY;
 
-  if (!token) {
-    console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
-  } else {
-    console.log("📦 ENV TOKEN:", token);
-  }
+if (!token) {
+  console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
+} else {
+  console.log("📦 ENV TOKEN:", token);
+}
 
-  const params = new URLSearchParams();
-  params.append("id", "1361");
-  params.append("auth_key", token); // ⬅️ aquí está la corrección clave
-  params.append("to", telefonoAgente);
-  params.append("text", texto);
+const params = new URLSearchParams();
+params.append("id", "1361");
+params.append("auth_key", token); // CORRECTO
+params.append("from", "NextLives"); // MUY IMPORTANTE: esto es obligatorio
+params.append("to", telefonoAgente);
+params.append("text", texto);
 
-  try {
-    const response = await fetch("http://api.smsarena.es/http/sms.php", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: params.toString()
-    });
+try {
+  const response = await fetch("http://api.smsarena.es/http/sms.php", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: params.toString()
+  });
 
-    const respuestaSMS = await response.text();
-    console.log("✅ SMS Arena respuesta:", respuestaSMS);
-  } catch (err) {
-    console.warn("❌ Error al enviar SMS Arena:", err);
-  }
+  const respuestaSMS = await response.text();
+  console.log("✅ SMS Arena respuesta:", respuestaSMS);
+} catch (err) {
+  console.warn("❌ Error al enviar SMS Arena:", err);
+}
 
   return res.json({
     reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
