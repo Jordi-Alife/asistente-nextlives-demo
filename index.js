@@ -9,9 +9,6 @@ import admin from "firebase-admin";
 import serviceAccount from "./serviceAccountKey.json" assert { type: "json" };
 import sharp from "sharp";
 
-} catch (e) {
-  console.warn("⚠️ dotenv no cargado (Railway o entorno ya configurado)");
-}
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
