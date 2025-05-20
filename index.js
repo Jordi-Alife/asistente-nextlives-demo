@@ -218,26 +218,25 @@ await db.collection("conversaciones").doc(finalUserId).set(
     );
 
     // Enviar SMS al agente (ajusta teléfono o lógica según el sistema real)
-    const telefonoAgente = "34673976486"; // 🔁 Reemplaza con el número real o dinámico
-    const texto = `⚠️ Nueva conversación de ${finalUserId} requiere intervención humana`;
+    const body = new URLSearchParams({
+  id: "1361", // ID real de SMS Arena
+  auth: "xtGIgr2UrDRrtwmcmcVR3RWT5zJrKxhDY", // Token real
+  to: telefonoAgente,
+  text: texto,
+});
 
-    try {
-      await fetch("https://api.smsarena.com/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer TU_TOKEN_SMS_ARENA", // ⏺️ reemplaza con tu token real
-        },
-        body: JSON.stringify({
-          to: telefonoAgente,
-          message: texto,
-        }),
-      });
-      console.log("✅ SMS enviado correctamente");
-    } catch (err) {
-      console.warn("❌ Error al enviar SMS:", err);
-    }
-  }
+try {
+  const res = await fetch("http://api.smsarena.es/http/sms.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+
+  const respuestaSMS = await res.text();
+  console.log("✅ SMS Arena respuesta:", respuestaSMS);
+} catch (err) {
+  console.warn("❌ Error al enviar SMS Arena:", err);
+}
 
   return res.json({
     reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
