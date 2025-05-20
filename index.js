@@ -238,19 +238,24 @@ if (shouldEscalateToHuman(message)) {
     } else {
       console.log("📦 ENV TOKEN:", token);
 
-      const smsId = `msg-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-      const body = `auth_key=${encodeURIComponent(token)}&to=${encodeURIComponent(telefonoAgente)}&text=${encodeURIComponent(texto)}&id=${encodeURIComponent(smsId)}`;
+      const params = new URLSearchParams();
+      const smsId = `msg-${Date.now()}-${Math.floor(Math.random() * 10000)}`; // ID único
+      params.append("id", smsId);                       // ✅ ID generado dinámicamente
+      params.append("auth_key", token);                 // ✅ Token correcto
+      params.append("from", "NextLives");               // ✅ Remitente registrado en SMS Arena
+      params.append("to", telefonoAgente);
+      params.append("text", texto);
 
       console.log("➡️ Enviando SMS con ID:", smsId);
-      console.log("➡️ Body a enviar:", body);
+      console.log("➡️ Body:", params.toString());
 
       try {
-        const response = await fetch("https://api.smsarena.es/http/sms.php", {
+        const response = await fetch("http://api.smsarena.es/http/sms.php", {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded"
           },
-          body
+          body: params.toString()
         });
 
         const respuestaSMS = await response.text();
@@ -264,7 +269,6 @@ if (shouldEscalateToHuman(message)) {
       reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
     });
   }
-}
 }
     // Preparar prompt
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
