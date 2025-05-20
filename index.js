@@ -206,47 +206,44 @@ if (convData?.intervenida) {
 console.log("🧪 Mensaje recibido:", message);
 
     if (shouldEscalateToHuman(message)) {
-  console.log("🚨 Escalada activada por mensaje:", message);
+    console.log("🚨 Escalada activada por mensaje:", message);
 
   const convRef = db.collection("conversaciones").doc(finalUserId);
-const convSnap = await convRef.get();
-const convData = convSnap.exists ? convSnap.data() : {};
+  const convSnap = await convRef.get();
+  const convData = convSnap.exists ? convSnap.data() : {};
 
-// Guardar estado de intervención (sin condicional mientras pruebas)
-await convRef.set(
-  {
-    pendienteIntervencion: true,
-    smsIntervencionEnviado: true,
-  },
-  { merge: true }
-);
+  // Guardar estado de intervención (sin condicional mientras pruebas)
+  await convRef.set(
+    {
+      pendienteIntervencion: true,
+      smsIntervencionEnviado: true,
+    },
+    { merge: true }
+  );
 
-const telefonoAgente = "34673976486";
-const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir.`;
+  const telefonoAgente = "34673976486";
+  const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir.`;
+  const token = process.env.SMS_ARENA_KEY;
 
-const token = process.env.SMS_ARENA_KEY;
+  if (!token) {
+    console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
+  } else {
+    console.log("📦 ENV TOKEN:", token);
+  }
 
-if (!token) {
-  console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
-} else {
-  console.log("📦 ENV TOKEN:", token);
-}
+  const smsUrl = `http://api.smsarena.es/http/sms.php?auth_key=${token}&id=1361&from=NextLives&to=${telefonoAgente}&text=${encodeURIComponent(texto)}`;
 
-// ✅ Enviar usando GET, como recomienda la documentación
-const smsUrl = `http://api.smsarena.es/http/sms.php?auth_key=${token}&id=1361&from=NextLives&to=${telefonoAgente}&text=${encodeURIComponent(texto)}`;
+  try {
+    const response = await fetch(smsUrl);
+    const respuestaSMS = await response.text();
+    console.log("✅ SMS Arena respuesta:", respuestaSMS);
+  } catch (err) {
+    console.warn("❌ Error al enviar SMS Arena:", err);
+  }
 
-try {
-  const response = await fetch(smsUrl);
-  const respuestaSMS = await response.text();
-  console.log("✅ SMS Arena respuesta (GET):", respuestaSMS);
-} catch (err) {
-  console.warn("❌ Error al enviar SMS Arena (GET):", err);
-}
-
-return res.json({
-  reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
-});
-
+  return res.json({
+    reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
+  });
     // Preparar prompt
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
