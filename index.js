@@ -658,9 +658,12 @@ app.post("/api/liberar-conversacion", async (req, res) => {
   if (!userId) return res.status(400).json({ error: "Falta userId" });
 
   try {
-    // 1. Marcar como no intervenida en la conversación
+    // 1. Marcar como no intervenida y permitir futuros SMS
     await db.collection("conversaciones").doc(userId).set(
-      { intervenida: false },
+      {
+        intervenida: false,
+        smsIntervencionEnviado: false, // ✅ Reinicia para permitir nuevos SMS
+      },
       { merge: true }
     );
 
@@ -669,7 +672,7 @@ app.post("/api/liberar-conversacion", async (req, res) => {
       idConversacion: userId,
       rol: "sistema",
       tipo: "estado",
-      estado: "Traspasado a GPT", // Esta línea es imprescindible para que se muestre la etiqueta
+      estado: "Traspasado a GPT",
       timestamp: new Date().toISOString(),
     });
 
