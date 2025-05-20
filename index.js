@@ -238,11 +238,17 @@ if (shouldEscalateToHuman(message)) {
     } else {
       console.log("📦 ENV TOKEN:", token);
 
-      // Corregido: construcción segura del body
       const smsId = `msg-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-      const body = `id=${encodeURIComponent(smsId)}&auth_key=${encodeURIComponent(token)}&from=NextLives&to=${telefonoAgente}&text=${encodeURIComponent(texto)}`;
+
+      const params = new URLSearchParams();
+      params.append("id", String(smsId));
+      params.append("auth_key", String(token));
+      params.append("from", "NextLives");
+      params.append("to", String(telefonoAgente));
+      params.append("text", String(texto));
 
       console.log("➡️ Enviando SMS con ID:", smsId);
+      console.log("➡️ Params a enviar:", params.toString());
 
       try {
         const response = await fetch("http://api.smsarena.es/http/sms.php", {
@@ -250,7 +256,7 @@ if (shouldEscalateToHuman(message)) {
           headers: {
             "Content-Type": "application/x-www-form-urlencoded"
           },
-          body
+          body: params.toString()
         });
 
         const respuestaSMS = await response.text();
