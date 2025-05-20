@@ -368,7 +368,7 @@ async function checkPanelMessages() {
     const data = await res.json();
     if (data && Array.isArray(data.mensajes)) {
       data.mensajes.forEach((msg) => {
-        if (!document.querySelector(`[data-panel-id="${msg.id}"]`)) {
+        if (msg.id && !document.querySelector(`[data-panel-id="${msg.id}"]`)) {
           console.log("📨 Mensaje manual recibido:", msg);
           const messageDiv = document.createElement('div');
           messageDiv.className = 'message assistant';
