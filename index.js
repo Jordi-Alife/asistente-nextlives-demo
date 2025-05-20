@@ -232,20 +232,19 @@ console.log("🧪 Mensaje recibido:", message);
     console.log("📦 ENV TOKEN:", token);
   }
 
-  const params = new URLSearchParams();
-  params.append("id", "1361");
-  params.append("auth", token);
-  params.append("to", telefonoAgente);
-  params.append("text", texto);
+  const body =
+  "id=1361" +
+  "&auth=" + encodeURIComponent(token) +
+  "&to=" + encodeURIComponent(telefonoAgente) +
+  "&text=" + encodeURIComponent(texto);
 
-  try {
-    const response = await fetch("http://api.smsarena.es/http/sms.php", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: params.toString()
-    });
+const response = await fetch("http://api.smsarena.es/http/sms.php", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/x-www-form-urlencoded"
+  },
+  body
+});
 
     const respuestaSMS = await response.text();
     console.log("✅ SMS Arena respuesta:", respuestaSMS);
