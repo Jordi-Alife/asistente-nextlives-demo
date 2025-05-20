@@ -515,7 +515,7 @@ app.get("/api/conversaciones", async (req, res) => {
   historial: data.historial || [],
   message: data.lastMessage || "",
   mensajes: [],
-  nuevos: data.noVistos || 0, // ✅ este es el campo que debe usar el frontend
+  noVistos: data.noVistos || 0, // ✅ este es el campo que debe usar el frontend
 };
     }).filter((c) => !!c);
 
