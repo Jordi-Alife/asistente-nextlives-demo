@@ -232,7 +232,7 @@ if (shouldEscalateToHuman(message)) {
 
   const params = new URLSearchParams();
   params.append("id", "1361");
-  params.append("auth_key", token);
+  params.append("auth_key", token); // ⬅️ aquí está la corrección clave
   params.append("to", telefonoAgente);
   params.append("text", texto);
 
