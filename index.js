@@ -226,33 +226,35 @@ if (true) {
     const telefonoAgente = "34673976486";
     const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir.`;
 
-    const params = new URLSearchParams();
-    params.append("id", "1361");
-    params.append("auth", process.env.SMS_ARENA_KEY);
-    params.append("to", telefonoAgente);
-    params.append("text", texto);
+    // 🔍 Verificar token solo una vez
+const token = process.env.SMS_ARENA_KEY;
 
-    if (!process.env.SMS_ARENA_KEY) {
+if (!token) {
   console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
 } else {
-  console.log("📦 ENV TOKEN:", process.env.SMS_ARENA_KEY);
+  console.log("📦 ENV TOKEN:", token);
 }
 
-    try {
-      const response = await fetch("http://api.smsarena.es/http/sms.php", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded"
-        },
-        body: params.toString()
-      });
+const params = new URLSearchParams();
+params.append("id", "1361");
+params.append("auth", token);
+params.append("to", telefonoAgente);
+params.append("text", texto);
 
-      const respuestaSMS = await response.text();
-      console.log("✅ SMS Arena respuesta:", respuestaSMS);
-    } catch (err) {
-      console.warn("❌ Error al enviar SMS Arena:", err);
-    }
-  }
+try {
+  const response = await fetch("http://api.smsarena.es/http/sms.php", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: params.toString()
+  });
+
+  const respuestaSMS = await response.text();
+  console.log("✅ SMS Arena respuesta:", respuestaSMS);
+} catch (err) {
+  console.warn("❌ Error al enviar SMS Arena:", err);
+}
 
   return res.json({
     reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
