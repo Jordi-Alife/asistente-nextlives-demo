@@ -223,7 +223,7 @@ if (shouldEscalateToHuman(message)) {
 
     const body = new URLSearchParams({
       id: "1361", // ID real de SMS Arena
-      auth: "xtGIgr2UrDRrtwmcmcVR3RWT5zJrKxhDY", // Token real
+      auth: process.env.SMS_ARENA_KEY,
       to: telefonoAgente,
       text: texto,
     });
