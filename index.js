@@ -212,48 +212,39 @@ if (shouldEscalateToHuman(message)) {
   const convSnap = await convRef.get();
   const convData = convSnap.exists ? convSnap.data() : {};
 
-  // Si aún no se ha enviado el SMS
-  // FORZADO para pruebas
-  if (true) {
-    await convRef.set(
-      {
-        pendienteIntervencion: true,
-        smsIntervencionEnviado: true,
-      },
-      { merge: true }
-    );
+ // Si aún no se ha enviado el SMS
+if (true) {
+  await convRef.set(
+    {
+      pendienteIntervencion: true,
+      smsIntervencionEnviado: true,
+    },
+    { merge: true }
+  );
 
-    const telefonoAgente = "34673976486";
-    const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir.`;
+  const telefonoAgente = "34673976486";
+  const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir.`;
 
-    const token = (process.env.SMS_ARENA_KEY || "").trim();
+  const token = (process.env.SMS_ARENA_KEY || "").trim();
 
-    if (!token) {
-      console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
-    } else {
-      console.log("📦 ENV TOKEN:", token);
-    }
+  if (!token) {
+    console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
+  } else {
+    console.log("📦 ENV TOKEN:", token);
+  }
 
-    const params = new URLSearchParams();
-    params.append("id", "1361");
-    params.append("auth", token);
-    params.append("to", telefonoAgente);
-    params.append("text", texto);
+  const params = new URLSearchParams();
+  params.append("id", "1361");
+  params.append("auth", token);
+  params.append("to", telefonoAgente);
+  params.append("text", texto);
 
-    try {
-      const response = await fetch("http://api.smsarena.es/http/sms.php", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: params.toString(),
-      });
-
-      const respuestaSMS = await response.text();
-      console.log("✅ SMS Arena respuesta:", respuestaSMS);
-    } catch (err) {
-      console.warn("❌ Error al enviar SMS Arena:", err);
-    }
+  try {
+    const response = await fetch("http://api.smsarena.es/http/sms.php?" + params.toString());
+    const respuestaSMS = await response.text();
+    console.log("✅ SMS Arena respuesta:", respuestaSMS);
+  } catch (err) {
+    console.warn("❌ Error al enviar SMS Arena:", err);
   }
 
   return res.json({
