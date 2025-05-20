@@ -203,16 +203,46 @@ await db.collection("conversaciones").doc(finalUserId).set(
     }
 
     if (shouldEscalateToHuman(message)) {
-  await db.collection("conversaciones").doc(finalUserId).set(
-    { pendienteIntervencion: true },
-    { merge: true }
-  );
+  const convRef = db.collection("conversaciones").doc(finalUserId);
+  const convSnap = await convRef.get();
+  const convData = convSnap.exists ? convSnap.data() : {};
+
+  // Si aún no se ha enviado el SMS
+  if (!convData.smsIntervencionEnviado) {
+    await convRef.set(
+      {
+        pendienteIntervencion: true,
+        smsIntervencionEnviado: true, // ⏺️ lo marcamos para no repetir
+      },
+      { merge: true }
+    );
+
+    // Enviar SMS al agente (ajusta teléfono o lógica según el sistema real)
+    const telefonoAgente = "34673976486"; // 🔁 Reemplaza con el número real o dinámico
+    const texto = `⚠️ Nueva conversación de ${finalUserId} requiere intervención humana`;
+
+    try {
+      await fetch("https://api.smsarena.com/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer TU_TOKEN_SMS_ARENA", // ⏺️ reemplaza con tu token real
+        },
+        body: JSON.stringify({
+          to: telefonoAgente,
+          message: texto,
+        }),
+      });
+      console.log("✅ SMS enviado correctamente");
+    } catch (err) {
+      console.warn("❌ Error al enviar SMS:", err);
+    }
+  }
 
   return res.json({
     reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
   });
 }
-
     // Preparar prompt
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
