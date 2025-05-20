@@ -213,7 +213,7 @@ if (shouldEscalateToHuman(message)) {
   const convData = convSnap.exists ? convSnap.data() : {};
 
   // Si aún no se ha enviado el SMS
-  if (!convData.smsIntervencionEnviado) {
+  if (true) {
     await convRef.set(
       {
         pendienteIntervencion: true,
