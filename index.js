@@ -231,7 +231,11 @@ if (shouldEscalateToHuman(message)) {
     params.append("to", telefonoAgente);
     params.append("text", texto);
 
-    console.log("📦 ENV TOKEN:", process.env.SMS_ARENA_KEY);
+    if (!process.env.SMS_ARENA_KEY) {
+  console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
+} else {
+  console.log("📦 ENV TOKEN:", process.env.SMS_ARENA_KEY);
+}
 
     try {
       const response = await fetch("http://api.smsarena.es/http/sms.php", {
