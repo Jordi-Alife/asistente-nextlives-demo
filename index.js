@@ -8,6 +8,9 @@ import { v4 as uuidv4 } from "uuid";
 import admin from "firebase-admin";
 import serviceAccount from "./serviceAccountKey.json" assert { type: "json" };
 import sharp from "sharp";
+import dotenv from "dotenv";
+dotenv.config();
+
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
