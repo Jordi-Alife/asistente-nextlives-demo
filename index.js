@@ -569,29 +569,12 @@ app.post("/api/marcar-visto", async (req, res) => {
   const now = new Date().toISOString();
 
   try {
-    // 1. Guardar timestamp de vista global
+    // 1. Guardar timestamp de vista global (para lógica SMS)
     await db.collection("vistas_globales").doc(userId).set({ timestamp: now });
 
-    // 2. Contar mensajes no vistos (últimos 50)
-    const mensajesSnapshot = await db
-      .collection("mensajes")
-      .where("idConversacion", "==", userId)
-      .where("rol", "==", "usuario")
-      .orderBy("timestamp", "desc")
-      .limit(50)
-      .get();
-
-    let noVistos = 0;
-    for (const doc of mensajesSnapshot.docs) {
-      const msg = doc.data();
-      if (msg.timestamp > now) {
-        noVistos++;
-      }
-    }
-
-    // 3. Guardar conteo en la conversación
+    // 2. Reiniciar contador de mensajes no vistos
     await db.collection("conversaciones").doc(userId).set(
-      { noVistos: noVistos },
+      { noVistos: 0 },
       { merge: true }
     );
 
