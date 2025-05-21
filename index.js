@@ -156,24 +156,6 @@ app.post("/api/traducir-modal", async (req, res) => {
   }
 
   try {
-    // 🕵️ Obtener estado real de la conversación ANTES de actualizarla
-    let debeNotificar = false;
-    try {
-      const convRef2 = db.collection("conversaciones").doc(finalUserId);
-      const convSnap2 = await convRef2.get();
-      const convData2 = convSnap2.exists ? convSnap2.data() : {};
-
-      console.log("🔍 Estado previo conversación:", {
-        intervenida: convData2?.intervenida,
-        estado: convData2?.estado,
-      });
-
-      debeNotificar =
-        convData2?.intervenida === true &&
-        ["inactiva", "archivado"].includes((convData2.estado || "").toLowerCase());
-    } catch (e) {
-      console.warn("❌ Error leyendo estado previo de la conversación:", e);
-    }
 
     // Guardar info usuario
     await db.collection("usuarios_chat").doc(finalUserId).set(
