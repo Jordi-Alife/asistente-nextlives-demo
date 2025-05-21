@@ -569,12 +569,33 @@ app.post("/api/marcar-visto", async (req, res) => {
   const now = new Date().toISOString();
 
   try {
-    // 1. Guardar timestamp de vista global (para lógica SMS)
+    // 1. Obtener última vista anterior (antes de actualizarla)
+    const vistaDoc = await db.collection("vistas_globales").doc(userId).get();
+    const ultimaVista = vistaDoc.exists ? vistaDoc.data().timestamp : now;
+
+    // 2. Actualizar el timestamp actual como nueva vista
     await db.collection("vistas_globales").doc(userId).set({ timestamp: now });
 
-    // 2. Reiniciar contador de mensajes no vistos
+    // 3. Contar mensajes no vistos desde la última vista previa
+    const mensajesSnapshot = await db
+      .collection("mensajes")
+      .where("idConversacion", "==", userId)
+      .where("rol", "==", "usuario")
+      .orderBy("timestamp", "desc")
+      .limit(50)
+      .get();
+
+    let noVistos = 0;
+    for (const doc of mensajesSnapshot.docs) {
+      const msg = doc.data();
+      if (msg.timestamp > ultimaVista) {
+        noVistos++;
+      }
+    }
+
+    // 4. Guardar conteo en la conversación
     await db.collection("conversaciones").doc(userId).set(
-      { noVistos: 0 },
+      { noVistos },
       { merge: true }
     );
 
@@ -582,31 +603,6 @@ app.post("/api/marcar-visto", async (req, res) => {
   } catch (e) {
     console.error("❌ Error en /api/marcar-visto:", e);
     res.status(500).json({ error: "Error en marcar-visto" });
-  }
-});
-app.post("/api/escribiendo", (req, res) => {
-  const { userId, texto } = req.body;
-  if (!userId) return res.status(400).json({ error: "Falta userId" });
-  escribiendoUsuarios[userId] = texto || "";
-  res.json({ ok: true });
-});
-
-app.get("/api/escribiendo/:userId", (req, res) => {
-  const texto = escribiendoUsuarios[req.params.userId] || "";
-  res.json({ texto });
-});
-
-app.get("/api/vistas", async (req, res) => {
-  try {
-    const snapshot = await db.collection("vistas_globales").get();
-    const result = {};
-    snapshot.forEach((doc) => {
-      result[doc.id] = doc.data().timestamp;
-    });
-    res.json(result);
-  } catch (error) {
-    console.error("❌ Error obteniendo vistas:", error);
-    res.status(500).json({ error: "Error obteniendo vistas" });
   }
 });
 
