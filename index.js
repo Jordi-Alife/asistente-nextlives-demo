@@ -127,33 +127,54 @@ app.post("/api/traducir-modal", async (req, res) => {
   app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial, datosContexto } = req.body;
   const finalUserId = userId || "anon";
+
   // 🧠 Detectar idioma del mensaje
-let idiomaDetectado = await detectarIdiomaGPT(message);
-let idioma = idiomaDetectado;
+  let idiomaDetectado = await detectarIdiomaGPT(message);
+  let idioma = idiomaDetectado;
 
-// 🛡️ Fallback si no es válido
-if (!idioma || idioma === "zxx") {
-  const ultimos = await db.collection("mensajes")
-    .where("idConversacion", "==", finalUserId)
-    .where("rol", "==", "usuario")
-    .orderBy("timestamp", "desc")
-    .limit(10)
-    .get();
+  // 🛡️ Fallback si no es válido
+  if (!idioma || idioma === "zxx") {
+    const ultimos = await db.collection("mensajes")
+      .where("idConversacion", "==", finalUserId)
+      .where("rol", "==", "usuario")
+      .orderBy("timestamp", "desc")
+      .limit(10)
+      .get();
 
-  const idiomaValido = ultimos.docs.find(doc => {
-    const msg = doc.data();
-    return msg.idiomaDetectado && msg.idiomaDetectado !== "zxx";
-  });
+    const idiomaValido = ultimos.docs.find(doc => {
+      const msg = doc.data();
+      return msg.idiomaDetectado && msg.idiomaDetectado !== "zxx";
+    });
 
-  if (idiomaValido) {
-    idioma = idiomaValido.data().idiomaDetectado;
-    console.log(`🌐 Fallback idioma en /chat: se usa anterior "${idioma}"`);
-  } else {
-    idioma = "es";
-    console.log(`⚠️ Fallback total en /chat: se usa "es"`);
+    if (idiomaValido) {
+      idioma = idiomaValido.data().idiomaDetectado;
+      console.log(`🌐 Fallback idioma en /chat: se usa anterior "${idioma}"`);
+    } else {
+      idioma = "es";
+      console.log(`⚠️ Fallback total en /chat: se usa "es"`);
+    }
   }
-}
+
   try {
+    // 🕵️ Obtener estado real de la conversación ANTES de actualizarla
+    let debeNotificar = false;
+    try {
+      const convRef2 = db.collection("conversaciones").doc(finalUserId);
+      const convSnap2 = await convRef2.get();
+      const convData2 = convSnap2.exists ? convSnap2.data() : {};
+
+      console.log("🔍 Estado previo conversación:", {
+        intervenida: convData2?.intervenida,
+        estado: convData2?.estado,
+      });
+
+      debeNotificar =
+        convData2?.intervenida === true &&
+        ["inactiva", "archivado"].includes((convData2.estado || "").toLowerCase());
+    } catch (e) {
+      console.warn("❌ Error leyendo estado previo de la conversación:", e);
+    }
+
     // Guardar info usuario
     await db.collection("usuarios_chat").doc(finalUserId).set(
       {
@@ -168,22 +189,22 @@ if (!idioma || idioma === "zxx") {
     );
 
     // Guardar info conversación
-await db.collection("conversaciones").doc(finalUserId).set(
-  {
-    idUsuario: finalUserId,
-    fechaInicio: new Date().toISOString(),
-    ultimaRespuesta: new Date().toISOString(),
-    lastMessage: message,
-    estado: "abierta",
-    idioma,
-    navegador: userAgent || "",
-    pais: pais || "",
-    historial: historial || [],
-    datosContexto: datosContexto || null,
-    noVistos: admin.firestore.FieldValue.increment(1), // ✅ nuevo campo optimizado
-  },
-  { merge: true }
-);
+    await db.collection("conversaciones").doc(finalUserId).set(
+      {
+        idUsuario: finalUserId,
+        fechaInicio: new Date().toISOString(),
+        ultimaRespuesta: new Date().toISOString(),
+        lastMessage: message,
+        estado: "abierta",
+        idioma,
+        navegador: userAgent || "",
+        pais: pais || "",
+        historial: historial || [],
+        datosContexto: datosContexto || null,
+        noVistos: admin.firestore.FieldValue.increment(1), // ✅ nuevo campo optimizado
+      },
+      { merge: true }
+    );
 
     // Traducir mensaje para guardar en español (para el panel)
     const traduccionUsuario = await traducir(message, "es");
@@ -191,68 +212,57 @@ await db.collection("conversaciones").doc(finalUserId).set(
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
       rol: "usuario",
-      mensaje: traduccionUsuario,     // ✅ lo que se ve en el panel
-      original: message,              // ✅ lo que escribió el usuario
+      mensaje: traduccionUsuario,
+      original: message,
       idiomaDetectado: idioma,
       tipo: "texto",
       timestamp: new Date().toISOString(),
     });
 
-    // ➕ NUEVO BLOQUE: enviar SMS si usuario escribe en conversación ya intervenida pero inactiva o archivada
-try {
-  console.log("🟡 Comprobando si debe notificarse actividad post-intervención...");
+    // ✅ USO del flag calculado antes
+    if (debeNotificar) {
+      console.log("🔔 Usuario ha escrito en conversación intervenida e inactiva/archivada (estado anterior).");
 
-  const convRef2 = db.collection("conversaciones").doc(finalUserId);
-  const convSnap2 = await convRef2.get();
-  const convData2 = convSnap2.exists ? convSnap2.data() : {};
+      const telefonoAgente = "34673976486";
+      const texto = `El usuario ${finalUserId} ha escrito en una conversación intervenida que estaba inactiva. Entra en el panel.`;
+      const token = process.env.SMS_ARENA_KEY;
 
-  console.log("🔍 Estado conversación:", {
-    intervenida: convData2?.intervenida,
-    estado: convData2?.estado,
-  });
+      if (token) {
+        const params = new URLSearchParams();
+        const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
+        params.append("id", smsId);
+        params.append("auth_key", token);
+        params.append("from", "NextLives");
+        params.append("to", telefonoAgente);
+        params.append("text", texto);
 
-  const debeNotificar =
-    convData2?.intervenida === true &&
-    ["inactiva", "archivado"].includes((convData2.estado || "").toLowerCase());
+        console.log("➡️ Enviando SMS (actividad post-intervención) con ID:", smsId);
+        console.log("➡️ Body:", params.toString());
 
-  if (debeNotificar) {
-    console.log("🔔 Usuario ha escrito en conversación intervenida e inactiva/archivada.");
+        const response = await fetch("http://api.smsarena.es/http/sms.php", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: params.toString()
+        });
 
-    const telefonoAgente = "34673976486";
-    const texto = `El usuario ${finalUserId} ha escrito en una conversación intervenida que está inactiva. Entra en el panel.`;
-    const token = process.env.SMS_ARENA_KEY;
-
-    if (token) {
-      const params = new URLSearchParams();
-      const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
-      params.append("id", smsId);
-      params.append("auth_key", token);
-      params.append("from", "NextLives");
-      params.append("to", telefonoAgente);
-      params.append("text", texto);
-
-      console.log("➡️ Enviando SMS (actividad post-intervención) con ID:", smsId);
-      console.log("➡️ Body:", params.toString());
-
-      const response = await fetch("http://api.smsarena.es/http/sms.php", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded"
-        },
-        body: params.toString()
-      });
-
-      const respuestaSMS = await response.text();
-      console.log("✅ SMS Arena (actividad post-intervención):", respuestaSMS);
+        const respuestaSMS = await response.text();
+        console.log("✅ SMS Arena (actividad post-intervención):", respuestaSMS);
+      } else {
+        console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
+      }
     } else {
-      console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
+      console.log("ℹ️ No se requiere SMS (no estaba intervenida + inactiva/archivada).");
     }
-  } else {
-    console.log("ℹ️ No se requiere SMS (no está intervenida + inactiva/archivada).");
+
+    // (aquí seguiría el resto del endpoint como ya lo tienes: lógica de escalado, intervención, GPT, etc.)
+
+  } catch (error) {
+    console.error("❌ Error general en /api/chat:", error);
+    res.status(500).json({ reply: "Lo siento, ocurrió un error." });
   }
-} catch (e) {
-  console.warn("❌ Error en SMS post-intervención:", e);
-}
+});
 
     // Intervención activa: no responder
 const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
