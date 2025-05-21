@@ -219,7 +219,7 @@ app.post("/api/traducir-modal", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
-    // ✅ USO del flag calculado antes
+        // ✅ USO del flag calculado antes
     if (debeNotificar) {
       console.log("🔔 Usuario ha escrito en conversación intervenida e inactiva/archivada (estado anterior).");
 
@@ -256,86 +256,74 @@ app.post("/api/traducir-modal", async (req, res) => {
       console.log("ℹ️ No se requiere SMS (no estaba intervenida + inactiva/archivada).");
     }
 
-    // (aquí seguiría el resto del endpoint como ya lo tienes: lógica de escalado, intervención, GPT, etc.)
+    // 🔁 Intervención activa: no responder
+    const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
+    const convData = convDoc.exists ? convDoc.data() : null;
+    if (convData?.intervenida) {
+      console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
+      return res.json({ reply: "" });
+    }
 
-  } catch (error) {
-    console.error("❌ Error general en /api/chat:", error);
-    res.status(500).json({ reply: "Lo siento, ocurrió un error." });
-  }
-});
+    // 🔍 DEBUG: Verificar mensaje recibido
+    console.log("🧪 Mensaje recibido:", message);
 
-    // Intervención activa: no responder
-const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
-const convData = convDoc.exists ? convDoc.data() : null;
-if (convData?.intervenida) {
-  console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
-  return res.json({ reply: "" });
-}
+    // 🔁 Lógica de escalado por petición explícita
+    if (shouldEscalateToHuman(message)) {
+      console.log("🚨 Escalada activada por mensaje:", message);
 
-// 🔍 DEBUG: Verificar mensaje recibido
-console.log("🧪 Mensaje recibido:", message);
+      const convRef = db.collection("conversaciones").doc(finalUserId);
+      const convSnap = await convRef.get();
+      const convData = convSnap.exists ? convSnap.data() : {};
 
-if (shouldEscalateToHuman(message)) {
-  console.log("🚨 Escalada activada por mensaje:", message);
+      const necesitaEscalada =
+        (!convData.intervenida) ||
+        (convData.intervenida === true &&
+          ["inactiva", "archivado"].includes((convData.estado || "").toLowerCase()));
 
-  const convRef = db.collection("conversaciones").doc(finalUserId);
-  const convSnap = await convRef.get();
-  const convData = convSnap.exists ? convSnap.data() : {};
+      if (necesitaEscalada) {
+        await convRef.set(
+          { pendienteIntervencion: true },
+          { merge: true }
+        );
 
-  const necesitaEscalada =
-    (!convData.intervenida) ||
-    (convData.intervenida === true &&
-     ["inactiva", "archivado"].includes((convData.estado || "").toLowerCase()));
+        const telefonoAgente = "34673976486";
+        const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir.`;
+        const token = process.env.SMS_ARENA_KEY;
 
-  if (necesitaEscalada) {
-    await convRef.set(
-      {
-        pendienteIntervencion: true,
-      },
-      { merge: true }
-    );
+        if (!token) {
+          console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
+        } else {
+          console.log("📦 ENV TOKEN:", token);
 
-    const telefonoAgente = "34673976486";
-    const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir.`;
-    const token = process.env.SMS_ARENA_KEY;
+          const params = new URLSearchParams();
+          const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
+          params.append("id", smsId);
+          params.append("auth_key", token);
+          params.append("from", "NextLives");
+          params.append("to", telefonoAgente);
+          params.append("text", texto);
 
-    if (!token) {
-      console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
-    } else {
-      console.log("📦 ENV TOKEN:", token);
+          try {
+            const response = await fetch("http://api.smsarena.es/http/sms.php", {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: params.toString()
+            });
 
-      const params = new URLSearchParams();
-      const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`; // ✅ ID numérico único
-      params.append("id", smsId);
-      params.append("auth_key", token);
-      params.append("from", "NextLives");
-      params.append("to", telefonoAgente);
-      params.append("text", texto);
+            const respuestaSMS = await response.text();
+            console.log("✅ SMS Arena respuesta:", respuestaSMS);
+          } catch (err) {
+            console.warn("❌ Error al enviar SMS Arena:", err);
+          }
+        }
 
-      console.log("➡️ Enviando SMS con ID:", smsId);
-      console.log("➡️ Body:", params.toString());
-
-      try {
-        const response = await fetch("http://api.smsarena.es/http/sms.php", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded"
-          },
-          body: params.toString()
+        return res.json({
+          reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
         });
-
-        const respuestaSMS = await response.text();
-        console.log("✅ SMS Arena respuesta:", respuestaSMS);
-      } catch (err) {
-        console.warn("❌ Error al enviar SMS Arena:", err);
       }
     }
 
-    return res.json({
-      reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
-    });
-  }
-}    // Preparar prompt
+    // 🧠 Preparar prompt + llamada a GPT...
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
       : "";
