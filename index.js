@@ -826,10 +826,18 @@ app.get("/api/test-historial/:userId", async (req, res) => {
     res.status(500).json({ error: "Error consultando historial" });
   }
 });
+app.post("/api/escribiendo", (req, res) => {
+  const { userId, texto } = req.body;
+  if (!userId) return res.status(400).json({ error: "Falta userId" });
+  escribiendoUsuarios[userId] = texto || "";
+  res.json({ ok: true });
+});
+
 app.get("/api/escribiendo/:userId", (req, res) => {
   const texto = escribiendoUsuarios[req.params.userId] || "";
   res.json({ texto });
 });
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
 });
