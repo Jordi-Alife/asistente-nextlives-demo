@@ -198,6 +198,52 @@ await db.collection("conversaciones").doc(finalUserId).set(
       timestamp: new Date().toISOString(),
     });
 
+    // ➕ NUEVO BLOQUE: enviar SMS si usuario escribe en conversación ya intervenida pero inactiva o archivada
+try {
+  const convRef2 = db.collection("conversaciones").doc(finalUserId);
+  const convSnap2 = await convRef2.get();
+  const convData2 = convSnap2.exists ? convSnap2.data() : {};
+
+  const debeNotificar =
+    convData2?.intervenida === true &&
+    ["inactiva", "archivado"].includes((convData2.estado || "").toLowerCase());
+
+  if (debeNotificar) {
+    console.log("🔔 Usuario ha escrito en conversación intervenida e inactiva/archivada.");
+
+    const telefonoAgente = "34673976486";
+    const texto = `El usuario ${finalUserId} ha escrito en una conversación intervenida que está inactiva. Entra en el panel.`;
+    const token = process.env.SMS_ARENA_KEY;
+
+    if (token) {
+      const params = new URLSearchParams();
+      const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
+      params.append("id", smsId);
+      params.append("auth_key", token);
+      params.append("from", "NextLives");
+      params.append("to", telefonoAgente);
+      params.append("text", texto);
+
+      console.log("➡️ Enviando SMS (actividad post-intervención) con ID:", smsId);
+
+      const response = await fetch("http://api.smsarena.es/http/sms.php", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: params.toString()
+      });
+
+      const respuestaSMS = await response.text();
+      console.log("✅ SMS Arena (actividad post-intervención):", respuestaSMS);
+    } else {
+      console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
+    }
+  }
+} catch (e) {
+  console.warn("❌ Error en SMS post-intervención:", e);
+}
+
     // Intervención activa: no responder
 const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
 const convData = convDoc.exists ? convDoc.data() : null;
