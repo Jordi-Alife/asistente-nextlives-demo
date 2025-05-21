@@ -105,52 +105,63 @@ function shouldEscalateToHuman(message) {
 function enviarSMSActividadInactiva(userId) {
   setTimeout(async () => {
     try {
-      const [convSnap, vistaSnap] = await Promise.all([
-        db.collection("conversaciones").doc(userId).get(),
-        db.collection("vistas_globales").doc(userId).get(),
-      ]);
-
+      const convRef = db.collection("conversaciones").doc(userId);
+      const convSnap = await convRef.get();
       const conv = convSnap.exists ? convSnap.data() : null;
-      const vista = vistaSnap.exists ? vistaSnap.data() : null;
 
-      const ultimaVista = vista?.timestamp;
-      const ultimaRespuesta = conv?.ultimaRespuesta;
+      const vistaSnap = await db.collection("vistas_globales").doc(userId).get();
+      const vista = vistaSnap.exists ? vistaSnap.data()?.timestamp : null;
 
-      const aunNoVisto =
-        !ultimaVista ||
-        (ultimaRespuesta && new Date(ultimaVista) < new Date(ultimaRespuesta));
+      // Obtener el último mensaje del usuario
+      const mensajesSnapshot = await db.collection("mensajes")
+        .where("idConversacion", "==", userId)
+        .where("rol", "==", "usuario")
+        .orderBy("timestamp", "desc")
+        .limit(1)
+        .get();
 
-      if (conv?.intervenida && aunNoVisto) {
-        console.log("📣 SMS por actividad no vista tras 10s:", userId);
+      const ultimoMensaje = mensajesSnapshot.empty ? null : mensajesSnapshot.docs[0].data();
 
-        const telefonoAgente = "34673976486";
-        const texto = `El usuario ${userId} ha escrito en una conversación intervenida que sigue sin verse tras 10s. Entra en el panel.`;
-        const token = process.env.SMS_ARENA_KEY;
-
-        if (!token) {
-          console.warn("⚠️ TOKEN vacío para SMS");
-          return;
-        }
-
-        const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
-        const params = new URLSearchParams();
-        params.append("id", smsId);
-        params.append("auth_key", token);
-        params.append("from", "NextLives");
-        params.append("to", telefonoAgente);
-        params.append("text", texto);
-
-        const response = await fetch("http://api.smsarena.es/http/sms.php", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: params.toString()
-        });
-
-        const resText = await response.text();
-        console.log("✅ SMS Arena post-10s:", resText);
-      } else {
-        console.log("⏱️ No se envía SMS (mensaje ya visto o no intervenida):", userId);
+      if (!conv?.intervenida || !ultimoMensaje) {
+        console.log("ℹ️ No intervenida o sin mensaje reciente:", userId);
+        return;
       }
+
+      const mensajeTimestamp = new Date(ultimoMensaje.timestamp).getTime();
+      const vistaTimestamp = vista ? new Date(vista).getTime() : 0;
+
+      if (mensajeTimestamp <= vistaTimestamp) {
+        console.log("👁️ Mensaje ya visto, no se envía SMS:", userId);
+        return;
+      }
+
+      console.log("📣 SMS por actividad no vista tras 10s:", userId);
+
+      const telefonoAgente = "34673976486";
+      const texto = `El usuario ${userId} ha escrito en una conversación intervenida que sigue sin verse tras 10s. Entra en el panel.`;
+      const token = process.env.SMS_ARENA_KEY;
+
+      if (!token) {
+        console.warn("⚠️ TOKEN vacío para SMS");
+        return;
+      }
+
+      const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
+      const params = new URLSearchParams();
+      params.append("id", smsId);
+      params.append("auth_key", token);
+      params.append("from", "NextLives");
+      params.append("to", telefonoAgente);
+      params.append("text", texto);
+
+      const response = await fetch("http://api.smsarena.es/http/sms.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: params.toString()
+      });
+
+      const resText = await response.text();
+      console.log("✅ SMS Arena post-10s:", resText);
     } catch (e) {
       console.warn("❌ Error al comprobar envío SMS post-10s:", e);
     }
