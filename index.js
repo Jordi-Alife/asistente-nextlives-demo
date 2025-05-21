@@ -606,6 +606,21 @@ app.post("/api/marcar-visto", async (req, res) => {
   }
 });
 
+// ✅ NUEVO ENDPOINT para obtener vistas
+app.get("/api/vistas", async (req, res) => {
+  try {
+    const snapshot = await db.collection("vistas_globales").get();
+    const result = {};
+    snapshot.forEach((doc) => {
+      result[doc.id] = doc.data().timestamp;
+    });
+    res.json(result);
+  } catch (error) {
+    console.error("❌ Error obteniendo vistas:", error);
+    res.status(500).json({ error: "Error obteniendo vistas" });
+  }
+});
+
 app.get("/api/conversaciones", async (req, res) => {
   try {
     const snapshot = await db.collection("conversaciones").get();
