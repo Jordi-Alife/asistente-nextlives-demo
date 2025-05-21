@@ -230,9 +230,18 @@ if (shouldEscalateToHuman(message)) {
       { merge: true }
     );
 
+    // ✅ Añadir mensaje tipo estado "Intervenida"
+    await db.collection("mensajes").add({
+      idConversacion: finalUserId,
+      rol: "sistema",
+      tipo: "estado",
+      estado: "Intervenida",
+      timestamp: new Date().toISOString(),
+    });
+
     const telefonoAgente = "34673976486";
     const urlPanel = `https://panel-gestion-chats-production.up.railway.app/conversaciones?userId=${finalUserId}`;
-const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Accede al panel: ${urlPanel}`;
+    const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Accede al panel: ${urlPanel}`;
     const token = process.env.SMS_ARENA_KEY;
 
     if (!token) {
