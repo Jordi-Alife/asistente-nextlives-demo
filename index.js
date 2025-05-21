@@ -225,6 +225,7 @@ if (shouldEscalateToHuman(message)) {
     await convRef.set(
       {
         pendienteIntervencion: true,
+        intervenida: true, // ✅ también se marca como intervenida
       },
       { merge: true }
     );
@@ -239,7 +240,7 @@ if (shouldEscalateToHuman(message)) {
       console.log("📦 ENV TOKEN:", token);
 
       const params = new URLSearchParams();
-      const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`; // ✅ ID numérico único
+      const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
       params.append("id", smsId);
       params.append("auth_key", token);
       params.append("from", "NextLives");
@@ -264,11 +265,9 @@ if (shouldEscalateToHuman(message)) {
         console.warn("❌ Error al enviar SMS Arena:", err);
       }
     }
-
-    return res.json({
-      reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
-    });
   }
+
+  // ❌ No hacemos return — GPT continúa y responde de forma natural
 }    // Preparar prompt
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
