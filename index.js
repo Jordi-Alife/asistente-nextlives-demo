@@ -232,7 +232,7 @@ if (shouldEscalateToHuman(message)) {
 
     const telefonoAgente = "34673976486";
     const urlPanel = `https://panel-gestion-chats-production.up.railway.app/conversaciones?userId=${finalUserId}`;
-const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir:\n${urlPanel}`;
+const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Accede al panel: ${urlPanel}`;
     const token = process.env.SMS_ARENA_KEY;
 
     if (!token) {
