@@ -194,184 +194,150 @@ app.post("/api/traducir-modal", async (req, res) => {
   app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial, datosContexto } = req.body;
   const finalUserId = userId || "anon";
-  // 🧠 Detectar idioma del mensaje
-let idiomaDetectado = await detectarIdiomaGPT(message);
-let idioma = idiomaDetectado;
 
-// 🛡️ Fallback si no es válido
-if (!idioma || idioma === "zxx") {
-  const ultimos = await db.collection("mensajes")
-    .where("idConversacion", "==", finalUserId)
-    .where("rol", "==", "usuario")
-    .orderBy("timestamp", "desc")
-    .limit(10)
-    .get();
-
-  const idiomaValido = ultimos.docs.find(doc => {
-    const msg = doc.data();
-    return msg.idiomaDetectado && msg.idiomaDetectado !== "zxx";
-  });
-
-  if (idiomaValido) {
-    idioma = idiomaValido.data().idiomaDetectado;
-    console.log(`🌐 Fallback idioma en /chat: se usa anterior "${idioma}"`);
-  } else {
-    idioma = "es";
-    console.log(`⚠️ Fallback total en /chat: se usa "es"`);
-  }
-}
   try {
-    // Guardar info usuario
-    await db.collection("usuarios_chat").doc(finalUserId).set(
-      {
-        nombre: "Invitado",
-        idioma,
-        ultimaConexion: new Date().toISOString(),
-        navegador: userAgent || "",
-        pais: pais || "",
-        historial: historial || [],
-      },
-      { merge: true }
-    );
-
-    // Guardar info conversación
-await db.collection("conversaciones").doc(finalUserId).set(
-  {
-    idUsuario: finalUserId,
-    fechaInicio: new Date().toISOString(),
-    ultimaRespuesta: new Date().toISOString(),
-    lastMessage: message,
-    estado: "abierta",
-    idioma,
-    navegador: userAgent || "",
-    pais: pais || "",
-    historial: historial || [],
-    datosContexto: datosContexto || null,
-    noVistos: admin.firestore.FieldValue.increment(1), // ✅ nuevo campo optimizado
-  },
-  { merge: true }
-);
-
-    // Traducir mensaje para guardar en español (para el panel)
-const traduccionUsuario = await traducir(message, "es");
-
-await db.collection("mensajes").add({
-  idConversacion: finalUserId,
-  rol: "usuario",
-  mensaje: traduccionUsuario,     // ✅ lo que se ve en el panel
-  original: message,              // ✅ lo que escribió el usuario
-  idiomaDetectado: idioma,
-  tipo: "texto",
-  timestamp: new Date().toISOString(),
-});
-
-// ✅ Lanzar temporizador para enviar SMS si tras 10s sigue no visto
-enviarSMSActividadInactiva(finalUserId);
-
-    // Intervención activa: no responder
-const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
-const convData = convDoc.exists ? convDoc.data() : null;
-if (convData?.intervenida) {
-  console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
-  return res.json({ reply: "" });
-}
-
-// 🔍 DEBUG: Verificar mensaje recibido
-console.log("🧪 Mensaje recibido:", message);
-
-if (shouldEscalateToHuman(message)) {
-  console.log("🚨 Escalada activada por mensaje:", message);
-
-  const convRef = db.collection("conversaciones").doc(finalUserId);
-  const convSnap = await convRef.get();
-  const convData = convSnap.exists ? convSnap.data() : {};
-
-  const necesitaEscalada =
-    (!convData.intervenida) ||
-    (convData.intervenida === true &&
-     ["inactiva", "archivado"].includes((convData.estado || "").toLowerCase()));
-
-  if (necesitaEscalada) {
-    await convRef.set(
-      {
-        pendienteIntervencion: true,
-      },
-      { merge: true }
-    );
-
-    const telefonoAgente = "34673976486";
-    const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir.`;
-    const token = process.env.SMS_ARENA_KEY;
-
-    if (token) {
-      const params = new URLSearchParams();
-      const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
-      params.append("id", smsId);
-      params.append("auth_key", token);
-      params.append("from", "NextLives");
-      params.append("to", telefonoAgente);
-      params.append("text", texto);
-
-      try {
-        const response = await fetch("http://api.smsarena.es/http/sms.php", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: params.toString(),
-        });
-        const respuestaSMS = await response.text();
-        console.log("✅ SMS enviado:", respuestaSMS);
-      } catch (err) {
-        console.warn("❌ Error al enviar SMS:", err);
-      }
-    } else {
-      console.warn("⚠️ TOKEN vacío para SMS");
+    // 🧠 Detectar idioma
+    let idioma = await detectarIdiomaGPT(message);
+    if (!idioma || idioma === "zxx") {
+      const ultimos = await db.collection("mensajes")
+        .where("idConversacion", "==", finalUserId)
+        .where("rol", "==", "usuario")
+        .orderBy("timestamp", "desc")
+        .limit(10)
+        .get();
+      const idiomaValido = ultimos.docs.find(doc => doc.data()?.idiomaDetectado !== "zxx");
+      idioma = idiomaValido ? idiomaValido.data().idiomaDetectado : "es";
     }
-  }
 
-  // ⚠️ NO return aquí — continuar para que GPT responda con algo natural
-}
-}    // Preparar prompt
-    const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
-      ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
-      : "";
+    // Guardar info usuario y conversación
+    await db.collection("usuarios_chat").doc(finalUserId).set({
+      nombre: "Invitado",
+      idioma,
+      ultimaConexion: new Date().toISOString(),
+      navegador: userAgent || "",
+      pais: pais || "",
+      historial: historial || [],
+    }, { merge: true });
 
-    // Obtener últimos 6 mensajes de la conversación
-const historialMensajes = await obtenerUltimosMensajesUsuario(finalUserId);
-const historialFormateado = formatearHistorialParaPrompt(historialMensajes);
+    await db.collection("conversaciones").doc(finalUserId).set({
+      idUsuario: finalUserId,
+      fechaInicio: new Date().toISOString(),
+      ultimaRespuesta: new Date().toISOString(),
+      lastMessage: message,
+      estado: "abierta",
+      idioma,
+      navegador: userAgent || "",
+      pais: pais || "",
+      historial: historial || [],
+      datosContexto: datosContexto || null,
+      noVistos: admin.firestore.FieldValue.increment(1),
+    }, { merge: true });
 
-// Construir prompt con base de conocimiento + historial + contexto
-const promptSystem = [
-  baseConocimiento,
-  `\nHistorial reciente de conversación:\n${historialFormateado}`,
-  datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
-  `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}". Si el usuario escribió en catalán, responde en catalán; si lo hizo en inglés, responde en inglés; si en español, responde en español. No traduzcas ni expliques nada adicional.`,
-].join("\n");
-
-// Llamada a GPT
-const response = await openai.chat.completions.create({
-  model: "gpt-4",
-  messages: [
-    { role: "system", content: promptSystem },
-    { role: "user", content: message },
-  ],
-});
-
-const reply = response.choices[0].message.content;
-
-    // Traducir al español para guardar en Firestore (para el panel)
-    const traduccionRespuesta = await traducir(reply, "es");
-
+    // Traducir y guardar mensaje
+    const traduccionUsuario = await traducir(message, "es");
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
-      rol: "asistente",
-      mensaje: traduccionRespuesta,  // ✅ para panel
-      original: reply,               // ✅ lo que dijo GPT realmente
+      rol: "usuario",
+      mensaje: traduccionUsuario,
+      original: message,
       idiomaDetectado: idioma,
       tipo: "texto",
       timestamp: new Date().toISOString(),
     });
 
-    res.json({ reply }); // ✅ mostrar al usuario sin traducir
+    // SMS por actividad no vista tras 10s
+    enviarSMSActividadInactiva(finalUserId);
+
+    // Si está intervenida, no responder
+    const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
+    const convData = convDoc.exists ? convDoc.data() : null;
+    if (convData?.intervenida) {
+      console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
+      return res.json({ reply: "" });
+    }
+
+    // Escalado humano (sin cortar la respuesta)
+    if (shouldEscalateToHuman(message)) {
+      console.log("🚨 Escalada activada por mensaje:", message);
+      const convRef = db.collection("conversaciones").doc(finalUserId);
+      const convSnap = await convRef.get();
+      const convData = convSnap.exists ? convSnap.data() : {};
+      const necesitaEscalada =
+        (!convData.intervenida) ||
+        (convData.intervenida === true &&
+         ["inactiva", "archivado"].includes((convData.estado || "").toLowerCase()));
+
+      if (necesitaEscalada) {
+        await convRef.set({ pendienteIntervencion: true }, { merge: true });
+
+        const telefonoAgente = "34673976486";
+        const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir.`;
+        const token = process.env.SMS_ARENA_KEY;
+
+        if (token) {
+          const params = new URLSearchParams();
+          const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
+          params.append("id", smsId);
+          params.append("auth_key", token);
+          params.append("from", "NextLives");
+          params.append("to", telefonoAgente);
+          params.append("text", texto);
+
+          try {
+            const response = await fetch("http://api.smsarena.es/http/sms.php", {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: params.toString(),
+            });
+            const respuestaSMS = await response.text();
+            console.log("✅ SMS enviado:", respuestaSMS);
+          } catch (err) {
+            console.warn("❌ Error al enviar SMS:", err);
+          }
+        } else {
+          console.warn("⚠️ TOKEN vacío para SMS");
+        }
+      }
+
+      // ⛔ NO hacemos return — GPT continuará respondiendo algo natural
+    }
+
+    // GPT responde como siempre
+    const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
+      ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
+      : "";
+    const historialMensajes = await obtenerUltimosMensajesUsuario(finalUserId);
+    const historialFormateado = formatearHistorialParaPrompt(historialMensajes);
+
+    const promptSystem = [
+      baseConocimiento,
+      `\nHistorial reciente de conversación:\n${historialFormateado}`,
+      datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
+      `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}".`
+    ].join("\n");
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        { role: "system", content: promptSystem },
+        { role: "user", content: message },
+      ],
+    });
+
+    const reply = response.choices[0].message.content;
+    const traduccionRespuesta = await traducir(reply, "es");
+
+    await db.collection("mensajes").add({
+      idConversacion: finalUserId,
+      rol: "asistente",
+      mensaje: traduccionRespuesta,
+      original: reply,
+      idiomaDetectado: idioma,
+      tipo: "texto",
+      timestamp: new Date().toISOString(),
+    });
+
+    res.json({ reply });
   } catch (error) {
     console.error("❌ Error general en /api/chat:", error);
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
