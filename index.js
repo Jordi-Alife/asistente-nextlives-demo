@@ -452,13 +452,14 @@ app.post("/api/send-to-user", async (req, res) => {
     await db.collection("conversaciones").doc(userId).set(
   {
     intervenida: true,
+    estado: "activa", // ✅ fuerza el estado correcto al intervenir
     intervenidaPor: {
       nombre: agente.nombre,
       foto: agente.foto,
       uid: agente.uid || null,
     },
-    ultimaRespuesta: new Date().toISOString(),  // ✅ nuevo campo
-    lastMessage: traduccion,                    // ✅ nuevo campo
+    ultimaRespuesta: new Date().toISOString(),
+    lastMessage: traduccion,
   },
   { merge: true }
 );
