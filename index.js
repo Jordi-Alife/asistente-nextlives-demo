@@ -105,11 +105,22 @@ function shouldEscalateToHuman(message) {
 function enviarSMSActividadInactiva(userId) {
   setTimeout(async () => {
     try {
-      const convRef = db.collection("conversaciones").doc(userId);
-      const convSnap = await convRef.get();
-      const conv = convSnap.exists ? convSnap.data() : null;
+      const [convSnap, vistaSnap] = await Promise.all([
+        db.collection("conversaciones").doc(userId).get(),
+        db.collection("vistas_globales").doc(userId).get(),
+      ]);
 
-      if (conv?.intervenida && (conv?.noVistos || 0) > 0) {
+      const conv = convSnap.exists ? convSnap.data() : null;
+      const vista = vistaSnap.exists ? vistaSnap.data() : null;
+
+      const ultimaVista = vista?.timestamp;
+      const ultimaRespuesta = conv?.ultimaRespuesta;
+
+      const aunNoVisto =
+        !ultimaVista ||
+        (ultimaRespuesta && new Date(ultimaVista) < new Date(ultimaRespuesta));
+
+      if (conv?.intervenida && aunNoVisto) {
         console.log("📣 SMS por actividad no vista tras 10s:", userId);
 
         const telefonoAgente = "34673976486";
@@ -138,7 +149,7 @@ function enviarSMSActividadInactiva(userId) {
         const resText = await response.text();
         console.log("✅ SMS Arena post-10s:", resText);
       } else {
-        console.log("⏱️ No se envía SMS (visto o no intervenida):", userId);
+        console.log("⏱️ No se envía SMS (mensaje ya visto o no intervenida):", userId);
       }
     } catch (e) {
       console.warn("❌ Error al comprobar envío SMS post-10s:", e);
