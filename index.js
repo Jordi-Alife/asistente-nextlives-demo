@@ -200,9 +200,16 @@ await db.collection("conversaciones").doc(finalUserId).set(
 
     // ➕ NUEVO BLOQUE: enviar SMS si usuario escribe en conversación ya intervenida pero inactiva o archivada
 try {
+  console.log("🟡 Comprobando si debe notificarse actividad post-intervención...");
+
   const convRef2 = db.collection("conversaciones").doc(finalUserId);
   const convSnap2 = await convRef2.get();
   const convData2 = convSnap2.exists ? convSnap2.data() : {};
+
+  console.log("🔍 Estado conversación:", {
+    intervenida: convData2?.intervenida,
+    estado: convData2?.estado,
+  });
 
   const debeNotificar =
     convData2?.intervenida === true &&
@@ -225,6 +232,7 @@ try {
       params.append("text", texto);
 
       console.log("➡️ Enviando SMS (actividad post-intervención) con ID:", smsId);
+      console.log("➡️ Body:", params.toString());
 
       const response = await fetch("http://api.smsarena.es/http/sms.php", {
         method: "POST",
@@ -239,6 +247,8 @@ try {
     } else {
       console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
     }
+  } else {
+    console.log("ℹ️ No se requiere SMS (no está intervenida + inactiva/archivada).");
   }
 } catch (e) {
   console.warn("❌ Error en SMS post-intervención:", e);
