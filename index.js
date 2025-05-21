@@ -101,73 +101,6 @@ function shouldEscalateToHuman(message) {
   );
 }
 
-// ✅ NUEVA FUNCIÓN: Enviar SMS si tras 10s el mensaje sigue sin verse
-function enviarSMSActividadInactiva(userId) {
-  setTimeout(async () => {
-    try {
-      const convRef = db.collection("conversaciones").doc(userId);
-      const convSnap = await convRef.get();
-      const conv = convSnap.exists ? convSnap.data() : null;
-
-      const vistaSnap = await db.collection("vistas_globales").doc(userId).get();
-      const vista = vistaSnap.exists ? vistaSnap.data()?.timestamp : null;
-
-      // Obtener el último mensaje del usuario
-      const mensajesSnapshot = await db.collection("mensajes")
-        .where("idConversacion", "==", userId)
-        .where("rol", "==", "usuario")
-        .orderBy("timestamp", "desc")
-        .limit(1)
-        .get();
-
-      const ultimoMensaje = mensajesSnapshot.empty ? null : mensajesSnapshot.docs[0].data();
-
-      if (!conv?.intervenida || !ultimoMensaje) {
-        console.log("ℹ️ No intervenida o sin mensaje reciente:", userId);
-        return;
-      }
-
-      const mensajeTimestamp = new Date(ultimoMensaje.timestamp).getTime();
-      const vistaTimestamp = vista ? new Date(vista).getTime() : 0;
-
-      if (mensajeTimestamp <= vistaTimestamp) {
-        console.log("👁️ Mensaje ya visto, no se envía SMS:", userId);
-        return;
-      }
-
-      console.log("📣 SMS por actividad no vista tras 10s:", userId);
-
-      const telefonoAgente = "34673976486";
-      const texto = `El usuario ${userId} ha escrito en una conversación intervenida que sigue sin verse tras 10s. Entra en el panel.`;
-      const token = process.env.SMS_ARENA_KEY;
-
-      if (!token) {
-        console.warn("⚠️ TOKEN vacío para SMS");
-        return;
-      }
-
-      const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
-      const params = new URLSearchParams();
-      params.append("id", smsId);
-      params.append("auth_key", token);
-      params.append("from", "NextLives");
-      params.append("to", telefonoAgente);
-      params.append("text", texto);
-
-      const response = await fetch("http://api.smsarena.es/http/sms.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: params.toString()
-      });
-
-      const resText = await response.text();
-      console.log("✅ SMS Arena post-10s:", resText);
-    } catch (e) {
-      console.warn("❌ Error al comprobar envío SMS post-10s:", e);
-    }
-  }, 10000);
-}
-
 // NUEVO ENDPOINT PARA TRADUCIR TEXTO AL ÚLTIMO IDIOMA DETECTADO
 app.post("/api/traducir-modal", async (req, res) => {
   const { userId, textos } = req.body;
@@ -194,150 +127,190 @@ app.post("/api/traducir-modal", async (req, res) => {
   app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial, datosContexto } = req.body;
   const finalUserId = userId || "anon";
+  // 🧠 Detectar idioma del mensaje
+let idiomaDetectado = await detectarIdiomaGPT(message);
+let idioma = idiomaDetectado;
 
+// 🛡️ Fallback si no es válido
+if (!idioma || idioma === "zxx") {
+  const ultimos = await db.collection("mensajes")
+    .where("idConversacion", "==", finalUserId)
+    .where("rol", "==", "usuario")
+    .orderBy("timestamp", "desc")
+    .limit(10)
+    .get();
+
+  const idiomaValido = ultimos.docs.find(doc => {
+    const msg = doc.data();
+    return msg.idiomaDetectado && msg.idiomaDetectado !== "zxx";
+  });
+
+  if (idiomaValido) {
+    idioma = idiomaValido.data().idiomaDetectado;
+    console.log(`🌐 Fallback idioma en /chat: se usa anterior "${idioma}"`);
+  } else {
+    idioma = "es";
+    console.log(`⚠️ Fallback total en /chat: se usa "es"`);
+  }
+}
   try {
-    // 🧠 Detectar idioma
-    let idioma = await detectarIdiomaGPT(message);
-    if (!idioma || idioma === "zxx") {
-      const ultimos = await db.collection("mensajes")
-        .where("idConversacion", "==", finalUserId)
-        .where("rol", "==", "usuario")
-        .orderBy("timestamp", "desc")
-        .limit(10)
-        .get();
-      const idiomaValido = ultimos.docs.find(doc => doc.data()?.idiomaDetectado !== "zxx");
-      idioma = idiomaValido ? idiomaValido.data().idiomaDetectado : "es";
-    }
+    // Guardar info usuario
+    await db.collection("usuarios_chat").doc(finalUserId).set(
+      {
+        nombre: "Invitado",
+        idioma,
+        ultimaConexion: new Date().toISOString(),
+        navegador: userAgent || "",
+        pais: pais || "",
+        historial: historial || [],
+      },
+      { merge: true }
+    );
 
-    // Guardar info usuario y conversación
-    await db.collection("usuarios_chat").doc(finalUserId).set({
-      nombre: "Invitado",
-      idioma,
-      ultimaConexion: new Date().toISOString(),
-      navegador: userAgent || "",
-      pais: pais || "",
-      historial: historial || [],
-    }, { merge: true });
+    // Guardar info conversación
+await db.collection("conversaciones").doc(finalUserId).set(
+  {
+    idUsuario: finalUserId,
+    fechaInicio: new Date().toISOString(),
+    ultimaRespuesta: new Date().toISOString(),
+    lastMessage: message,
+    estado: "abierta",
+    idioma,
+    navegador: userAgent || "",
+    pais: pais || "",
+    historial: historial || [],
+    datosContexto: datosContexto || null,
+    noVistos: admin.firestore.FieldValue.increment(1), // ✅ nuevo campo optimizado
+  },
+  { merge: true }
+);
 
-    await db.collection("conversaciones").doc(finalUserId).set({
-      idUsuario: finalUserId,
-      fechaInicio: new Date().toISOString(),
-      ultimaRespuesta: new Date().toISOString(),
-      lastMessage: message,
-      estado: "abierta",
-      idioma,
-      navegador: userAgent || "",
-      pais: pais || "",
-      historial: historial || [],
-      datosContexto: datosContexto || null,
-      noVistos: admin.firestore.FieldValue.increment(1),
-    }, { merge: true });
-
-    // Traducir y guardar mensaje
+    // Traducir mensaje para guardar en español (para el panel)
     const traduccionUsuario = await traducir(message, "es");
+
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
       rol: "usuario",
-      mensaje: traduccionUsuario,
-      original: message,
+      mensaje: traduccionUsuario,     // ✅ lo que se ve en el panel
+      original: message,              // ✅ lo que escribió el usuario
       idiomaDetectado: idioma,
       tipo: "texto",
       timestamp: new Date().toISOString(),
     });
 
-    // SMS por actividad no vista tras 10s
-    enviarSMSActividadInactiva(finalUserId);
+    // Intervención activa: no responder
+const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
+const convData = convDoc.exists ? convDoc.data() : null;
+if (convData?.intervenida) {
+  console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
+  return res.json({ reply: "" });
+}
 
-    // Si está intervenida, no responder
-    const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
-    const convData = convDoc.exists ? convDoc.data() : null;
-    if (convData?.intervenida) {
-      console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
-      return res.json({ reply: "" });
-    }
+// 🔍 DEBUG: Verificar mensaje recibido
+console.log("🧪 Mensaje recibido:", message);
 
-    // Escalado humano (sin cortar la respuesta)
-    if (shouldEscalateToHuman(message)) {
-      console.log("🚨 Escalada activada por mensaje:", message);
-      const convRef = db.collection("conversaciones").doc(finalUserId);
-      const convSnap = await convRef.get();
-      const convData = convSnap.exists ? convSnap.data() : {};
-      const necesitaEscalada =
-        (!convData.intervenida) ||
-        (convData.intervenida === true &&
-         ["inactiva", "archivado"].includes((convData.estado || "").toLowerCase()));
+if (shouldEscalateToHuman(message)) {
+  console.log("🚨 Escalada activada por mensaje:", message);
 
-      if (necesitaEscalada) {
-        await convRef.set({ pendienteIntervencion: true }, { merge: true });
+  const convRef = db.collection("conversaciones").doc(finalUserId);
+  const convSnap = await convRef.get();
+  const convData = convSnap.exists ? convSnap.data() : {};
 
-        const telefonoAgente = "34673976486";
-        const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir.`;
-        const token = process.env.SMS_ARENA_KEY;
+  const necesitaEscalada =
+    (!convData.intervenida) ||
+    (convData.intervenida === true &&
+     ["inactiva", "archivado"].includes((convData.estado || "").toLowerCase()));
 
-        if (token) {
-          const params = new URLSearchParams();
-          const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
-          params.append("id", smsId);
-          params.append("auth_key", token);
-          params.append("from", "NextLives");
-          params.append("to", telefonoAgente);
-          params.append("text", texto);
+  if (necesitaEscalada) {
+    await convRef.set(
+      {
+        pendienteIntervencion: true,
+      },
+      { merge: true }
+    );
 
-          try {
-            const response = await fetch("http://api.smsarena.es/http/sms.php", {
-              method: "POST",
-              headers: { "Content-Type": "application/x-www-form-urlencoded" },
-              body: params.toString(),
-            });
-            const respuestaSMS = await response.text();
-            console.log("✅ SMS enviado:", respuestaSMS);
-          } catch (err) {
-            console.warn("❌ Error al enviar SMS:", err);
-          }
-        } else {
-          console.warn("⚠️ TOKEN vacío para SMS");
-        }
+    const telefonoAgente = "34673976486";
+    const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir.`;
+    const token = process.env.SMS_ARENA_KEY;
+
+    if (!token) {
+      console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
+    } else {
+      console.log("📦 ENV TOKEN:", token);
+
+      const params = new URLSearchParams();
+      const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`; // ✅ ID numérico único
+      params.append("id", smsId);
+      params.append("auth_key", token);
+      params.append("from", "NextLives");
+      params.append("to", telefonoAgente);
+      params.append("text", texto);
+
+      console.log("➡️ Enviando SMS con ID:", smsId);
+      console.log("➡️ Body:", params.toString());
+
+      try {
+        const response = await fetch("http://api.smsarena.es/http/sms.php", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: params.toString()
+        });
+
+        const respuestaSMS = await response.text();
+        console.log("✅ SMS Arena respuesta:", respuestaSMS);
+      } catch (err) {
+        console.warn("❌ Error al enviar SMS Arena:", err);
       }
-
-      // ⛔ NO hacemos return — GPT continuará respondiendo algo natural
     }
 
-    // GPT responde como siempre
+    return res.json({
+      reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
+    });
+  }
+}    // Preparar prompt
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
       : "";
-    const historialMensajes = await obtenerUltimosMensajesUsuario(finalUserId);
-    const historialFormateado = formatearHistorialParaPrompt(historialMensajes);
 
-    const promptSystem = [
-      baseConocimiento,
-      `\nHistorial reciente de conversación:\n${historialFormateado}`,
-      datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
-      `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}".`
-    ].join("\n");
+    // Obtener últimos 6 mensajes de la conversación
+const historialMensajes = await obtenerUltimosMensajesUsuario(finalUserId);
+const historialFormateado = formatearHistorialParaPrompt(historialMensajes);
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        { role: "system", content: promptSystem },
-        { role: "user", content: message },
-      ],
-    });
+// Construir prompt con base de conocimiento + historial + contexto
+const promptSystem = [
+  baseConocimiento,
+  `\nHistorial reciente de conversación:\n${historialFormateado}`,
+  datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
+  `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}". Si el usuario escribió en catalán, responde en catalán; si lo hizo en inglés, responde en inglés; si en español, responde en español. No traduzcas ni expliques nada adicional.`,
+].join("\n");
 
-    const reply = response.choices[0].message.content;
+// Llamada a GPT
+const response = await openai.chat.completions.create({
+  model: "gpt-4",
+  messages: [
+    { role: "system", content: promptSystem },
+    { role: "user", content: message },
+  ],
+});
+
+const reply = response.choices[0].message.content;
+
+    // Traducir al español para guardar en Firestore (para el panel)
     const traduccionRespuesta = await traducir(reply, "es");
 
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
       rol: "asistente",
-      mensaje: traduccionRespuesta,
-      original: reply,
+      mensaje: traduccionRespuesta,  // ✅ para panel
+      original: reply,               // ✅ lo que dijo GPT realmente
       idiomaDetectado: idioma,
       tipo: "texto",
       timestamp: new Date().toISOString(),
     });
 
-    res.json({ reply });
+    res.json({ reply }); // ✅ mostrar al usuario sin traducir
   } catch (error) {
     console.error("❌ Error general en /api/chat:", error);
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
@@ -452,14 +425,13 @@ app.post("/api/send-to-user", async (req, res) => {
     await db.collection("conversaciones").doc(userId).set(
   {
     intervenida: true,
-    estado: "activa", // ✅ fuerza el estado correcto al intervenir
     intervenidaPor: {
       nombre: agente.nombre,
       foto: agente.foto,
       uid: agente.uid || null,
     },
-    ultimaRespuesta: new Date().toISOString(),
-    lastMessage: traduccion,
+    ultimaRespuesta: new Date().toISOString(),  // ✅ nuevo campo
+    lastMessage: traduccion,                    // ✅ nuevo campo
   },
   { merge: true }
 );
@@ -527,12 +499,10 @@ app.post("/api/marcar-visto", async (req, res) => {
   const now = new Date().toISOString();
 
   try {
-    // 1. Obtener última vista anterior (antes de actualizarla)
-    const vistaDoc = await db.collection("vistas_globales").doc(userId).get();
-    const ultimaVista = vistaDoc.exists ? vistaDoc.data().timestamp : now;
-    console.log("⏱️ Comparando contra últimaVista:", ultimaVista);
+    // 1. Guardar timestamp de vista global
+    await db.collection("vistas_globales").doc(userId).set({ timestamp: now });
 
-    // 2. Contar mensajes no vistos desde la última vista previa
+    // 2. Contar mensajes no vistos (últimos 50)
     const mensajesSnapshot = await db
       .collection("mensajes")
       .where("idConversacion", "==", userId)
@@ -541,23 +511,17 @@ app.post("/api/marcar-visto", async (req, res) => {
       .limit(50)
       .get();
 
-    console.log("🔢 Total mensajes obtenidos:", mensajesSnapshot.size);
-
     let noVistos = 0;
     for (const doc of mensajesSnapshot.docs) {
       const msg = doc.data();
-      if (msg.timestamp > ultimaVista) {
-        console.log("❗ No visto:", msg.timestamp);
+      if (msg.timestamp > now) {
         noVistos++;
       }
     }
 
-    // 3. Guardar el nuevo timestamp de vista
-    await db.collection("vistas_globales").doc(userId).set({ timestamp: now });
-
-    // 4. Guardar conteo en la conversación
+    // 3. Guardar conteo en la conversación
     await db.collection("conversaciones").doc(userId).set(
-      { noVistos },
+      { noVistos: noVistos },
       { merge: true }
     );
 
@@ -565,6 +529,31 @@ app.post("/api/marcar-visto", async (req, res) => {
   } catch (e) {
     console.error("❌ Error en /api/marcar-visto:", e);
     res.status(500).json({ error: "Error en marcar-visto" });
+  }
+});
+app.post("/api/escribiendo", (req, res) => {
+  const { userId, texto } = req.body;
+  if (!userId) return res.status(400).json({ error: "Falta userId" });
+  escribiendoUsuarios[userId] = texto || "";
+  res.json({ ok: true });
+});
+
+app.get("/api/escribiendo/:userId", (req, res) => {
+  const texto = escribiendoUsuarios[req.params.userId] || "";
+  res.json({ texto });
+});
+
+app.get("/api/vistas", async (req, res) => {
+  try {
+    const snapshot = await db.collection("vistas_globales").get();
+    const result = {};
+    snapshot.forEach((doc) => {
+      result[doc.id] = doc.data().timestamp;
+    });
+    res.json(result);
+  } catch (error) {
+    console.error("❌ Error obteniendo vistas:", error);
+    res.status(500).json({ error: "Error obteniendo vistas" });
   }
 });
 
@@ -773,18 +762,6 @@ app.get("/api/test-historial/:userId", async (req, res) => {
     res.status(500).json({ error: "Error consultando historial" });
   }
 });
-app.post("/api/escribiendo", (req, res) => {
-  const { userId, texto } = req.body;
-  if (!userId) return res.status(400).json({ error: "Falta userId" });
-  escribiendoUsuarios[userId] = texto || "";
-  res.json({ ok: true });
-});
-
-app.get("/api/escribiendo/:userId", (req, res) => {
-  const texto = escribiendoUsuarios[req.params.userId] || "";
-  res.json({ texto });
-});
-
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
 });
