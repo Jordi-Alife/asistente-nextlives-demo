@@ -303,42 +303,33 @@ if (shouldEscalateToHuman(message)) {
     const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Entra en el panel para intervenir.`;
     const token = process.env.SMS_ARENA_KEY;
 
-    if (!token) {
-      console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
-    } else {
-      console.log("📦 ENV TOKEN:", token);
-
+    if (token) {
       const params = new URLSearchParams();
-      const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`; // ✅ ID numérico único
+      const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
       params.append("id", smsId);
       params.append("auth_key", token);
       params.append("from", "NextLives");
       params.append("to", telefonoAgente);
       params.append("text", texto);
 
-      console.log("➡️ Enviando SMS con ID:", smsId);
-      console.log("➡️ Body:", params.toString());
-
       try {
         const response = await fetch("http://api.smsarena.es/http/sms.php", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded"
-          },
-          body: params.toString()
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: params.toString(),
         });
-
         const respuestaSMS = await response.text();
-        console.log("✅ SMS Arena respuesta:", respuestaSMS);
+        console.log("✅ SMS enviado:", respuestaSMS);
       } catch (err) {
-        console.warn("❌ Error al enviar SMS Arena:", err);
+        console.warn("❌ Error al enviar SMS:", err);
       }
+    } else {
+      console.warn("⚠️ TOKEN vacío para SMS");
     }
-
-    return res.json({
-      reply: "Dame unos segundos, voy a intentar conectarte con una persona de nuestro equipo.",
-    });
   }
+
+  // ⚠️ NO return aquí — continuar para que GPT responda con algo natural
+}
 }    // Preparar prompt
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
