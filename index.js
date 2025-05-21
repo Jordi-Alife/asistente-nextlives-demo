@@ -826,6 +826,10 @@ app.get("/api/test-historial/:userId", async (req, res) => {
     res.status(500).json({ error: "Error consultando historial" });
   }
 });
+app.get("/api/escribiendo/:userId", (req, res) => {
+  const texto = escribiendoUsuarios[req.params.userId] || "";
+  res.json({ texto });
+});
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
 });
