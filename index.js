@@ -231,17 +231,20 @@ await db.collection("conversaciones").doc(finalUserId).set(
 );
 
     // Traducir mensaje para guardar en español (para el panel)
-    const traduccionUsuario = await traducir(message, "es");
+const traduccionUsuario = await traducir(message, "es");
 
-    await db.collection("mensajes").add({
-      idConversacion: finalUserId,
-      rol: "usuario",
-      mensaje: traduccionUsuario,     // ✅ lo que se ve en el panel
-      original: message,              // ✅ lo que escribió el usuario
-      idiomaDetectado: idioma,
-      tipo: "texto",
-      timestamp: new Date().toISOString(),
-    });
+await db.collection("mensajes").add({
+  idConversacion: finalUserId,
+  rol: "usuario",
+  mensaje: traduccionUsuario,     // ✅ lo que se ve en el panel
+  original: message,              // ✅ lo que escribió el usuario
+  idiomaDetectado: idioma,
+  tipo: "texto",
+  timestamp: new Date().toISOString(),
+});
+
+// ✅ Lanzar temporizador para enviar SMS si tras 10s sigue no visto
+enviarSMSActividadInactiva(finalUserId);
 
     // Intervención activa: no responder
 const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
