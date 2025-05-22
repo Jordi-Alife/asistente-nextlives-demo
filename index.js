@@ -310,6 +310,14 @@ const reply = response.choices[0].message.content;
       tipo: "texto",
       timestamp: new Date().toISOString(),
     });
+
+await db.collection("mensajes").add({
+      idConversacion: finalUserId,
+      rol: "sistema",
+      tipo: "estado",
+      estado: "Intervenida",
+      timestamp: new Date().toISOString(),
+    });
     
     res.json({ reply }); // ✅ mostrar al usuario sin traducir
   } catch (error) {
