@@ -190,6 +190,9 @@ await db.collection("conversaciones").doc(finalUserId).set(
 // Traducir mensaje para guardar en español (para el panel)
 const traduccionUsuario = await traducir(message, "es");
 
+// Guardamos el timestamp manualmente para usarlo luego
+const timestampEnvio = new Date();
+
 await db.collection("mensajes").add({
   idConversacion: finalUserId,
   rol: "usuario",
@@ -197,7 +200,7 @@ await db.collection("mensajes").add({
   original: message,
   idiomaDetectado: idioma,
   tipo: "texto",
-  timestamp: new Date().toISOString(),
+  timestamp: timestampEnvio.toISOString(), // ✅ usamos este timestamp exacto
 });
 
 // ⏱️ NUEVO: SMS si en 60s no responde un agente en conversación intervenida
