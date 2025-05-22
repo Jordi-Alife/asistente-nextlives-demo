@@ -190,9 +190,6 @@ await db.collection("conversaciones").doc(finalUserId).set(
 // Traducir mensaje para guardar en español (para el panel)
 const traduccionUsuario = await traducir(message, "es");
 
-// Usamos timestamp unificado para mensaje y lógica post-60s
-const timestampEnvio = new Date();
-
 await db.collection("mensajes").add({
   idConversacion: finalUserId,
   rol: "usuario",
@@ -200,7 +197,7 @@ await db.collection("mensajes").add({
   original: message,
   idiomaDetectado: idioma,
   tipo: "texto",
-  timestamp: timestampEnvio,
+  timestamp: new Date().toISOString(),
 });
 
 // ⏱️ NUEVO: SMS si en 60s no responde un agente en conversación intervenida
@@ -214,13 +211,10 @@ setTimeout(async () => {
     const ultimos = await db.collection("mensajes")
       .where("idConversacion", "==", finalUserId)
       .orderBy("timestamp", "desc")
-      .limit(20)
+      .limit(10)
       .get();
 
-    const huboRespuestaAgente = ultimos.docs.some(doc => {
-      const d = doc.data();
-      return d.manual === true && new Date(d.timestamp) > timestampEnvio;
-    });
+    const huboRespuestaAgente = ultimos.docs.some(doc => doc.data().manual === true);
 
     if (!huboRespuestaAgente) {
       const agentesSnapshot = await db.collection("agentes").get();
