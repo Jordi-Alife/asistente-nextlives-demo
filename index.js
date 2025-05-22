@@ -201,6 +201,8 @@ await db.collection("mensajes").add({
 });
 
 // ⏱️ NUEVO: SMS si en 60s no responde un agente en conversación intervenida
+const timestampEnvio = new Date();
+
 setTimeout(async () => {
   try {
     const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
@@ -211,10 +213,13 @@ setTimeout(async () => {
     const ultimos = await db.collection("mensajes")
       .where("idConversacion", "==", finalUserId)
       .orderBy("timestamp", "desc")
-      .limit(10)
+      .limit(20)
       .get();
 
-    const huboRespuestaAgente = ultimos.docs.some(doc => doc.data().manual === true);
+    const huboRespuestaAgente = ultimos.docs.some(doc => {
+      const d = doc.data();
+      return d.manual === true && new Date(d.timestamp) > timestampEnvio;
+    });
 
     if (!huboRespuestaAgente) {
       const agentesSnapshot = await db.collection("agentes").get();
