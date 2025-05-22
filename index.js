@@ -323,6 +323,7 @@ if (convData?.intervenida) {
       {
         pendienteIntervencion: true,
         intervenida: true,
+        intervenidaDesde: new Date().toISOString(), // ✅ este campo es clave
       },
       { merge: true }
     );
