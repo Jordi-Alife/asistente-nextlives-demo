@@ -704,13 +704,13 @@ app.post("/api/cerrar-chat", async (req, res) => {
     await db.collection("conversaciones").doc(userId).set(
       {
         estado: "cerrado",
-        intervenida: false,              // ✅ liberar conversación
-        smsIntervencionEnviado: false,  // ✅ permitir futuros SMS
+        intervenida: false,
+        smsIntervencionEnviado: false,
       },
       { merge: true }
     );
 
-    // 2. Añadir un mensaje de tipo estado para que se muestre en el historial
+    // 2. Añadir mensaje tipo estado "Cerrado"
     await db.collection("mensajes").add({
       idConversacion: userId,
       rol: "sistema",
@@ -719,13 +719,22 @@ app.post("/api/cerrar-chat", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
-    console.log(`✅ Estado "cerrado" y liberado para ${userId}`);
+    // 3. Añadir mensaje tipo estado "Traspasado a GPT"
+    await db.collection("mensajes").add({
+      idConversacion: userId,
+      rol: "sistema",
+      tipo: "estado",
+      estado: "Traspasado a GPT",
+      timestamp: new Date().toISOString(),
+    });
+
+    console.log(`✅ Conversación cerrada y liberada para ${userId}`);
     res.json({ ok: true });
   } catch (error) {
-    console.error("❌ Error al guardar estado cerrado:", error);
-    res.status(500).json({ error: "Error guardando estado cerrado" });
+    console.error("❌ Error al cerrar y liberar conversación:", error);
+    res.status(500).json({ error: "Error al cerrar conversación" });
   }
-});
+});;
 app.get("/api/estado-conversacion/:userId", async (req, res) => {
   const { userId } = req.params;
   try {
