@@ -211,65 +211,62 @@ app.post("/api/traducir-modal", async (req, res) => {
     console.log("🧪 Mensaje recibido:", message);
 
     if (shouldEscalateToHuman(message)) {
-      console.log("🚨 Escalada activada por mensaje:", message);
+  console.log("🚨 Escalada activada por mensaje:", message);
 
-      const convRef = db.collection("conversaciones").doc(finalUserId);
-      const convSnap = await convRef.get();
-      const convData = convSnap.exists ? convSnap.data() : {};
+  const convRef = db.collection("conversaciones").doc(finalUserId);
+  const convSnap = await convRef.get();
+  const convData = convSnap.exists ? convSnap.data() : {};
 
-      const necesitaEscalada =
-        (!convData.intervenida) ||
-        (convData.intervenida === true &&
-         ["inactiva", "archivado"].includes((convData.estado || "").toLowerCase()));
+  const necesitaEscalada = !convData.intervenida; // ✅ simplificado
 
-      if (necesitaEscalada) {
-        await convRef.set(
-          {
-            pendienteIntervencion: true,
-            intervenida: true,
-          },
-          { merge: true }
-        );
+  if (necesitaEscalada) {
+    await convRef.set(
+      {
+        pendienteIntervencion: true,
+        intervenida: true,
+      },
+      { merge: true }
+    );
 
-        const agentesSnapshot = await db.collection("agentes").get();
-        const agentes = agentesSnapshot.docs
-          .map(doc => doc.data())
-          .filter(a => a.notificarSMS && a.telefono);
+    const agentesSnapshot = await db.collection("agentes").get();
+    const agentes = agentesSnapshot.docs
+      .map(doc => doc.data())
+      .filter(a => a.notificarSMS && a.telefono);
 
-        const urlPanel = `https://panel-gestion-chats-production.up.railway.app/conversaciones?userId=${finalUserId}`;
-        const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Accede al panel: ${urlPanel}`;
-        const token = process.env.SMS_ARENA_KEY;
+    const urlPanel = `https://panel-gestion-chats-production.up.railway.app/conversaciones?userId=${finalUserId}`;
+    const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Accede al panel: ${urlPanel}`;
+    const token = process.env.SMS_ARENA_KEY;
 
-        if (!token) {
-          console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
-        } else {
-          for (const agente of agentes) {
-            const telefono = agente.telefono.toString().replace(/\s+/g, "");
-            if (!telefono) continue;
+    if (!token) {
+      console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
+    } else {
+      for (const agente of agentes) {
+        const telefono = agente.telefono.toString().replace(/\s+/g, "");
+        if (!telefono) continue;
 
-            const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
-            const params = new URLSearchParams();
-            params.append("id", smsId);
-            params.append("auth_key", token);
-            params.append("from", "NextLives");
-            params.append("to", telefono);
-            params.append("text", texto);
+        const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
+        const params = new URLSearchParams();
+        params.append("id", smsId);
+        params.append("auth_key", token);
+        params.append("from", "NextLives");
+        params.append("to", telefono);
+        params.append("text", texto);
 
-            try {
-              const response = await fetch("http://api.smsarena.es/http/sms.php", {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: params.toString()
-              });
-              const respuestaSMS = await response.text();
-              console.log(`✅ SMS enviado a ${telefono}:`, respuestaSMS);
-            } catch (err) {
-              console.warn(`❌ Error al enviar SMS a ${telefono}:`, err);
-            }
-          }
+        try {
+          const response = await fetch("http://api.smsarena.es/http/sms.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: params.toString()
+          });
+          const respuestaSMS = await response.text();
+          console.log(`✅ SMS enviado a ${telefono}:`, respuestaSMS);
+        } catch (err) {
+          console.warn(`❌ Error al enviar SMS a ${telefono}:`, err);
         }
       }
     }
+  }
+}
 
     // Preparar prompt
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
