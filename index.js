@@ -156,7 +156,6 @@ app.post("/api/traducir-modal", async (req, res) => {
   }
 
   try {
-    // Guardar info usuario
     await db.collection("usuarios_chat").doc(finalUserId).set(
       {
         nombre: "Invitado",
@@ -169,7 +168,6 @@ app.post("/api/traducir-modal", async (req, res) => {
       { merge: true }
     );
 
-    // Guardar info conversación
     await db.collection("conversaciones").doc(finalUserId).set(
       {
         idUsuario: finalUserId,
@@ -187,10 +185,9 @@ app.post("/api/traducir-modal", async (req, res) => {
       { merge: true }
     );
 
-    // Traducir mensaje para guardar en español (para el panel)
     const traduccionUsuario = await traducir(message, "es");
 
-    await db.collection("mensajes").add({
+    const mensajeUsuarioRef = await db.collection("mensajes").add({
       idConversacion: finalUserId,
       rol: "usuario",
       mensaje: traduccionUsuario,
@@ -200,78 +197,68 @@ app.post("/api/traducir-modal", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
-    // Intervención activa: no responder
     const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
     const convData = convDoc.exists ? convDoc.data() : null;
+
     if (convData?.intervenida) {
-      console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
+      console.log(`⏳ Conversación intervenida, esperando respuesta manual para ${finalUserId}`);
+
+      setTimeout(async () => {
+        const nuevos = await db.collection("mensajes")
+          .where("idConversacion", "==", finalUserId)
+          .where("manual", "==", true)
+          .where("timestamp", ">", new Date(mensajeUsuarioRef.writeTime.toDate().toISOString()))
+          .limit(1)
+          .get();
+
+        if (nuevos.empty) {
+          const agentesSnapshot = await db.collection("agentes").get();
+          const agentes = agentesSnapshot.docs
+            .map(doc => doc.data())
+            .filter(a => a.notificarSMS && a.telefono);
+
+          const urlPanel = `https://panel-gestion-chats-production.up.railway.app/conversaciones?userId=${finalUserId}`;
+          const texto = `El usuario ${finalUserId} ha enviado un nuevo mensaje y no ha recibido respuesta. Accede al panel: ${urlPanel}`;
+          const token = process.env.SMS_ARENA_KEY;
+
+          if (!token) {
+            console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
+          } else {
+            for (const agente of agentes) {
+              const telefono = agente.telefono.toString().replace(/\s+/g, "");
+              if (!telefono) continue;
+
+              const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
+              const params = new URLSearchParams();
+              params.append("id", smsId);
+              params.append("auth_key", token);
+              params.append("from", "NextLives");
+              params.append("to", telefono);
+              params.append("text", texto);
+
+              try {
+                const response = await fetch("http://api.smsarena.es/http/sms.php", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                  body: params.toString()
+                });
+                const respuestaSMS = await response.text();
+                console.log(`✅ SMS enviado a ${telefono}:`, respuestaSMS);
+              } catch (err) {
+                console.warn(`❌ Error al enviar SMS a ${telefono}:`, err);
+              }
+            }
+          }
+        } else {
+          console.log("✋ Agente ya ha respondido, no se envía SMS");
+        }
+      }, 60000);
+
       return res.json({ reply: "" });
     }
 
     console.log("🧪 Mensaje recibido:", message);
 
-    if (shouldEscalateToHuman(message)) {
-      console.log("🚨 Escalada activada por mensaje:", message);
-
-      const convRef = db.collection("conversaciones").doc(finalUserId);
-      const convSnap = await convRef.get();
-      const convData = convSnap.exists ? convSnap.data() : {};
-
-      const necesitaEscalada =
-        (!convData.intervenida) ||
-        (convData.intervenida === true &&
-         ["inactiva", "archivado"].includes((convData.estado || "").toLowerCase()));
-
-      if (necesitaEscalada) {
-        await convRef.set(
-          {
-            pendienteIntervencion: true,
-            intervenida: true,
-          },
-          { merge: true }
-        );
-
-        const agentesSnapshot = await db.collection("agentes").get();
-        const agentes = agentesSnapshot.docs
-          .map(doc => doc.data())
-          .filter(a => a.notificarSMS && a.telefono);
-
-        const urlPanel = `https://panel-gestion-chats-production.up.railway.app/conversaciones?userId=${finalUserId}`;
-        const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Accede al panel: ${urlPanel}`;
-        const token = process.env.SMS_ARENA_KEY;
-
-        if (!token) {
-          console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
-        } else {
-          for (const agente of agentes) {
-            const telefono = agente.telefono.toString().replace(/\s+/g, "");
-            if (!telefono) continue;
-
-            const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
-            const params = new URLSearchParams();
-            params.append("id", smsId);
-            params.append("auth_key", token);
-            params.append("from", "NextLives");
-            params.append("to", telefono);
-            params.append("text", texto);
-
-            try {
-              const response = await fetch("http://api.smsarena.es/http/sms.php", {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: params.toString()
-              });
-              const respuestaSMS = await response.text();
-              console.log(`✅ SMS enviado a ${telefono}:`, respuestaSMS);
-            } catch (err) {
-              console.warn(`❌ Error al enviar SMS a ${telefono}:`, err);
-            }
-          }
-        }
-      }
-    }
-
-    // Preparar prompt
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
       : "";
@@ -295,7 +282,6 @@ app.post("/api/traducir-modal", async (req, res) => {
     });
 
     const reply = response.choices[0].message.content;
-
     const traduccionRespuesta = await traducir(reply, "es");
 
     await db.collection("mensajes").add({
@@ -308,7 +294,6 @@ app.post("/api/traducir-modal", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
-    // ✅ Etiqueta "Intervenida" se añade después del mensaje GPT
     if (shouldEscalateToHuman(message)) {
       await db.collection("mensajes").add({
         idConversacion: finalUserId,
