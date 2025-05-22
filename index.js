@@ -700,9 +700,13 @@ app.post("/api/cerrar-chat", async (req, res) => {
   if (!userId) return res.status(400).json({ error: "Falta userId" });
 
   try {
-    // 1. Actualizar el estado de la conversación a "cerrado"
+    // 1. Actualizar el estado de la conversación a "cerrado" y liberar
     await db.collection("conversaciones").doc(userId).set(
-      { estado: "cerrado" },
+      {
+        estado: "cerrado",
+        intervenida: false,              // ✅ liberar conversación
+        smsIntervencionEnviado: false,  // ✅ permitir futuros SMS
+      },
       { merge: true }
     );
 
@@ -715,14 +719,13 @@ app.post("/api/cerrar-chat", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
-    console.log(`✅ Estado "cerrado" guardado para ${userId}`);
+    console.log(`✅ Estado "cerrado" y liberado para ${userId}`);
     res.json({ ok: true });
   } catch (error) {
     console.error("❌ Error al guardar estado cerrado:", error);
     res.status(500).json({ error: "Error guardando estado cerrado" });
   }
 });
-
 app.get("/api/estado-conversacion/:userId", async (req, res) => {
   const { userId } = req.params;
   try {
