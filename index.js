@@ -203,95 +203,118 @@ await db.collection("mensajes").add({
   timestamp: timestampEnvio.toISOString(), // ✅ usamos este timestamp exacto
 });
 
-// ⏱️ SMS si en 60s no responde un agente después de intervención
+// ⏱️ SMS si en 60s no responde un agente en conversación intervenida (solo una vez por intervención)
 setTimeout(async () => {
-  console.log("⏱️ Verificando si hace falta enviar SMS tras 60s...");
+  console.log("⏱️ Verificando respuesta del agente tras 60s...");
 
   try {
-    const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
+    const convRef = db.collection("conversaciones").doc(finalUserId);
+    const convDoc = await convRef.get();
     const convData = convDoc.exists ? convDoc.data() : null;
 
     if (!convData?.intervenida) {
-      console.log("ℹ️ La conversación no está intervenida. No se evalúa SMS.");
+      console.log("ℹ️ La conversación no está intervenida, no se envía SMS.");
       return;
     }
 
-    const intervencionTS = new Date(convData?.timestampIntervencion || convData?.ultimaRespuesta || 0);
-    console.log("🕓 Timestamp de intervención:", intervencionTS.toISOString());
+    const timestampIntervencion = convData.timestampIntervencion
+      ? new Date(convData.timestampIntervencion)
+      : null;
 
-    const mensajesSnap = await db.collection("mensajes")
+    if (!timestampIntervencion) {
+      console.log("⚠️ No hay timestamp de intervención. Abortando verificación.");
+      return;
+    }
+
+    const ultimos = await db.collection("mensajes")
       .where("idConversacion", "==", finalUserId)
       .orderBy("timestamp", "desc")
-      .limit(30)
+      .limit(20)
       .get();
 
-    const mensajes = mensajesSnap.docs.map(doc => doc.data()).filter(m => !!m.timestamp);
-
-    // Filtrar mensajes del usuario posteriores a la intervención
-    const mensajesUsuario = mensajes.filter(m =>
+    const mensajes = ultimos.docs.map(doc => doc.data());
+    const ultimoUsuario = mensajes.find(m =>
       m.rol === "usuario" &&
-      new Date(m.timestamp) > intervencionTS
+      new Date(m.timestamp) > timestampIntervencion
     );
 
-    if (!mensajesUsuario.length) {
-      console.log("⚠️ No hay mensajes del usuario después de la intervención.");
+    if (!ultimoUsuario) {
+      console.log("ℹ️ No hay mensaje del usuario posterior a la intervención.");
       return;
     }
 
-    const ultimoUsuario = mensajesUsuario[0];
     const tsUsuario = new Date(ultimoUsuario.timestamp);
-    console.log("📩 Último mensaje usuario tras intervención:", tsUsuario.toISOString());
+    console.log("⏱️ Último mensaje del usuario tras intervención:", tsUsuario.toISOString());
 
     const huboRespuesta = mensajes.some(m =>
       m.manual === true && new Date(m.timestamp) > tsUsuario
     );
 
-    console.log("¿Respuesta posterior?", huboRespuesta);
+    console.log("¿Respuesta posterior del agente?", huboRespuesta);
 
-    if (!huboRespuesta) {
-      const agentesSnapshot = await db.collection("agentes").get();
-      const agentes = agentesSnapshot.docs
-        .map(doc => doc.data())
-        .filter(a => a.notificarSMS && a.telefono);
-
-      const texto = `¡Recuerda! Tienes un mensaje de ${finalUserId} pendiente de respuesta. Entra al panel para contestar.`;
-      const token = process.env.SMS_ARENA_KEY;
-
-      if (!token) {
-        console.warn("⚠️ TOKEN vacío. Variable SMS_ARENA_KEY no está definida.");
-      } else {
-        for (const agente of agentes) {
-          const telefono = agente.telefono.toString().replace(/\s+/g, "");
-          if (!telefono) continue;
-
-          const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
-          const params = new URLSearchParams();
-          params.append("id", smsId);
-          params.append("auth_key", token);
-          params.append("from", "NextLives");
-          params.append("to", telefono);
-          params.append("text", texto);
-
-          try {
-            const response = await fetch("http://api.smsarena.es/http/sms.php", {
-              method: "POST",
-              headers: { "Content-Type": "application/x-www-form-urlencoded" },
-              body: params.toString()
-            });
-            const respuestaSMS = await response.text();
-            console.log(`📨 SMS enviado a ${telefono}:`, respuestaSMS);
-          } catch (err) {
-            console.warn(`❌ Error al enviar SMS a ${telefono}:`, err);
-          }
-        }
-      }
-    } else {
-      console.log("✅ Ya hubo respuesta del agente. No se envía SMS.");
+    if (huboRespuesta) {
+      console.log("✅ El agente respondió, no se envía SMS.");
+      return;
     }
+
+    const smsPrevio = convData.ultimoSMSPost60s
+      ? new Date(convData.ultimoSMSPost60s)
+      : null;
+
+    if (smsPrevio && smsPrevio > tsUsuario) {
+      console.log("❌ Ya se envió un SMS después de ese mensaje. Cancelando.");
+      return;
+    }
+
+    console.log("❗ No hubo respuesta del agente, preparando SMS...");
+
+    const agentesSnapshot = await db.collection("agentes").get();
+    const agentes = agentesSnapshot.docs
+      .map(doc => doc.data())
+      .filter(a => a.notificarSMS && a.telefono);
+
+    console.log("Agentes notificados:", agentes.map(a => a.telefono));
+
+    const texto = `¡Recuerda! Tienes un mensaje de ${finalUserId} pendiente de respuesta. Entra al panel para contestar.`;
+    const token = process.env.SMS_ARENA_KEY;
+
+    if (!token) {
+      console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
+      return;
+    }
+
+    for (const agente of agentes) {
+      const telefono = agente.telefono.toString().replace(/\s+/g, "");
+      if (!telefono) continue;
+
+      const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
+      const params = new URLSearchParams();
+      params.append("id", smsId);
+      params.append("auth_key", token);
+      params.append("from", "NextLives");
+      params.append("to", telefono);
+      params.append("text", texto);
+
+      try {
+        const response = await fetch("http://api.smsarena.es/http/sms.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: params.toString()
+        });
+        const respuestaSMS = await response.text();
+        console.log(`📨 SMS post-60s enviado a ${telefono}:`, respuestaSMS);
+      } catch (err) {
+        console.warn(`❌ Error al enviar SMS a ${telefono}:`, err);
+      }
+    }
+
+    // ✅ Registrar que ya se envió
+    await convRef.set({ ultimoSMSPost60s: new Date().toISOString() }, { merge: true });
+
   } catch (error) {
-    console.error("❌ Error en lógica SMS post-60s:", error);
+    console.error("❌ Error en lógica post-60s sin respuesta:", error);
   }
-}, 60000);
+}, 60000); // 60 segundos
 
 // Intervención activa: no responder
 const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
