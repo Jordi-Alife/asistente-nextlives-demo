@@ -205,35 +205,52 @@ await db.collection("mensajes").add({
 
 // ⏱️ NUEVO: SMS si en 60s no responde un agente en conversación intervenida
 setTimeout(async () => {
+  console.log("⏱️ Verificando respuesta del agente tras 60s...");
+
   try {
     const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
     const convData = convDoc.exists ? convDoc.data() : null;
 
-    if (!convData?.intervenida) return;
+    if (!convData?.intervenida) {
+      console.log("ℹ️ La conversación no está intervenida, no se envía SMS.");
+      return;
+    }
 
-    // Buscar el último mensaje del usuario con timestampEnvio
     const ultimos = await db.collection("mensajes")
       .where("idConversacion", "==", finalUserId)
       .orderBy("timestamp", "desc")
-      .limit(20)
+      .limit(15)
       .get();
 
     const mensajes = ultimos.docs.map(doc => doc.data());
+    const ultimoUsuario = mensajes.find(m => m.rol === "usuario" && m.timestamp);
 
-const ultimoUsuario = mensajes.find(m => m.rol === "usuario" && m.timestamp);
-if (!ultimoUsuario) return;
+    console.log("Último mensaje de usuario detectado:", ultimoUsuario);
 
-const tsUsuario = new Date(ultimoUsuario.timestamp);
+    if (!ultimoUsuario) {
+      console.log("⚠️ No se encontró mensaje de usuario con timestamp válido.");
+      return;
+    }
 
-const huboRespuesta = mensajes.some(m =>
-  m.manual === true && new Date(m.timestamp) > tsUsuario
-);
+    const tsUsuario = new Date(ultimoUsuario.timestamp);
+    console.log("Timestamp del usuario:", tsUsuario.toISOString());
 
-if (!huboRespuesta) {
-  const agentesSnapshot = await db.collection("agentes").get();
-  const agentes = agentesSnapshot.docs
-    .map(doc => doc.data())
-    .filter(a => a.notificarSMS && a.telefono);
+    const huboRespuesta = mensajes.some(m =>
+      m.manual === true && new Date(m.timestamp) > tsUsuario
+    );
+
+    console.log("¿Hubo respuesta del agente después?", huboRespuesta);
+
+    if (!huboRespuesta) {
+      console.log("❗ No hubo respuesta del agente, preparando SMS...");
+
+      const agentesSnapshot = await db.collection("agentes").get();
+      const agentes = agentesSnapshot.docs
+        .map(doc => doc.data())
+        .filter(a => a.notificarSMS && a.telefono);
+
+      console.log("Token SMS:", process.env.SMS_ARENA_KEY);
+      console.log("Agentes notificados:", agentes.map(a => a.telefono));
 
       const urlPanel = `https://panel-gestion-chats-production.up.railway.app/conversaciones?userId=${finalUserId}`;
       const texto = `El usuario ${finalUserId} ha escrito en una conversación intervenida y no ha recibido respuesta. Entra al panel: ${urlPanel}`;
@@ -267,6 +284,8 @@ if (!huboRespuesta) {
           }
         }
       }
+    } else {
+      console.log("✅ El agente respondió, no se envía SMS.");
     }
   } catch (error) {
     console.error("❌ Error en lógica post-60s sin respuesta:", error);
