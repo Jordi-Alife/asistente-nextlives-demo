@@ -170,43 +170,103 @@ app.post("/api/traducir-modal", async (req, res) => {
     );
 
     // Guardar info conversación
-    await db.collection("conversaciones").doc(finalUserId).set(
-      {
-        idUsuario: finalUserId,
-        fechaInicio: new Date().toISOString(),
-        ultimaRespuesta: new Date().toISOString(),
-        lastMessage: message,
-        estado: "abierta",
-        idioma,
-        navegador: userAgent || "",
-        pais: pais || "",
-        historial: historial || [],
-        datosContexto: datosContexto || null,
-        noVistos: admin.firestore.FieldValue.increment(1),
-      },
-      { merge: true }
-    );
+await db.collection("conversaciones").doc(finalUserId).set(
+  {
+    idUsuario: finalUserId,
+    fechaInicio: new Date().toISOString(),
+    ultimaRespuesta: new Date().toISOString(),
+    lastMessage: message,
+    estado: "abierta",
+    idioma,
+    navegador: userAgent || "",
+    pais: pais || "",
+    historial: historial || [],
+    datosContexto: datosContexto || null,
+    noVistos: admin.firestore.FieldValue.increment(1),
+  },
+  { merge: true }
+);
 
-    // Traducir mensaje para guardar en español (para el panel)
-    const traduccionUsuario = await traducir(message, "es");
+// Traducir mensaje para guardar en español (para el panel)
+const traduccionUsuario = await traducir(message, "es");
 
-    await db.collection("mensajes").add({
-      idConversacion: finalUserId,
-      rol: "usuario",
-      mensaje: traduccionUsuario,
-      original: message,
-      idiomaDetectado: idioma,
-      tipo: "texto",
-      timestamp: new Date().toISOString(),
-    });
+await db.collection("mensajes").add({
+  idConversacion: finalUserId,
+  rol: "usuario",
+  mensaje: traduccionUsuario,
+  original: message,
+  idiomaDetectado: idioma,
+  tipo: "texto",
+  timestamp: new Date().toISOString(),
+});
 
-    // Intervención activa: no responder
+// ⏱️ NUEVO: SMS si en 60s no responde un agente en conversación intervenida
+setTimeout(async () => {
+  try {
     const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
     const convData = convDoc.exists ? convDoc.data() : null;
-    if (convData?.intervenida) {
-      console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
-      return res.json({ reply: "" });
+
+    if (!convData?.intervenida) return;
+
+    const ultimos = await db.collection("mensajes")
+      .where("idConversacion", "==", finalUserId)
+      .orderBy("timestamp", "desc")
+      .limit(10)
+      .get();
+
+    const huboRespuestaAgente = ultimos.docs.some(doc => doc.data().manual === true);
+
+    if (!huboRespuestaAgente) {
+      const agentesSnapshot = await db.collection("agentes").get();
+      const agentes = agentesSnapshot.docs
+        .map(doc => doc.data())
+        .filter(a => a.notificarSMS && a.telefono);
+
+      const urlPanel = `https://panel-gestion-chats-production.up.railway.app/conversaciones?userId=${finalUserId}`;
+      const texto = `El usuario ${finalUserId} ha escrito en una conversación intervenida y no ha recibido respuesta. Entra al panel: ${urlPanel}`;
+      const token = process.env.SMS_ARENA_KEY;
+
+      if (!token) {
+        console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
+      } else {
+        for (const agente of agentes) {
+          const telefono = agente.telefono.toString().replace(/\s+/g, "");
+          if (!telefono) continue;
+
+          const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
+          const params = new URLSearchParams();
+          params.append("id", smsId);
+          params.append("auth_key", token);
+          params.append("from", "NextLives");
+          params.append("to", telefono);
+          params.append("text", texto);
+
+          try {
+            const response = await fetch("http://api.smsarena.es/http/sms.php", {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: params.toString()
+            });
+            const respuestaSMS = await response.text();
+            console.log(`📨 SMS post-60s enviado a ${telefono}:`, respuestaSMS);
+          } catch (err) {
+            console.warn(`❌ Error al enviar SMS a ${telefono}:`, err);
+          }
+        }
+      }
     }
+  } catch (error) {
+    console.error("❌ Error en lógica post-60s sin respuesta:", error);
+  }
+}, 60000); // 60 segundos
+
+// Intervención activa: no responder
+const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
+const convData = convDoc.exists ? convDoc.data() : null;
+if (convData?.intervenida) {
+  console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
+  return res.json({ reply: "" });
+}
 
     console.log("🧪 Mensaje recibido:", message);
 
