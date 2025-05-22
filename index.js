@@ -127,32 +127,34 @@ app.post("/api/traducir-modal", async (req, res) => {
   app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial, datosContexto } = req.body;
   const finalUserId = userId || "anon";
+
   // 🧠 Detectar idioma del mensaje
-let idiomaDetectado = await detectarIdiomaGPT(message);
-let idioma = idiomaDetectado;
+  let idiomaDetectado = await detectarIdiomaGPT(message);
+  let idioma = idiomaDetectado;
 
-// 🛡️ Fallback si no es válido
-if (!idioma || idioma === "zxx") {
-  const ultimos = await db.collection("mensajes")
-    .where("idConversacion", "==", finalUserId)
-    .where("rol", "==", "usuario")
-    .orderBy("timestamp", "desc")
-    .limit(10)
-    .get();
+  // 🛡️ Fallback si no es válido
+  if (!idioma || idioma === "zxx") {
+    const ultimos = await db.collection("mensajes")
+      .where("idConversacion", "==", finalUserId)
+      .where("rol", "==", "usuario")
+      .orderBy("timestamp", "desc")
+      .limit(10)
+      .get();
 
-  const idiomaValido = ultimos.docs.find(doc => {
-    const msg = doc.data();
-    return msg.idiomaDetectado && msg.idiomaDetectado !== "zxx";
-  });
+    const idiomaValido = ultimos.docs.find(doc => {
+      const msg = doc.data();
+      return msg.idiomaDetectado && msg.idiomaDetectado !== "zxx";
+    });
 
-  if (idiomaValido) {
-    idioma = idiomaValido.data().idiomaDetectado;
-    console.log(`🌐 Fallback idioma en /chat: se usa anterior "${idioma}"`);
-  } else {
-    idioma = "es";
-    console.log(`⚠️ Fallback total en /chat: se usa "es"`);
+    if (idiomaValido) {
+      idioma = idiomaValido.data().idiomaDetectado;
+      console.log(`🌐 Fallback idioma en /chat: se usa anterior "${idioma}"`);
+    } else {
+      idioma = "es";
+      console.log(`⚠️ Fallback total en /chat: se usa "es"`);
+    }
   }
-}
+
   try {
     // Guardar info usuario
     await db.collection("usuarios_chat").doc(finalUserId).set(
@@ -168,22 +170,22 @@ if (!idioma || idioma === "zxx") {
     );
 
     // Guardar info conversación
-await db.collection("conversaciones").doc(finalUserId).set(
-  {
-    idUsuario: finalUserId,
-    fechaInicio: new Date().toISOString(),
-    ultimaRespuesta: new Date().toISOString(),
-    lastMessage: message,
-    estado: "abierta",
-    idioma,
-    navegador: userAgent || "",
-    pais: pais || "",
-    historial: historial || [],
-    datosContexto: datosContexto || null,
-    noVistos: admin.firestore.FieldValue.increment(1), // ✅ nuevo campo optimizado
-  },
-  { merge: true }
-);
+    await db.collection("conversaciones").doc(finalUserId).set(
+      {
+        idUsuario: finalUserId,
+        fechaInicio: new Date().toISOString(),
+        ultimaRespuesta: new Date().toISOString(),
+        lastMessage: message,
+        estado: "abierta",
+        idioma,
+        navegador: userAgent || "",
+        pais: pais || "",
+        historial: historial || [],
+        datosContexto: datosContexto || null,
+        noVistos: admin.firestore.FieldValue.increment(1),
+      },
+      { merge: true }
+    );
 
     // Traducir mensaje para guardar en español (para el panel)
     const traduccionUsuario = await traducir(message, "es");
@@ -191,135 +193,133 @@ await db.collection("conversaciones").doc(finalUserId).set(
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
       rol: "usuario",
-      mensaje: traduccionUsuario,     // ✅ lo que se ve en el panel
-      original: message,              // ✅ lo que escribió el usuario
+      mensaje: traduccionUsuario,
+      original: message,
       idiomaDetectado: idioma,
       tipo: "texto",
       timestamp: new Date().toISOString(),
     });
 
     // Intervención activa: no responder
-const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
-const convData = convDoc.exists ? convDoc.data() : null;
-if (convData?.intervenida) {
-  console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
-  return res.json({ reply: "" });
-}
+    const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
+    const convData = convDoc.exists ? convDoc.data() : null;
+    if (convData?.intervenida) {
+      console.log(`🤖 GPT desactivado: conversación intervenida para ${finalUserId}`);
+      return res.json({ reply: "" });
+    }
 
-// 🔍 DEBUG: Verificar mensaje recibido
-console.log("🧪 Mensaje recibido:", message);
+    console.log("🧪 Mensaje recibido:", message);
 
-if (shouldEscalateToHuman(message)) {
-  console.log("🚨 Escalada activada por mensaje:", message);
+    if (shouldEscalateToHuman(message)) {
+      console.log("🚨 Escalada activada por mensaje:", message);
 
-  const convRef = db.collection("conversaciones").doc(finalUserId);
-  const convSnap = await convRef.get();
-  const convData = convSnap.exists ? convSnap.data() : {};
+      const convRef = db.collection("conversaciones").doc(finalUserId);
+      const convSnap = await convRef.get();
+      const convData = convSnap.exists ? convSnap.data() : {};
 
-  const necesitaEscalada =
-    (!convData.intervenida) ||
-    (convData.intervenida === true &&
-     ["inactiva", "archivado"].includes((convData.estado || "").toLowerCase()));
+      const necesitaEscalada =
+        (!convData.intervenida) ||
+        (convData.intervenida === true &&
+         ["inactiva", "archivado"].includes((convData.estado || "").toLowerCase()));
 
-  if (necesitaEscalada) {
-    await convRef.set(
-      {
-        pendienteIntervencion: true,
-        intervenida: true,
-      },
-      { merge: true }
-    );
+      if (necesitaEscalada) {
+        await convRef.set(
+          {
+            pendienteIntervencion: true,
+            intervenida: true,
+          },
+          { merge: true }
+        );
 
-    const agentesSnapshot = await db.collection("agentes").get();
-    const agentes = agentesSnapshot.docs
-      .map(doc => doc.data())
-      .filter(a => a.notificarSMS && a.telefono);
+        const agentesSnapshot = await db.collection("agentes").get();
+        const agentes = agentesSnapshot.docs
+          .map(doc => doc.data())
+          .filter(a => a.notificarSMS && a.telefono);
 
-    const urlPanel = `https://panel-gestion-chats-production.up.railway.app/conversaciones?userId=${finalUserId}`;
-    const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Accede al panel: ${urlPanel}`;
-    const token = process.env.SMS_ARENA_KEY;
+        const urlPanel = `https://panel-gestion-chats-production.up.railway.app/conversaciones?userId=${finalUserId}`;
+        const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Accede al panel: ${urlPanel}`;
+        const token = process.env.SMS_ARENA_KEY;
 
-    if (!token) {
-      console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
-    } else {
-      for (const agente of agentes) {
-        const telefono = agente.telefono.toString().replace(/\s+/g, "");
-        if (!telefono) continue;
+        if (!token) {
+          console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
+        } else {
+          for (const agente of agentes) {
+            const telefono = agente.telefono.toString().replace(/\s+/g, "");
+            if (!telefono) continue;
 
-        const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
-        const params = new URLSearchParams();
-        params.append("id", smsId);
-        params.append("auth_key", token);
-        params.append("from", "NextLives");
-        params.append("to", telefono);
-        params.append("text", texto);
+            const smsId = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
+            const params = new URLSearchParams();
+            params.append("id", smsId);
+            params.append("auth_key", token);
+            params.append("from", "NextLives");
+            params.append("to", telefono);
+            params.append("text", texto);
 
-        try {
-          const response = await fetch("http://api.smsarena.es/http/sms.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: params.toString()
-          });
-          const respuestaSMS = await response.text();
-          console.log(`✅ SMS enviado a ${telefono}:`, respuestaSMS);
-        } catch (err) {
-          console.warn(`❌ Error al enviar SMS a ${telefono}:`, err);
+            try {
+              const response = await fetch("http://api.smsarena.es/http/sms.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: params.toString()
+              });
+              const respuestaSMS = await response.text();
+              console.log(`✅ SMS enviado a ${telefono}:`, respuestaSMS);
+            } catch (err) {
+              console.warn(`❌ Error al enviar SMS a ${telefono}:`, err);
+            }
+          }
         }
       }
     }
-  }
 
-  // ❌ No hacemos return — GPT continúa y responde de forma natural
-}    // Preparar prompt
+    // Preparar prompt
     const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
       : "";
 
-    // Obtener últimos 6 mensajes de la conversación
-const historialMensajes = await obtenerUltimosMensajesUsuario(finalUserId);
-const historialFormateado = formatearHistorialParaPrompt(historialMensajes);
+    const historialMensajes = await obtenerUltimosMensajesUsuario(finalUserId);
+    const historialFormateado = formatearHistorialParaPrompt(historialMensajes);
 
-// Construir prompt con base de conocimiento + historial + contexto
-const promptSystem = [
-  baseConocimiento,
-  `\nHistorial reciente de conversación:\n${historialFormateado}`,
-  datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
-  `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}". Si el usuario escribió en catalán, responde en catalán; si lo hizo en inglés, responde en inglés; si en español, responde en español. No traduzcas ni expliques nada adicional.`,
-].join("\n");
+    const promptSystem = [
+      baseConocimiento,
+      `\nHistorial reciente de conversación:\n${historialFormateado}`,
+      datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
+      `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}".`,
+    ].join("\n");
 
-// Llamada a GPT
-const response = await openai.chat.completions.create({
-  model: "gpt-4",
-  messages: [
-    { role: "system", content: promptSystem },
-    { role: "user", content: message },
-  ],
-});
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        { role: "system", content: promptSystem },
+        { role: "user", content: message },
+      ],
+    });
 
-const reply = response.choices[0].message.content;
+    const reply = response.choices[0].message.content;
 
-    // Traducir al español para guardar en Firestore (para el panel)
     const traduccionRespuesta = await traducir(reply, "es");
 
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
       rol: "asistente",
-      mensaje: traduccionRespuesta,  // ✅ para panel
-      original: reply,               // ✅ lo que dijo GPT realmente
+      mensaje: traduccionRespuesta,
+      original: reply,
       idiomaDetectado: idioma,
       tipo: "texto",
       timestamp: new Date().toISOString(),
     });
 
-await db.collection("mensajes").add({
-      idConversacion: finalUserId,
-      rol: "sistema",
-      tipo: "estado",
-      estado: "Intervenida",
-      timestamp: new Date().toISOString(),
-    });
-    
-    res.json({ reply }); // ✅ mostrar al usuario sin traducir
+    // ✅ Etiqueta "Intervenida" se añade después del mensaje GPT
+    if (shouldEscalateToHuman(message)) {
+      await db.collection("mensajes").add({
+        idConversacion: finalUserId,
+        rol: "sistema",
+        tipo: "estado",
+        estado: "Intervenida",
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    res.json({ reply });
   } catch (error) {
     console.error("❌ Error general en /api/chat:", error);
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
