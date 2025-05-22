@@ -211,10 +211,12 @@ setTimeout(async () => {
     const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
     const convData = convDoc.exists ? convDoc.data() : null;
 
-    if (!convData?.intervenida) {
-      console.log("ℹ️ La conversación no está intervenida, no se envía SMS.");
+    if (!convData?.intervenida || !convData?.intervenidaDesde) {
+      console.log("ℹ️ La conversación no está intervenida o falta 'intervenidaDesde', no se envía SMS.");
       return;
     }
+
+    const intervenidaDesde = new Date(convData.intervenidaDesde);
 
     const ultimos = await db.collection("mensajes")
       .where("idConversacion", "==", finalUserId)
@@ -234,6 +236,12 @@ setTimeout(async () => {
 
     const tsUsuario = new Date(ultimoUsuario.timestamp);
     console.log("Timestamp del usuario:", tsUsuario.toISOString());
+    console.log("Intervenida desde:", intervenidaDesde.toISOString());
+
+    if (tsUsuario < intervenidaDesde) {
+      console.log("⛔ El mensaje del usuario es anterior a la intervención. No se envía SMS.");
+      return;
+    }
 
     const huboRespuesta = mensajes.some(m =>
       m.manual === true && new Date(m.timestamp) > tsUsuario
@@ -252,7 +260,6 @@ setTimeout(async () => {
       console.log("Token SMS:", process.env.SMS_ARENA_KEY);
       console.log("Agentes notificados:", agentes.map(a => a.telefono));
 
-      const urlPanel = `https://panel-gestion-chats-production.up.railway.app/conversaciones?userId=${finalUserId}`;
       const texto = `¡Recuerda! Tienes un mensaje de ${finalUserId} pendiente de respuesta. Entra al panel para contestar.`;
       const token = process.env.SMS_ARENA_KEY;
 
