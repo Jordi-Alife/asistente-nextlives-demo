@@ -214,9 +214,18 @@ setTimeout(async () => {
       .limit(10)
       .get();
 
-    const huboRespuestaAgente = ultimos.docs.some(doc => doc.data().manual === true);
+    const ultimoMensajeUsuario = ultimos.docs.find(doc => doc.data().rol === "usuario");
+    let huboRespuestaPosterior = false;
 
-    if (!huboRespuestaAgente) {
+    if (ultimoMensajeUsuario) {
+      const timestampUsuario = new Date(ultimoMensajeUsuario.data().timestamp);
+      huboRespuestaPosterior = ultimos.docs.some(doc => {
+        const d = doc.data();
+        return d.manual === true && new Date(d.timestamp) > timestampUsuario;
+      });
+    }
+
+    if (!huboRespuestaPosterior) {
       const agentesSnapshot = await db.collection("agentes").get();
       const agentes = agentesSnapshot.docs
         .map(doc => doc.data())
