@@ -211,24 +211,25 @@ setTimeout(async () => {
 
     if (!convData?.intervenida) return;
 
+    // Buscar el último mensaje del usuario con timestampEnvio
     const ultimos = await db.collection("mensajes")
       .where("idConversacion", "==", finalUserId)
       .orderBy("timestamp", "desc")
-      .limit(10)
+      .limit(20)
       .get();
 
-    const ultimoMensajeUsuario = ultimos.docs.find(doc => doc.data().rol === "usuario");
-    let huboRespuestaPosterior = false;
+    const mensajes = ultimos.docs.map(doc => doc.data());
+    const ultimoUsuario = mensajes.find(m => m.rol === "usuario" && m.timestampEnvio);
 
-    if (ultimoMensajeUsuario) {
-      const timestampUsuario = new Date(ultimoMensajeUsuario.data().timestamp);
-      huboRespuestaPosterior = ultimos.docs.some(doc => {
-        const d = doc.data();
-        return d.manual === true && new Date(d.timestamp) > timestampUsuario;
-      });
-    }
+    if (!ultimoUsuario) return;
 
-    if (!huboRespuestaPosterior) {
+    const tsUsuario = new Date(ultimoUsuario.timestampEnvio);
+
+    const huboRespuesta = mensajes.some(m =>
+      m.manual === true && new Date(m.timestamp) > tsUsuario
+    );
+
+    if (!huboRespuesta) {
       const agentesSnapshot = await db.collection("agentes").get();
       const agentes = agentesSnapshot.docs
         .map(doc => doc.data())
