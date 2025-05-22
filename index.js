@@ -230,14 +230,6 @@ if (shouldEscalateToHuman(message)) {
       { merge: true }
     );
 
-    await db.collection("mensajes").add({
-      idConversacion: finalUserId,
-      rol: "sistema",
-      tipo: "estado",
-      estado: "Intervenida",
-      timestamp: new Date().toISOString(),
-    });
-
     const agentesSnapshot = await db.collection("agentes").get();
     const agentes = agentesSnapshot.docs
       .map(doc => doc.data())
@@ -319,6 +311,14 @@ const reply = response.choices[0].message.content;
       timestamp: new Date().toISOString(),
     });
 
+await db.collection("mensajes").add({
+      idConversacion: finalUserId,
+      rol: "sistema",
+      tipo: "estado",
+      estado: "Intervenida",
+      timestamp: new Date().toISOString(),
+    });
+    
     res.json({ reply }); // ✅ mostrar al usuario sin traducir
   } catch (error) {
     console.error("❌ Error general en /api/chat:", error);
