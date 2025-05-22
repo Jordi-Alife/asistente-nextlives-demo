@@ -204,8 +204,6 @@ await db.collection("mensajes").add({
 });
 
 // ⏱️ NUEVO: SMS si en 60s no responde un agente en conversación intervenida
-const timestampEnvio = new Date();
-
 setTimeout(async () => {
   try {
     const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
