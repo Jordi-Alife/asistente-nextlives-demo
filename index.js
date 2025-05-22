@@ -203,68 +203,62 @@ await db.collection("mensajes").add({
   timestamp: timestampEnvio.toISOString(), // ✅ usamos este timestamp exacto
 });
 
-// ⏱️ NUEVO: SMS si en 60s no responde un agente en conversación intervenida
+// ⏱️ SMS si en 60s no responde un agente después de intervención
 setTimeout(async () => {
-  console.log("⏱️ Verificando respuesta del agente tras 60s...");
+  console.log("⏱️ Verificando si hace falta enviar SMS tras 60s...");
 
   try {
     const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
     const convData = convDoc.exists ? convDoc.data() : null;
 
-    if (!convData?.intervenida || !convData?.intervenidaDesde) {
-      console.log("ℹ️ La conversación no está intervenida o falta 'intervenidaDesde', no se envía SMS.");
+    if (!convData?.intervenida) {
+      console.log("ℹ️ La conversación no está intervenida. No se evalúa SMS.");
       return;
     }
 
-    const intervenidaDesde = new Date(convData.intervenidaDesde);
+    const intervencionTS = new Date(convData?.timestampIntervencion || convData?.ultimaRespuesta || 0);
+    console.log("🕓 Timestamp de intervención:", intervencionTS.toISOString());
 
-    const ultimos = await db.collection("mensajes")
+    const mensajesSnap = await db.collection("mensajes")
       .where("idConversacion", "==", finalUserId)
       .orderBy("timestamp", "desc")
-      .limit(15)
+      .limit(30)
       .get();
 
-    const mensajes = ultimos.docs.map(doc => doc.data());
-    const ultimoUsuario = mensajes.find(m => m.rol === "usuario" && m.timestamp);
+    const mensajes = mensajesSnap.docs.map(doc => doc.data()).filter(m => !!m.timestamp);
 
-    console.log("Último mensaje de usuario detectado:", ultimoUsuario);
+    // Filtrar mensajes del usuario posteriores a la intervención
+    const mensajesUsuario = mensajes.filter(m =>
+      m.rol === "usuario" &&
+      new Date(m.timestamp) > intervencionTS
+    );
 
-    if (!ultimoUsuario) {
-      console.log("⚠️ No se encontró mensaje de usuario con timestamp válido.");
+    if (!mensajesUsuario.length) {
+      console.log("⚠️ No hay mensajes del usuario después de la intervención.");
       return;
     }
 
+    const ultimoUsuario = mensajesUsuario[0];
     const tsUsuario = new Date(ultimoUsuario.timestamp);
-    console.log("Timestamp del usuario:", tsUsuario.toISOString());
-    console.log("Intervenida desde:", intervenidaDesde.toISOString());
-
-    if (tsUsuario < intervenidaDesde) {
-      console.log("⛔ El mensaje del usuario es anterior a la intervención. No se envía SMS.");
-      return;
-    }
+    console.log("📩 Último mensaje usuario tras intervención:", tsUsuario.toISOString());
 
     const huboRespuesta = mensajes.some(m =>
       m.manual === true && new Date(m.timestamp) > tsUsuario
     );
 
-    console.log("¿Hubo respuesta del agente después?", huboRespuesta);
+    console.log("¿Respuesta posterior?", huboRespuesta);
 
     if (!huboRespuesta) {
-      console.log("❗ No hubo respuesta del agente, preparando SMS...");
-
       const agentesSnapshot = await db.collection("agentes").get();
       const agentes = agentesSnapshot.docs
         .map(doc => doc.data())
         .filter(a => a.notificarSMS && a.telefono);
 
-      console.log("Token SMS:", process.env.SMS_ARENA_KEY);
-      console.log("Agentes notificados:", agentes.map(a => a.telefono));
-
       const texto = `¡Recuerda! Tienes un mensaje de ${finalUserId} pendiente de respuesta. Entra al panel para contestar.`;
       const token = process.env.SMS_ARENA_KEY;
 
       if (!token) {
-        console.warn("⚠️ TOKEN vacío: variable SMS_ARENA_KEY no está definida");
+        console.warn("⚠️ TOKEN vacío. Variable SMS_ARENA_KEY no está definida.");
       } else {
         for (const agente of agentes) {
           const telefono = agente.telefono.toString().replace(/\s+/g, "");
@@ -285,19 +279,19 @@ setTimeout(async () => {
               body: params.toString()
             });
             const respuestaSMS = await response.text();
-            console.log(`📨 SMS post-60s enviado a ${telefono}:`, respuestaSMS);
+            console.log(`📨 SMS enviado a ${telefono}:`, respuestaSMS);
           } catch (err) {
             console.warn(`❌ Error al enviar SMS a ${telefono}:`, err);
           }
         }
       }
     } else {
-      console.log("✅ El agente respondió, no se envía SMS.");
+      console.log("✅ Ya hubo respuesta del agente. No se envía SMS.");
     }
   } catch (error) {
-    console.error("❌ Error en lógica post-60s sin respuesta:", error);
+    console.error("❌ Error en lógica SMS post-60s:", error);
   }
-}, 60000); // 60 segundos
+}, 60000);
 
 // Intervención activa: no responder
 const convDoc = await db.collection("conversaciones").doc(finalUserId).get();
