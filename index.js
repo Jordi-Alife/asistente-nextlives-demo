@@ -219,21 +219,21 @@ setTimeout(async () => {
       .get();
 
     const mensajes = ultimos.docs.map(doc => doc.data());
-    const ultimoUsuario = mensajes.find(m => m.rol === "usuario" && m.timestampEnvio);
 
-    if (!ultimoUsuario) return;
+const ultimoUsuario = mensajes.find(m => m.rol === "usuario" && m.timestamp);
+if (!ultimoUsuario) return;
 
-    const tsUsuario = new Date(ultimoUsuario.timestampEnvio);
+const tsUsuario = new Date(ultimoUsuario.timestamp);
 
-    const huboRespuesta = mensajes.some(m =>
-      m.manual === true && new Date(m.timestamp) > tsUsuario
-    );
+const huboRespuesta = mensajes.some(m =>
+  m.manual === true && new Date(m.timestamp) > tsUsuario
+);
 
-    if (!huboRespuesta) {
-      const agentesSnapshot = await db.collection("agentes").get();
-      const agentes = agentesSnapshot.docs
-        .map(doc => doc.data())
-        .filter(a => a.notificarSMS && a.telefono);
+if (!huboRespuesta) {
+  const agentesSnapshot = await db.collection("agentes").get();
+  const agentes = agentesSnapshot.docs
+    .map(doc => doc.data())
+    .filter(a => a.notificarSMS && a.telefono);
 
       const urlPanel = `https://panel-gestion-chats-production.up.railway.app/conversaciones?userId=${finalUserId}`;
       const texto = `El usuario ${finalUserId} ha escrito en una conversación intervenida y no ha recibido respuesta. Entra al panel: ${urlPanel}`;
