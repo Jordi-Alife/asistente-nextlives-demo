@@ -253,7 +253,7 @@ setTimeout(async () => {
       console.log("Agentes notificados:", agentes.map(a => a.telefono));
 
       const urlPanel = `https://panel-gestion-chats-production.up.railway.app/conversaciones?userId=${finalUserId}`;
-      const texto = `El usuario ${finalUserId} sigue sin respuesta. Abre el panel ahora: ${urlPanel}`;
+      const texto = `¡Recuerda! Tienes un mensaje de ${finalUserId} pendiente de respuesta. Entra al panel para contestar.`;
       const token = process.env.SMS_ARENA_KEY;
 
       if (!token) {
