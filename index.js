@@ -317,7 +317,7 @@ if (convData?.intervenida) {
       {
         pendienteIntervencion: true,
         intervenida: true,
-        intervenidaDesde: new Date().toISOString(), // ✅ este campo es clave
+        timestampIntervencion: new Date().toISOString(), // ✅ NUEVO CAMPO para lógica SMS
       },
       { merge: true }
     );
