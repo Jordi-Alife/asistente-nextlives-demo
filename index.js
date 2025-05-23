@@ -534,19 +534,16 @@ app.post("/api/send-to-user", async (req, res) => {
     return res.status(400).json({ error: "Faltan datos" });
 
   try {
-    const mensajesSnapshot = await db
-      .collection("mensajes")
-      .where("idConversacion", "==", userId)
-      .where("rol", "==", "usuario")
-      .orderBy("timestamp", "desc")
-      .limit(1)
-      .get();
-
     let idiomaDestino = "es";
-    if (!mensajesSnapshot.empty) {
-      const ultimoMensaje = mensajesSnapshot.docs[0].data();
-      idiomaDestino = ultimoMensaje.idiomaDetectado || await detectarIdiomaGPT(ultimoMensaje.original || ultimoMensaje.mensaje) || "es";
-    }
+try {
+  const convDoc = await db.collection("conversaciones").doc(userId).get();
+  if (convDoc.exists && convDoc.data().idioma) {
+    idiomaDestino = convDoc.data().idioma;
+    console.log("🌐 Idioma extraído de conversación:", idiomaDestino);
+  }
+} catch (e) {
+  console.warn("⚠️ Error leyendo idioma desde conversación:", e);
+}
 
     const traduccion = await traducir(message, idiomaDestino);
 
