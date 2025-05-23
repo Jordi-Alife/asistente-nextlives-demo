@@ -429,18 +429,6 @@ await db.collection("mensajes").add({
   timestamp: new Date().toISOString(),
 });
 
-// ✅ Guardar lastMessage con tipo para la lista de conversaciones
-await db.collection("conversaciones").doc(finalUserId).set(
-  {
-    lastMessage: {
-      tipo: "texto",
-      contenido: traduccionRespuesta
-    },
-    ultimaRespuesta: new Date().toISOString()
-  },
-  { merge: true }
-);
-
 // ✅ Guardar historial formateado optimizado en el documento de la conversación
 const nuevoHistorial = historialFormateado
   ? `${historialFormateado}\nUsuario: ${message}\nAsistente: ${reply}`
@@ -451,16 +439,16 @@ await db.collection("conversaciones").doc(finalUserId).set(
   { merge: true }
 );
 
-// ✅ Etiqueta "Intervenida" se añade después del mensaje GPT
-if (shouldEscalateToHuman(message)) {
-  await db.collection("mensajes").add({
-    idConversacion: finalUserId,
-    rol: "sistema",
-    tipo: "estado",
-    estado: "Intervenida",
-    timestamp: new Date().toISOString(),
-  });
-}
+    // ✅ Etiqueta "Intervenida" se añade después del mensaje GPT
+    if (shouldEscalateToHuman(message)) {
+      await db.collection("mensajes").add({
+        idConversacion: finalUserId,
+        rol: "sistema",
+        tipo: "estado",
+        estado: "Intervenida",
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     res.json({ reply });
   } catch (error) {
@@ -499,11 +487,8 @@ app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
       foto: "",
       uid: agenteUid,
     },
-    ultimaRespuesta: new Date().toISOString(),
-    lastMessage: {
-      tipo: "imagen",
-      contenido: imageUrl,
-    },
+    ultimaRespuesta: new Date().toISOString(),   // ✅ nuevo campo
+    lastMessage: imageUrl,                       // ✅ nuevo campo
   },
   { merge: true }
 );
@@ -592,10 +577,7 @@ await db.collection("conversaciones").doc(userId).set(
   {
     historialFormateado: nuevoHistorial,
     ultimaRespuesta: timestampAhora,
-    lastMessage: {
-      tipo: "texto",
-      contenido: traduccion,
-    },
+    lastMessage: traduccion,
     intervenida: true,
     intervenidaPor: {
       nombre: agente.nombre,
