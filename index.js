@@ -559,18 +559,43 @@ app.post("/api/send-to-user", async (req, res) => {
 
     const traduccion = await traducir(message, idiomaDestino);
 
-    await db.collection("mensajes").add({
+    const timestampAhora = new Date().toISOString();
+
+await db.collection("mensajes").add({
   idConversacion: userId,
   rol: "asistente",
-  mensaje: traduccion,             // ✅ lo que verá el usuario (traducido)
-  original: message,               // ✅ lo que escribió el agente en el panel
+  mensaje: traduccion,
+  original: message,
   idiomaDetectado: idiomaDestino,
   tipo: "texto",
-  timestamp: new Date().toISOString(),
+  timestamp: timestampAhora,
   manual: true,
   agenteUid: agente.uid || null,
 });
 
+const convDoc = await db.collection("conversaciones").doc(userId).get();
+const historialPrevio = convDoc.exists && convDoc.data().historialFormateado
+  ? convDoc.data().historialFormateado
+  : "";
+
+const nuevoHistorial = historialPrevio
+  ? `${historialPrevio}\nAsistente: ${message}`
+  : `Asistente: ${message}`;
+
+await db.collection("conversaciones").doc(userId).set(
+  {
+    historialFormateado: nuevoHistorial,
+    ultimaRespuesta: timestampAhora,
+    lastMessage: traduccion,
+    intervenida: true,
+    intervenidaPor: {
+      nombre: agente.nombre,
+      foto: agente.foto,
+      uid: agente.uid || null,
+    },
+  },
+  { merge: true }
+);
     await db.collection("conversaciones").doc(userId).set(
   {
     intervenida: true,
