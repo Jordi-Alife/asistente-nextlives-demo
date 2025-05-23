@@ -390,8 +390,20 @@ if (convData?.intervenida) {
       ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
       : "";
 
-    const historialMensajes = await obtenerUltimosMensajesUsuario(finalUserId);
-    const historialFormateado = formatearHistorialParaPrompt(historialMensajes);
+    let historialFormateado = "";
+
+try {
+  const historialMensajes = await obtenerUltimosMensajesUsuario(finalUserId);
+  historialFormateado = formatearHistorialParaPrompt(historialMensajes);
+
+  // Guardar historial formateado para futuras respuestas sin volver a leer mensajes
+  await db.collection("conversaciones").doc(finalUserId).set(
+    { historialFormateado },
+    { merge: true }
+  );
+} catch (err) {
+  console.warn("⚠️ No se pudo cargar o guardar historial formateado:", err);
+}
 
     const promptSystem = [
       baseConocimiento,
