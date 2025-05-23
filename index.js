@@ -589,7 +589,10 @@ await db.collection("conversaciones").doc(userId).set(
   {
     historialFormateado: nuevoHistorial,
     ultimaRespuesta: timestampAhora,
-    lastMessage: traduccion,
+    lastMessage: {
+      tipo: "texto",
+      contenido: traduccion,
+    },
     intervenida: true,
     intervenidaPor: {
       nombre: agente.nombre,
