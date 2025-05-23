@@ -537,14 +537,17 @@ app.post("/api/send-to-user", async (req, res) => {
     let idiomaDestino = "es";
 try {
   const convDoc = await db.collection("conversaciones").doc(userId).get();
-  if (convDoc.exists && convDoc.data().idioma) {
-    idiomaDestino = convDoc.data().idioma;
+  const idioma = convDoc.exists ? convDoc.data().idioma : null;
+
+  if (idioma && idioma !== "und" && idioma !== "zxx") {
+    idiomaDestino = idioma;
     console.log("🌐 Idioma extraído de conversación:", idiomaDestino);
+  } else {
+    console.warn("⚠️ Idioma inválido o no definido. Se usará fallback 'es'");
   }
 } catch (e) {
   console.warn("⚠️ Error leyendo idioma desde conversación:", e);
 }
-
     const traduccion = await traducir(message, idiomaDestino);
 
     const timestampAhora = new Date().toISOString();
