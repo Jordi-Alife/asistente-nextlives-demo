@@ -499,8 +499,11 @@ app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
       foto: "",
       uid: agenteUid,
     },
-    ultimaRespuesta: new Date().toISOString(),   // ✅ nuevo campo
-    lastMessage: imageUrl,                       // ✅ nuevo campo
+    ultimaRespuesta: new Date().toISOString(),
+    lastMessage: {
+      tipo: "imagen",
+      contenido: imageUrl,
+    },
   },
   { merge: true }
 );
