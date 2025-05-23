@@ -134,26 +134,17 @@ app.post("/api/traducir-modal", async (req, res) => {
 
   // 🛡️ Fallback si no es válido
   if (!idioma || idioma === "zxx") {
-    const ultimos = await db.collection("mensajes")
-      .where("idConversacion", "==", finalUserId)
-      .where("rol", "==", "usuario")
-      .orderBy("timestamp", "desc")
-      .limit(10)
-      .get();
+  const convDoc = await db.collection("conversaciones").doc(userId).get();
+  const convData = convDoc.exists ? convDoc.data() : null;
 
-    const idiomaValido = ultimos.docs.find(doc => {
-      const msg = doc.data();
-      return msg.idiomaDetectado && msg.idiomaDetectado !== "zxx";
-    });
-
-    if (idiomaValido) {
-      idioma = idiomaValido.data().idiomaDetectado;
-      console.log(`🌐 Fallback idioma en /chat: se usa anterior "${idioma}"`);
-    } else {
-      idioma = "es";
-      console.log(`⚠️ Fallback total en /chat: se usa "es"`);
-    }
+  if (convData?.idioma && convData.idioma !== "zxx") {
+    idioma = convData.idioma;
+    console.log(`🌐 Fallback idioma en /send: se usa conversación "${idioma}"`);
+  } else {
+    idioma = "es";
+    console.log(`⚠️ Fallback total en /send: se usa "es"`);
   }
+}
 
   try {
     // Guardar info usuario
