@@ -393,8 +393,11 @@ if (convData?.intervenida) {
     let historialFormateado = "";
 
 try {
-  const historialMensajes = await obtenerUltimosMensajesUsuario(finalUserId);
-  historialFormateado = formatearHistorialParaPrompt(historialMensajes);
+  // Usamos historial ya guardado (si existe) para evitar lecturas adicionales
+const convDoc2 = await db.collection("conversaciones").doc(finalUserId).get();
+const historialFormateado = convDoc2.exists && convDoc2.data().historialFormateado
+  ? convDoc2.data().historialFormateado
+  : "";
 
   // Guardar historial formateado para futuras respuestas sin volver a leer mensajes
   await db.collection("conversaciones").doc(finalUserId).set(
@@ -424,15 +427,26 @@ try {
 
     const traduccionRespuesta = await traducir(reply, "es");
 
-    await db.collection("mensajes").add({
-      idConversacion: finalUserId,
-      rol: "asistente",
-      mensaje: traduccionRespuesta,
-      original: reply,
-      idiomaDetectado: idioma,
-      tipo: "texto",
-      timestamp: new Date().toISOString(),
-    });
+    // Guardar mensaje del asistente (traducido para el panel)
+await db.collection("mensajes").add({
+  idConversacion: finalUserId,
+  rol: "asistente",
+  mensaje: traduccionRespuesta,
+  original: reply,
+  idiomaDetectado: idioma,
+  tipo: "texto",
+  timestamp: new Date().toISOString(),
+});
+
+// ✅ Guardar historial formateado optimizado en el documento de la conversación
+const nuevoHistorial = historialFormateado
+  ? `${historialFormateado}\nUsuario: ${message}\nAsistente: ${reply}`
+  : `Usuario: ${message}\nAsistente: ${reply}`;
+
+await db.collection("conversaciones").doc(finalUserId).set(
+  { historialFormateado: nuevoHistorial },
+  { merge: true }
+);
 
     // ✅ Etiqueta "Intervenida" se añade después del mensaje GPT
     if (shouldEscalateToHuman(message)) {
