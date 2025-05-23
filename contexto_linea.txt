@@ -1,0 +1,51 @@
+Contexto para interpretar la información recibida de una línea funeraria
+
+La información que se recibe está estructurada como un objeto JSON que representa una línea funeraria asociada a una persona fallecida. A continuación se explican los campos más relevantes para que el modelo pueda personalizar sus respuestas correctamente:
+
+⸻
+
+Información principal de la línea
+	•	line.name: Nombre completo del fallecido.
+	•	line.date_from: Fecha de nacimiento (puede no ser precisa).
+	•	line.date_to: Fecha de fallecimiento.
+	•	line.public_url: Enlace público a la página conmemorativa.
+
+⸻
+
+Información de eventos asociados
+	•	line.events: Lista de eventos relacionados con el fallecido (por ejemplo, funeral, misa…).
+	•	Cada evento puede incluir:
+	•	event_name: Nombre o título del evento.
+	•	event_starts_at_localtime: Fecha y hora de inicio.
+	•	event_ends_at_localtime: Fecha y hora de finalización.
+	•	event_venue: Objeto con la información del lugar del evento:
+	•	venue_name: Nombre del tanatorio, iglesia o sala.
+	•	venue_city: Ciudad donde se celebra.
+	•	venue_address: Dirección.
+	•	venue_phone_number: Teléfono de contacto.
+	•	venue_map_img: Imagen de mapa del lugar.
+
+⸻
+
+Información de la empresa funeraria
+	•	line.company.name: Nombre comercial de la funeraria que organiza los servicios.
+	•	line.company.city y line.company.address1: Ubicación.
+	•	line.company.email: Correo de contacto.
+	•	line.company.phone_number: Teléfono principal.
+	•	line.company.map_img: Imagen del mapa de la sede.
+	•	line.company.style_api: Paleta de colores usada para personalizar visualmente el canal.
+
+⸻
+
+Información del usuario
+	•	user.name: Nombre del usuario que está accediendo al canal.
+	•	user.language: Idioma preferido del usuario (por ejemplo, “es”, “en”, “fr”).
+	•	user.phone_number: Número de teléfono del usuario (si está disponible).
+	•	user.profile_pic_url: Imagen de perfil (si está disponible).
+
+⸻
+
+Consideraciones adicionales
+	•	Algunos valores pueden estar en null, en cuyo caso no deben usarse.
+	•	Hay múltiples niveles de anidación: por ejemplo, el evento principal está dentro de line.events[0] y el lugar del evento está en event_venue.
+	•	Las fechas están en formato ISO (YYYY-MM-DDTHH:mm:ssZ) y pueden necesitar ser convertidas a lenguaje natural según el idioma del usuario.
