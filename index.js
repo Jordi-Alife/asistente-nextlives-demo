@@ -723,29 +723,49 @@ app.get("/api/vistas", async (req, res) => {
 });
 
 app.get("/api/conversaciones", async (req, res) => {
+  const tipo = req.query.tipo || "recientes"; // puede ser "recientes" o "archivo"
+
   try {
     const snapshot = await db.collection("conversaciones").get();
-    const conversaciones = snapshot.docs.map((doc) => {
-      const data = doc.data();
-      const userId = data.idUsuario;
-      if (!userId) return null;
+    const todas = snapshot.docs
+      .map((doc) => {
+        const data = doc.data();
+        const userId = data.idUsuario;
+        if (!userId) return null;
 
-      return {
-  userId,
-  lastInteraction: data.ultimaRespuesta || data.fechaInicio || new Date().toISOString(),
-  estado: data.estado || "abierta",
-  intervenida: data.intervenida || false,
-  intervenidaPor: data.intervenidaPor || null,
-  pais: data.pais || "🌐",
-  navegador: data.navegador || "Desconocido",
-  historial: data.historial || [],
-  message: data.lastMessage || "",
-  mensajes: [],
-  noVistos: data.noVistos || 0, // ✅ este es el campo que debe usar el frontend
-};
-    }).filter((c) => !!c);
+        return {
+          userId,
+          lastInteraction: data.ultimaRespuesta || data.fechaInicio || new Date().toISOString(),
+          estado: data.estado || "abierta",
+          intervenida: data.intervenida || false,
+          intervenidaPor: data.intervenidaPor || null,
+          pais: data.pais || "🌐",
+          navegador: data.navegador || "Desconocido",
+          historial: data.historial || [],
+          message: data.lastMessage || "",
+          mensajes: [],
+          noVistos: data.noVistos || 0,
+        };
+      })
+      .filter((c) => !!c);
 
-    res.json(conversaciones);
+    let filtradas = todas;
+
+    if (tipo === "recientes") {
+      filtradas = todas.filter(
+        (c) =>
+          (c.estado || "").toLowerCase() !== "cerrado" &&
+          (c.estado || "").toLowerCase() !== "archivado"
+      );
+    } else if (tipo === "archivo") {
+      filtradas = todas.filter(
+        (c) =>
+          (c.estado || "").toLowerCase() === "cerrado" ||
+          (c.estado || "").toLowerCase() === "archivado"
+      );
+    }
+
+    res.json(filtradas);
   } catch (error) {
     console.error("❌ Error obteniendo conversaciones:", error);
     res.status(500).json({ error: "Error obteniendo conversaciones" });
