@@ -741,14 +741,14 @@ app.get("/api/conversaciones", async (req, res) => {
 
       // Si lleva inactiva más de 10 minutos y no está cerrada ni archivada, marcar como archivada
       const estadoRaw = (data.estado || "").toLowerCase();
-      if (minutos > 10 && estadoRaw === "abierta") {
-        await db.collection("conversaciones").doc(userId).set(
-          { estado: "archivado" },
-          { merge: true }
-        );
-        console.log(`✅ Conversación ${userId} archivada automáticamente`);
-        data.estado = "archivado"; // actualizar localmente también
-      }
+      if (minutos > 10 && (data.estado || "").toLowerCase() === "abierta") {
+  db.collection("conversaciones").doc(userId).set(
+    { estado: "archivado" },
+    { merge: true }
+  );
+  data.estado = "archivado"; // para que se devuelva actualizado
+  console.log(`✅ Conversación archivada automáticamente: ${userId}`);
+}
 
       todas.push({
         userId,
