@@ -727,27 +727,40 @@ app.get("/api/conversaciones", async (req, res) => {
 
   try {
     const snapshot = await db.collection("conversaciones").get();
-    const todas = snapshot.docs
-      .map((doc) => {
-        const data = doc.data();
-        const userId = data.idUsuario;
-        if (!userId) return null;
+    const ahora = new Date();
+const todas = snapshot.docs
+  .map((doc) => {
+    const data = doc.data();
+    const userId = data.idUsuario;
+    if (!userId) return null;
 
-        return {
-          userId,
-          lastInteraction: data.ultimaRespuesta || data.fechaInicio || new Date().toISOString(),
-          estado: data.estado || "abierta",
-          intervenida: data.intervenida || false,
-          intervenidaPor: data.intervenidaPor || null,
-          pais: data.pais || "🌐",
-          navegador: data.navegador || "Desconocido",
-          historial: data.historial || [],
-          message: data.lastMessage || "",
-          mensajes: [],
-          noVistos: data.noVistos || 0,
-        };
-      })
-      .filter((c) => !!c);
+    const ultima = data.ultimaRespuesta || data.fechaInicio;
+    const minutos = ultima ? (ahora - new Date(ultima)) / 60000 : Infinity;
+
+    // Si lleva inactiva más de 10 minutos y no está cerrada, marcar como archivada
+    if (minutos > 10 && (data.estado || "").toLowerCase() === "abierta") {
+      db.collection("conversaciones").doc(userId).set(
+        { estado: "archivado" },
+        { merge: true }
+      );
+      data.estado = "archivado"; // para que se devuelva actualizado
+    }
+
+    return {
+      userId,
+      lastInteraction: ultima || new Date().toISOString(),
+      estado: data.estado || "abierta",
+      intervenida: data.intervenida || false,
+      intervenidaPor: data.intervenidaPor || null,
+      pais: data.pais || "🌐",
+      navegador: data.navegador || "Desconocido",
+      historial: data.historial || [],
+      message: data.lastMessage || "",
+      mensajes: [],
+      noVistos: data.noVistos || 0,
+    };
+  })
+  .filter((c) => !!c);
 
     let filtradas = todas;
 
