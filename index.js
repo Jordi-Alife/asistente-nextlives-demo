@@ -728,42 +728,42 @@ app.get("/api/conversaciones", async (req, res) => {
   try {
     const snapshot = await db.collection("conversaciones").get();
     const ahora = new Date();
-const todas = snapshot.docs
-  .map((doc) => {
-    const data = doc.data();
-    const userId = data.idUsuario;
-    if (!userId) return null;
 
-    const ultima = data.ultimaRespuesta || data.fechaInicio;
-    const minutos = ultima ? (ahora - new Date(ultima)) / 60000 : Infinity;
+    const todas = [];
 
-    // Si lleva inactiva más de 10 minutos y no está cerrada, marcar como archivada
-if (minutos > 10 && (data.estado || "").toLowerCase() === "abierta") {
-  if ((data.estado || "").toLowerCase() !== "archivado") {
-    await db.collection("conversaciones").doc(userId).set(
-      { estado: "archivado" },
-      { merge: true }
-    );
-    console.log(`✅ Conversación ${userId} archivada automáticamente`);
-    data.estado = "archivado"; // actualizar localmente también
-  }
-}
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      const userId = data.idUsuario;
+      if (!userId) continue;
 
-    return {
-      userId,
-      lastInteraction: ultima || new Date().toISOString(),
-      estado: data.estado || "abierta",
-      intervenida: data.intervenida || false,
-      intervenidaPor: data.intervenidaPor || null,
-      pais: data.pais || "🌐",
-      navegador: data.navegador || "Desconocido",
-      historial: data.historial || [],
-      message: data.lastMessage || "",
-      mensajes: [],
-      noVistos: data.noVistos || 0,
-    };
-  })
-  .filter((c) => !!c);
+      const ultima = data.ultimaRespuesta || data.fechaInicio;
+      const minutos = ultima ? (ahora - new Date(ultima)) / 60000 : Infinity;
+
+      // Si lleva inactiva más de 10 minutos y no está cerrada ni archivada, marcar como archivada
+      const estadoRaw = (data.estado || "").toLowerCase();
+      if (minutos > 10 && estadoRaw === "abierta") {
+        await db.collection("conversaciones").doc(userId).set(
+          { estado: "archivado" },
+          { merge: true }
+        );
+        console.log(`✅ Conversación ${userId} archivada automáticamente`);
+        data.estado = "archivado"; // actualizar localmente también
+      }
+
+      todas.push({
+        userId,
+        lastInteraction: ultima || new Date().toISOString(),
+        estado: data.estado || "abierta",
+        intervenida: data.intervenida || false,
+        intervenidaPor: data.intervenidaPor || null,
+        pais: data.pais || "🌐",
+        navegador: data.navegador || "Desconocido",
+        historial: data.historial || [],
+        message: data.lastMessage || "",
+        mensajes: [],
+        noVistos: data.noVistos || 0,
+      });
+    }
 
     let filtradas = todas;
 
