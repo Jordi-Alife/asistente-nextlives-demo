@@ -738,13 +738,16 @@ const todas = snapshot.docs
     const minutos = ultima ? (ahora - new Date(ultima)) / 60000 : Infinity;
 
     // Si lleva inactiva más de 10 minutos y no está cerrada, marcar como archivada
-    if (minutos > 10 && (data.estado || "").toLowerCase() === "abierta") {
-      db.collection("conversaciones").doc(userId).set(
-        { estado: "archivado" },
-        { merge: true }
-      );
-      data.estado = "archivado"; // para que se devuelva actualizado
-    }
+if (minutos > 10 && (data.estado || "").toLowerCase() === "abierta") {
+  if ((data.estado || "").toLowerCase() !== "archivado") {
+    await db.collection("conversaciones").doc(userId).set(
+      { estado: "archivado" },
+      { merge: true }
+    );
+    console.log(`✅ Conversación ${userId} archivada automáticamente`);
+    data.estado = "archivado"; // actualizar localmente también
+  }
+}
 
     return {
       userId,
