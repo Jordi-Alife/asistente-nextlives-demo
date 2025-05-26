@@ -153,6 +153,9 @@ await db.collection("conversaciones").doc(finalUserId).set(
     historial: historial || [],
     datosContexto: datosContexto || null,
     noVistos: admin.firestore.FieldValue.increment(1),
+    userUuid: req.body.userUuid || null,
+    lineUuid: req.body.lineUuid || null,
+    chatIdiomaDetectado: req.body.language || idioma
   },
   { merge: true }
 );
