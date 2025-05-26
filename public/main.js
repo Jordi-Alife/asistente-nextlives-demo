@@ -206,12 +206,15 @@ async function sendMessage() {
     addTypingBubble(tempId);
 
     const bodyData = {
-      message: text,
-      userId,
-      userAgent: metadata.userAgent,
-      pais: metadata.pais,
-      historial: metadata.historial
-    };
+  message: text,
+  userId,
+  userAgent: metadata.userAgent,
+  pais: metadata.pais,
+  historial: metadata.historial,
+  userUuid: userUuid || null,         // UUID del usuario real
+  lineUuid: lineUuid || null,         // UUID de la web del difunto
+  language: languageFromChatSystem || null  // Idioma inicial forzado (si viene)
+};
 
     try {
       const res = await fetch("/api/chat", {
