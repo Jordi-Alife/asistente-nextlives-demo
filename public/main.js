@@ -318,6 +318,9 @@ async function cerrarChatConfirmado() {
 
   await notificarEvento("chat_cerrado");
 
+  // Notificar al padre que el chat se está cerrando
+  closeChat();
+
   if (userId) {
     try {
       await fetch("/api/cerrar-chat", {
@@ -495,15 +498,108 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// ✅ AÑADIR AQUÍ
 function minimizarChat() {
   localStorage.setItem('chatEstado', 'minimizado');
-  document.getElementById('chat-widget').style.display = 'none';
-  document.getElementById('chat-toggle').style.display = 'flex';
-  document.getElementById('scrollToBottomBtn').style.display = 'none';
+  minimizeChat();
 }
-window.minimizarChat = minimizarChat;
+
 function ocultarModal() {
   document.getElementById('modalConfirm').style.display = 'none';
 }
-window.ocultarModal = ocultarModal;
+
+/**
+ * =============================================
+ * COMUNICACIÓN CON APLICACIÓN PADRE VÍA IFRAME
+ * =============================================
+ */
+
+// Variables globales para almacenar los parámetros recibidos
+window.chatSystem = {
+  currentUser: null,
+  currentLine: null,
+  language: 'en',
+  initialized: false
+};
+
+// Agregar el listener para recibir mensajes del padre
+window.addEventListener('message', (event) => {
+  // Por seguridad, podrías verificar el origen del mensaje
+  // if (event.origin !== 'https://tu-dominio.com') return;
+  
+  // Verificar si el mensaje es del tipo esperado
+  if (event.data && event.data.type === 'CHAT_PARAMS') {
+    // Extraer los datos recibidos
+    const { userUuid, lineUuid, language } = event.data.data;
+      
+    // Inicializar el chat con estos parámetros
+    initializeChat(userUuid, lineUuid, language);
+  }
+});
+
+/**
+ * Función para inicializar el chat con los parámetros recibidos
+ * @param {string} userUuid - UUID del usuario
+ * @param {string} lineUuid - UUID de la línea
+ * @param {string} language - Idioma preferido del usuario
+ */
+function initializeChat(userUuid, lineUuid, language = 'en') {
+  console.log('Inicializando chat con:', { userUuid, lineUuid, language });
+  
+  // Configurar datos de usuario en el chat
+  window.chatSystem = {
+    currentUser: userUuid,
+    currentLine: lineUuid,
+    language: language,
+    initialized: true
+  };
+  
+  // Actualizar UI para mostrar información del usuario
+  const userInfoElement = document.getElementById('userIdDisplay');
+  if (userInfoElement) {
+    userInfoElement.textContent = `Usuario: ${getUserId()}`;
+  }
+}
+
+/**
+ * Notificar a la aplicación padre que el chat está listo para recibir parámetros
+ */
+function notifyReadyToReceiveParams() {
+  notifyParentEvent('CHAT_READY', { ready: true });
+}
+
+/**
+ * Función para cerrar el chat desde el iframe
+ */
+function closeChat() {
+  notifyParentEvent('CHAT_CLOSED', { reason: 'User closed chat' });
+}
+
+/**
+ * Función para cerrar el chat desde el iframe
+ */
+function minimizeChat() {
+  notifyParentEvent('CHAT_MINIMIZED', { reason: 'User minimized chat' });
+}
+
+/**
+ * Función para notificar eventos al padre
+ */
+function notifyParentEvent(eventType, data = {}) {
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage({
+      type: eventType,
+      data: data
+    }, '*');
+    
+  }
+}
+
+// Cuando el DOM esté cargado, notificar que estamos listos
+document.addEventListener('DOMContentLoaded', () => {
+  notifyReadyToReceiveParams();
+});
+
+// También notificar cuando la ventana termine de cargar
+window.addEventListener('load', () => {
+  notifyReadyToReceiveParams();
+});
