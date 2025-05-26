@@ -100,33 +100,6 @@ function shouldEscalateToHuman(message) {
     lower.includes("quiero una persona")
   );
 }
-
-// NUEVO ENDPOINT PARA TRADUCIR TEXTO AL ÚLTIMO IDIOMA DETECTADO
-app.post("/api/traducir-modal", async (req, res) => {
-  const { userId, textos } = req.body;
-  if (!userId || !Array.isArray(textos)) {
-    return res.status(400).json({ error: "Faltan datos" });
-  }
-
-  try {
-    // Usar el idioma guardado en la conversación
-    const convSnap = await db.collection("conversaciones").doc(userId).get();
-    const convData = convSnap.exists ? convSnap.data() : null;
-    const idioma = convData?.chatIdiomaDetectado || "es";
-
-    const traducciones = [];
-    for (const texto of textos) {
-      const traducido = await traducir(texto, idioma);
-      traducciones.push(traducido);
-    }
-
-    res.json({ traducciones });
-  } catch (error) {
-    console.error("❌ Error en /api/traducir-modal:", error);
-    res.status(500).json({ error: "Error traduciendo modal" });
-  }
-});
-
   app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial, datosContexto } = req.body;
   const finalUserId = userId || "anon";
