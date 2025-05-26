@@ -151,6 +151,13 @@ function scrollToBottom(smooth = true) {
 }
 
 async function sendMessage() {
+  // ⛔ Esperar a que window.chatSystem esté listo
+  if (!window.chatSystem?.initialized) {
+    console.warn("⏳ Esperando datos de chatSystem...");
+    setTimeout(sendMessage, 200); // Reintenta en 200ms
+    return;
+  }
+
   const text = input.value.trim();
   const userId = getUserId();
 
