@@ -436,7 +436,22 @@ async function checkPanelMessages() {
     console.error("Error al obtener mensajes manuales:", error);
   }
 }
-setInterval(checkPanelMessages, 5000);
+let intervaloMensajes = null;
+
+function iniciarCheckPanelMessages() {
+  if (intervaloMensajes) clearInterval(intervaloMensajes);
+
+  const estado = localStorage.getItem('chatEstado');
+  if (estado === 'cerrado' || estado === 'minimizado') {
+    console.log("⏸️ Polling detenido (estado cerrado o minimizado)");
+    return;
+  }
+
+  intervaloMensajes = setInterval(checkPanelMessages, 5000);
+  console.log("▶️ Polling activado");
+}
+
+iniciarCheckPanelMessages();
 
 const estadoChat = localStorage.getItem('chatEstado');
 if (estadoChat !== 'cerrado') {
