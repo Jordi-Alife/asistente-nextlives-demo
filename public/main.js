@@ -2,6 +2,10 @@ const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('messageInput');
 const fileInput = document.getElementById('fileInput');
 const sendBtn = document.querySelector('.send-button');
+const chatSystem = window.chatSystem || {};
+const userUuid = chatSystem.currentUser || null;
+const lineUuid = chatSystem.currentLine || null;
+const languageFromChatSystem = chatSystem.language || null;
 
 function getUserId() {
   let id = localStorage.getItem("userId");
