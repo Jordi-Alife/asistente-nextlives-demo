@@ -540,6 +540,14 @@ await db.collection("mensajes").add({
   agenteUid: agente.uid || null,
 });
 
+// ✅ Reactivar conversación si estaba cerrada o archivada
+await db.collection("conversaciones").doc(userId).set(
+  {
+    estado: "abierta",
+  },
+  { merge: true }
+);
+
 const convDoc = await db.collection("conversaciones").doc(userId).get();
 const historialPrevio = convDoc.exists && convDoc.data().historialFormateado
   ? convDoc.data().historialFormateado
