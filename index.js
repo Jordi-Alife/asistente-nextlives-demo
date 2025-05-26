@@ -104,12 +104,15 @@ function shouldEscalateToHuman(message) {
 // NUEVO ENDPOINT PARA TRADUCIR TEXTO AL ÚLTIMO IDIOMA DETECTADO
 app.post("/api/traducir-modal", async (req, res) => {
   const { userId, textos } = req.body;
-  if (!userId || !Array.isArray(textos)) return res.status(400).json({ error: "Faltan datos" });
+  if (!userId || !Array.isArray(textos)) {
+    return res.status(400).json({ error: "Faltan datos" });
+  }
 
   try {
-    const userDoc = await db.collection("usuarios_chat").doc(userId).get();
-    const userData = userDoc.exists ? userDoc.data() : null;
-    const idioma = userData?.idioma || "es";
+    // Usar el idioma guardado en la conversación
+    const convSnap = await db.collection("conversaciones").doc(userId).get();
+    const convData = convSnap.exists ? convSnap.data() : null;
+    const idioma = convData?.chatIdiomaDetectado || "es";
 
     const traducciones = [];
     for (const texto of textos) {
