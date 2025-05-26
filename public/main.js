@@ -536,10 +536,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function minimizarChat() {
   localStorage.setItem('chatEstado', 'minimizado');
 
-  // Oculta el chat visualmente
-  document.getElementById('chat-widget').style.display = 'none';
-  document.getElementById('chat-toggle').style.display = 'flex';
-  document.getElementById('scrollToBottomBtn').style.display = 'none';
+  minimizeChat();
 
   // Detiene el polling de mensajes si estaba activo
   if (intervaloMensajes) {
@@ -617,14 +614,30 @@ function notifyReadyToReceiveParams() {
  * Función para cerrar el chat desde el iframe
  */
 function closeChat() {
-  notifyParentEvent('CHAT_CLOSED', { reason: 'User closed chat' });
+  // Oculta el chat visualmente, si está embedded en un iframe
+  if (window.parent && window.parent !== window) {
+    notifyParentEvent('CHAT_CLOSED', { reason: 'User closed chat' });
+  } else {
+    // Si no está en un iframe, simplemente ocultamos el widget
+    document.getElementById('chat-widget').style.display = 'none';
+    document.getElementById('chat-toggle').style.display = 'flex';
+    document.getElementById('scrollToBottomBtn').style.display = 'none';
+  }
 }
 
 /**
  * Función para cerrar el chat desde el iframe
  */
 function minimizeChat() {
-  notifyParentEvent('CHAT_MINIMIZED', { reason: 'User minimized chat' });
+  // Oculta el chat visualmente, si está embedded en un iframe
+  if (window.parent && window.parent !== window) {
+    notifyParentEvent('CHAT_MINIMIZED', { reason: 'User minimized chat' });
+  } else {
+    // Si no está en un iframe, simplemente ocultamos el widget
+    document.getElementById('chat-widget').style.display = 'none';
+    document.getElementById('chat-toggle').style.display = 'flex';
+    document.getElementById('scrollToBottomBtn').style.display = 'none';
+  }
 }
 
 /**
