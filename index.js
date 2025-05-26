@@ -529,25 +529,41 @@ try {
 
     const timestampAhora = new Date().toISOString();
 
-await db.collection("mensajes").add({
-  idConversacion: userId,
-  rol: "asistente",
-  mensaje: traduccion,
-  original: message,
-  idiomaDetectado: idiomaDestino,
-  tipo: "texto",
-  timestamp: timestampAhora,
-  manual: true,
-  agenteUid: agente.uid || null,
-});
-
 // ✅ Reactivar conversación si estaba cerrada o archivada
 await db.collection("conversaciones").doc(userId).set(
-  {
-    estado: "abierta",
-  },
+  { estado: "abierta" },
   { merge: true }
 );
+
+// ✅ Enviar imagen si viene incluida
+if (req.body.imageUrl) {
+  await db.collection("mensajes").add({
+    idConversacion: userId,
+    rol: "asistente",
+    mensaje: req.body.imageUrl,
+    original: req.body.imageUrl,
+    idiomaDetectado: idiomaDestino,
+    tipo: "imagen",
+    timestamp: timestampAhora,
+    manual: true,
+    agenteUid: agente.uid || null,
+  });
+}
+
+// ✅ Enviar texto si hay mensaje
+if (message) {
+  await db.collection("mensajes").add({
+    idConversacion: userId,
+    rol: "asistente",
+    mensaje: traduccion,
+    original: message,
+    idiomaDetectado: idiomaDestino,
+    tipo: "texto",
+    timestamp: timestampAhora,
+    manual: true,
+    agenteUid: agente.uid || null,
+  });
+}
 
 const convDoc = await db.collection("conversaciones").doc(userId).get();
 const historialPrevio = convDoc.exists && convDoc.data().historialFormateado
