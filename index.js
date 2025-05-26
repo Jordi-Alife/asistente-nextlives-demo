@@ -109,19 +109,27 @@ function shouldEscalateToHuman(message) {
 
   // 🧠 Detectar idioma del mensaje
   let idiomaDetectado = await detectarIdiomaGPT(message);
-  let idioma = idiomaDetectado;
+let idioma = idiomaDetectado;
 
-  // 🛡️ Fallback si no es válido
-  if (!idioma || idioma === "zxx") {
+// Fallback si no es válido
+if (!idioma || idioma === "zxx") {
   const convDoc = await db.collection("conversaciones").doc(userId).get();
   const convData = convDoc.exists ? convDoc.data() : null;
 
+  // 1. Fallback a idioma de conversación
   if (convData?.idioma && convData.idioma !== "zxx") {
     idioma = convData.idioma;
-    console.log(`🌐 Fallback idioma en /send: se usa conversación "${idioma}"`);
-  } else {
+    console.log(`🌐 Fallback idioma desde conversación: ${idioma}`);
+  }
+  // 2. Fallback a language de chatSystem (si existe)
+  else if (convData?.language && typeof convData.language === "string") {
+    idioma = convData.language;
+    console.log(`🌐 Fallback idioma desde chatSystem.language: ${idioma}`);
+  }
+  // 3. Fallback final a español
+  else {
     idioma = "es";
-    console.log(`⚠️ Fallback total en /send: se usa "es"`);
+    console.log(`⚠️ Fallback total a "es"`);
   }
 }
 
