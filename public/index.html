@@ -6,66 +6,40 @@
   <title>Soporte Canal Digital</title>
   <link rel="stylesheet" href="style.css" />
   <style>
-  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; -webkit-overflow-scrolling: touch; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  #chat-toggle { position: fixed; bottom: 20px; right: 20px; z-index: 999; background-color: #22c55e; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; display: none; justify-content: center; align-items: center; }
-  #chat-widget { display: flex; flex-direction: column; height: 100dvh; background: #f2f2f2; }
-  .chat-header { position: sticky; top: 0; z-index: 10; background: linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.1)); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
-  .chat-header-info { display: flex; align-items: center; background: transparent; gap: 10px; }
-  .chat-avatar-wrapper { position: relative; width: 36px; height: 36px; }
-  .chat-avatar { width: 36px; height: 36px; border-radius: 50%; background-color: #000; display: flex; align-items: center; justify-content: center; }
-  .chat-avatar img { width: 20px; height: 20px; display: block; }
-  .chat-status-dot { position: absolute; right: -2px; top: -2px; width: 10px; height: 10px; background-color: #2ecc71; border-radius: 50%; border: 2px solid white; }
-  .chat-header-text { display: flex; flex-direction: column; line-height: 1.2; }
-  .chat-header-text strong { font-size: 14px; color: #000; }
-  .chat-header-text span { font-size: 12px; color: #888; }
-  .chat-header-actions { display: flex; gap: 8px; }
-  .chat-header button { background: transparent; border: none; font-size: 18px; cursor: pointer; color: #333; }
-  .chat-messages { flex: 1; overflow-y: auto; padding: 12px; box-sizing: border-box; display: flex; flex-direction: column; scroll-behavior: smooth; }
-  .message { max-width: 80%; padding: 10px 14px; margin: 6px 0; border-radius: 18px; word-wrap: break-word; line-height: 1.4; font-size: 15px; }
-  .message.user { align-self: flex-end; background-color: #000; color: #fff; border-bottom-right-radius: 4px; }
-  .message.assistant { align-self: flex-start; background-color: #ffffff; color: #000; border-bottom-left-radius: 4px; }
-  .chat-input {
-  display: flex;
-  align-items: center;
-  padding: 10px 12px calc(env(safe-area-inset-bottom) + 6px); /* ✅ solución iOS */
-  background: #fff;
-  border-top: 1px solid #e0e0e0;
-  gap: 10px;
-}
-
-.chat-input input[type="text"] {
-  flex: 1;
-  padding: 12px 16px;
-  border-radius: 30px;
-  border: 1px solid #ddd;
-  font-size: 15px;
-  outline: none;
-  background-color: #fafafa;
-}
-
-.chat-input input[type="text"]::placeholder {
-  color: #888;
-}
-  .file-button, .send-button { background: none; border: none; padding: 6px; border-radius: 999px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-  .file-button:hover, .send-button:hover { background-color: rgba(0, 0, 0, 0.05); }
-  #userIdDisplay { font-size: 11px; text-align: center; opacity: 0.5; padding-bottom: 5px; }
-  #scrollToBottomBtn { position: fixed; bottom: 80px; right: 20px; z-index: 999; background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); border: none; border-radius: 50%; width: 48px; height: 48px; display: none; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25); cursor: pointer; transition: opacity 0.3s ease, transform 0.2s ease; }
-  #scrollToBottomBtn:hover { background-color: rgba(0, 0, 0, 0.8); transform: scale(1.05); }
-  #modalConfirm { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
-  #modalContent { background: #fff; padding: 20px; border-radius: 12px; text-align: center; max-width: 300px; }
-  #modalContent p { margin-bottom: 20px; color: #000; font-size: 16px; }
-  #modalContent button { margin: 5px; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
-  #btnCancelar { background-color: #ddd; color: #000; }
-  #btnConfirmar { background-color: #000; color: #fff; }
-
-  /* ✅ FIX: Evitar que las imágenes giren al subirse desde el móvil */
-  .message img {
-    transform: rotate(0deg) !important;
-    max-width: 100%;
-    border-radius: 12px;
-    object-fit: contain;
-  }
-</style>
+    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; -webkit-overflow-scrolling: touch; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    #chat-toggle { position: fixed; bottom: 20px; right: 20px; z-index: 999; background-color: #22c55e; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; display: none; justify-content: center; align-items: center; }
+    #chat-widget { display: flex; flex-direction: column; height: 100dvh; background: #f2f2f2; }
+    .chat-header { position: sticky; top: 0; z-index: 10; background: linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.1)); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
+    .chat-header-info { display: flex; align-items: center; background: transparent; gap: 10px; }
+    .chat-avatar-wrapper { position: relative; width: 36px; height: 36px; }
+    .chat-avatar { width: 36px; height: 36px; border-radius: 50%; background-color: #000; display: flex; align-items: center; justify-content: center; }
+    .chat-avatar img { width: 20px; height: 20px; display: block; }
+    .chat-status-dot { position: absolute; right: -2px; top: -2px; width: 10px; height: 10px; background-color: #2ecc71; border-radius: 50%; border: 2px solid white; }
+    .chat-header-text { display: flex; flex-direction: column; line-height: 1.2; }
+    .chat-header-text strong { font-size: 14px; color: #000; }
+    .chat-header-text span { font-size: 12px; color: #888; }
+    .chat-header-actions { display: flex; gap: 8px; }
+    .chat-header button { background: transparent; border: none; font-size: 18px; cursor: pointer; color: #333; }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 12px; box-sizing: border-box; display: flex; flex-direction: column; scroll-behavior: smooth; }
+    .message { max-width: 80%; padding: 10px 14px; margin: 6px 0; border-radius: 18px; word-wrap: break-word; line-height: 1.4; font-size: 15px; }
+    .message.user { align-self: flex-end; background-color: #000; color: #fff; border-bottom-right-radius: 4px; }
+    .message.assistant { align-self: flex-start; background-color: #ffffff; color: #000; border-bottom-left-radius: 4px; }
+    .chat-input { display: flex; align-items: center; padding: 10px 12px calc(env(safe-area-inset-bottom) + 6px); background: #fff; border-top: 1px solid #e0e0e0; gap: 10px; }
+    .chat-input input[type="text"] { flex: 1; padding: 12px 16px; border-radius: 30px; border: 1px solid #ddd; font-size: 15px; outline: none; background-color: #fafafa; }
+    .chat-input input[type="text"]::placeholder { color: #888; }
+    .file-button, .send-button { background: none; border: none; padding: 6px; border-radius: 999px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .file-button:hover, .send-button:hover { background-color: rgba(0, 0, 0, 0.05); }
+    #userIdDisplay { font-size: 11px; text-align: center; opacity: 0.5; padding-bottom: 5px; }
+    #scrollToBottomBtn { position: fixed; bottom: 80px; right: 20px; z-index: 999; background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); border: none; border-radius: 50%; width: 48px; height: 48px; display: none; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25); cursor: pointer; transition: opacity 0.3s ease, transform 0.2s ease; }
+    #scrollToBottomBtn:hover { background-color: rgba(0, 0, 0, 0.8); transform: scale(1.05); }
+    #modalConfirm { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
+    #modalContent { background: #fff; padding: 20px; border-radius: 12px; text-align: center; max-width: 300px; }
+    #modalContent p { margin-bottom: 20px; color: #000; font-size: 16px; }
+    #modalContent button { margin: 5px; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    #btnCancelar { background-color: #ddd; color: #000; }
+    #btnConfirmar { background-color: #000; color: #fff; }
+    .message img { transform: rotate(0deg) !important; max-width: 100%; border-radius: 12px; object-fit: contain; }
+  </style>
 </head>
 <body>
   <button id="chat-toggle" onclick="abrirChat()">💬</button>
@@ -105,128 +79,23 @@
   </div>
 
   <div id="modalConfirm">
-  <div id="modalContent">
-    <p id="modalText">¿Realmente quieres cerrar el chat?<br>Esto borrará toda la conversación.</p>
-    <button id="btnCancelar" onclick="ocultarModal()">Cancelar</button>
-    <button id="btnConfirmar">Cerrar el chat</button>
+    <div id="modalContent">
+      <p id="modalText">¿Realmente quieres cerrar el chat?<br>Esto borrará toda la conversación.</p>
+      <button id="btnCancelar" onclick="ocultarModal()">Cancelar</button>
+      <button id="btnConfirmar">Cerrar el chat</button>
+    </div>
   </div>
-</div>
 
-  <button id="scrollToBottomBtn" onclick="scrollToBottom()" title="Ir al final"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button>
+  <button id="scrollToBottomBtn" onclick="scrollToBottom()" title="Ir al final">
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 9l6 6 6-6"></path>
+    </svg>
+  </button>
 
   <script src="main.js"></script>
-<script>
-  window.cerrarChatConfirmado = cerrarChatConfirmado;
-</script>
-<script>
-  async function notificarEvento(tipo) {
-    const userId = localStorage.getItem('userId');
-    if (!userId) return;
-    try {
-      await fetch("/api/evento", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, tipo }),
-      });
-      console.log(`✅ Evento "${tipo}" notificado para ${userId}`);
-    } catch (err) {
-      console.error(`❌ Error notificando evento "${tipo}"`, err);
-    }
-  }
-
-    async function mostrarModal() {
-      const userId = localStorage.getItem('userId');
-      const textos = [
-        "¿Realmente quieres cerrar el chat? Esto borrará toda la conversación.",
-        "Cancelar",
-        "Cerrar el chat"
-      ];
-      let traducciones = textos;
-
-      if (userId) {
-        try {
-          const res = await fetch(`/api/traducir-modal`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId, textos })
-          });
-          const data = await res.json();
-          traducciones = data.traducciones || textos;
-        } catch (error) {
-          console.error("Error traduciendo modal:", error);
-        }
-      }
-
-      document.getElementById('modalText').innerHTML = traducciones[0];
-      document.getElementById('btnCancelar').innerText = traducciones[1];
-      document.getElementById('btnConfirmar').innerText = traducciones[2];
-      document.getElementById('modalConfirm').style.display = 'flex';
-    }
-
-    function ocultarModal() {
-      document.getElementById('modalConfirm').style.display = 'none';
-    }
-
-    async function cerrarChatConfirmado() {
-  const userId = localStorage.getItem('userId');
-
-  await notificarEvento("chat_cerrado");
-
-    // ✅ Guardar estado "cerrado" en Firestore
-  if (userId) {
-    try {
-      await fetch("/api/cerrar-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId })
-      });
-      console.log(`✅ Estado "cerrado" guardado para ${userId}`);
-    } catch (err) {
-      console.error("❌ Error al guardar estado cerrado:", err);
-    }
-  }
-
-  localStorage.removeItem('chatMessages');
-  localStorage.setItem('chatEstado', 'cerrado');
-  document.getElementById('chat-widget').style.display = 'none';
-  document.getElementById('chat-toggle').style.display = 'flex';
-  document.getElementById('scrollToBottomBtn').style.display = 'none';
-  ocultarModal();
-}
-
-function minimizarChat() {
-  localStorage.setItem('chatEstado', 'minimizado');
-  document.getElementById('chat-widget').style.display = 'none';
-  document.getElementById('chat-toggle').style.display = 'flex';
-  document.getElementById('scrollToBottomBtn').style.display = 'none';
-}
-window.minimizarChat = minimizarChat;
-
-function abrirChat() {
-  const estadoAnterior = localStorage.getItem('chatEstado');
-
-  if (estadoAnterior === 'cerrado') {
-    localStorage.removeItem('chatMessages');
-    localStorage.removeItem('userId');
-  }
-
-  localStorage.setItem('chatEstado', 'abierto');
-  document.getElementById('chat-widget').style.display = 'flex';
-  document.getElementById('chat-toggle').style.display = 'none';
-}
-
-window.addEventListener('load', () => {
-  const estado = localStorage.getItem('chatEstado');
-
-  if (estado === 'abierto') {
-    abrirChat();
-  } else if (estado === 'minimizado') {
-    // no abrimos el chat, solo mostramos el botón de burbuja
-    document.getElementById('chat-widget').style.display = 'none';
-    document.getElementById('chat-toggle').style.display = 'flex';
-  } else {
-    // estado === null o 'cerrado'
-    document.getElementById('chat-widget').style.display = 'none';
-    document.getElementById('chat-toggle').style.display = 'flex';
-  }
-});
+  <script>
+    window.cerrarChatConfirmado = cerrarChatConfirmado;
+    window.minimizarChat = minimizarChat;
+  </script>
+</body>
+</html>
