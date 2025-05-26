@@ -515,7 +515,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function minimizarChat() {
   localStorage.setItem('chatEstado', 'minimizado');
-  minimizeChat();
+
+  // Oculta el chat visualmente
+  document.getElementById('chat-widget').style.display = 'none';
+  document.getElementById('chat-toggle').style.display = 'flex';
+  document.getElementById('scrollToBottomBtn').style.display = 'none';
+
+  // Detiene el polling de mensajes si estaba activo
+  if (intervaloMensajes) {
+    clearInterval(intervaloMensajes);
+    intervaloMensajes = null;
+    console.log("⏹️ Polling detenido al minimizar");
+  }
 }
 
 function ocultarModal() {
