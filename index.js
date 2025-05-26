@@ -457,6 +457,7 @@ app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
 
     await db.collection("conversaciones").doc(userId).set(
   {
+    estado: "abierta", // ✅ reactiva la conversación si estaba cerrada o archivada
     intervenida: true,
     intervenidaPor: {
       nombre: "Agente",
