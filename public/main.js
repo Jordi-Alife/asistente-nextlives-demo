@@ -255,31 +255,62 @@ async function notificarEvento(tipo) {
 }
 async function mostrarModal() {
   const userId = getUserId();
-  const textos = [
-    "¿Realmente quieres cerrar el chat? Esto borrará toda la conversación.",
-    "Cancelar",
-    "Cerrar el chat"
-  ];
-  let traducciones = textos;
 
-  if (userId) {
-    try {
-      const res = await fetch(`/api/traducir-modal`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, textos })
-      });
-      const data = await res.json();
-      traducciones = data.traducciones || textos;
-    } catch (error) {
-      console.error("Error traduciendo modal:", error);
-    }
+  // Idiomas pretraducidos (incluye catalán y euskera)
+  const traduccionesModal = {
+    es: [
+      "¿Realmente quieres cerrar el chat? Esto borrará toda la conversación.",
+      "Cancelar",
+      "Cerrar el chat"
+    ],
+    en: [
+      "Do you really want to close the chat? This will erase the entire conversation.",
+      "Cancel",
+      "Close chat"
+    ],
+    fr: [
+      "Voulez-vous vraiment fermer le chat ? Cela effacera toute la conversation.",
+      "Annuler",
+      "Fermer le chat"
+    ],
+    it: [
+      "Vuoi davvero chiudere la chat? Questo cancellerà tutta la conversazione.",
+      "Annulla",
+      "Chiudi chat"
+    ],
+    de: [
+      "Möchten Sie den Chat wirklich schließen? Dadurch wird die gesamte Unterhaltung gelöscht.",
+      "Abbrechen",
+      "Chat schließen"
+    ],
+    ca: [
+      "Realment vols tancar el xat? Això esborrarà tota la conversa.",
+      "Cancel·lar",
+      "Tancar el xat"
+    ],
+    eu: [
+      "Benetan itxi nahi duzu txata? Honek elkarrizketa osoa ezabatuko du.",
+      "Utzi",
+      "Itxi txata"
+    ]
+  };
+
+  let idioma = "es"; // fallback por defecto
+
+  try {
+    const res = await fetch(`/api/estado-conversacion/${userId}`);
+    const data = await res.json();
+    if (data.idioma) idioma = data.idioma.toLowerCase();
+  } catch (err) {
+    console.warn("❌ No se pudo obtener idioma de conversación. Se usará español.");
   }
 
-  document.getElementById('modalText').innerHTML = traducciones[0];
-  document.getElementById('btnCancelar').innerText = traducciones[1];
-  document.getElementById('btnConfirmar').innerText = traducciones[2];
-  document.getElementById('modalConfirm').style.display = 'flex';
+  const textos = traduccionesModal[idioma] || traduccionesModal["es"];
+
+  document.getElementById("modalText").innerHTML = textos[0];
+  document.getElementById("btnCancelar").innerText = textos[1];
+  document.getElementById("btnConfirmar").innerText = textos[2];
+  document.getElementById("modalConfirm").style.display = 'flex';
 }
 
 async function cerrarChatConfirmado() {
