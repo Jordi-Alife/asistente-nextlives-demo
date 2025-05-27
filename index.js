@@ -572,22 +572,30 @@ const nuevoHistorial = historialPrevio
   ? `${historialPrevio}\nAsistente: ${message}`
   : `Asistente: ${message}`;
 
-const nuevoHistorial = historialPrevio
-  ? `${historialPrevio}\nAsistente: ${req.body.imageUrl ? "📷 Imagen" : message}`
-  : `Asistente: ${req.body.imageUrl ? "📷 Imagen" : message}`;
-
 await db.collection("conversaciones").doc(userId).set(
   {
-    historialFormateado: nuevoHistorial.split("\n").slice(-25).join("\n"), // ✅ limitar historial
+    historialFormateado: nuevoHistorial,
     ultimaRespuesta: timestampAhora,
-    lastMessage: traduccion || req.body.imageUrl,
+    lastMessage: traduccion,
     intervenida: true,
     intervenidaPor: {
       nombre: agente.nombre,
       foto: agente.foto,
       uid: agente.uid || null,
     },
-    estado: "abierta", // ✅ reactiva conversación si estaba cerrada/archivada
+  },
+  { merge: true }
+);
+    await db.collection("conversaciones").doc(userId).set(
+  {
+    intervenida: true,
+    intervenidaPor: {
+      nombre: agente.nombre,
+      foto: agente.foto,
+      uid: agente.uid || null,
+    },
+    ultimaRespuesta: new Date().toISOString(),  // ✅ nuevo campo
+    lastMessage: traduccion,                    // ✅ nuevo campo
   },
   { merge: true }
 );
