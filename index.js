@@ -549,30 +549,14 @@ await db.collection("conversaciones").doc(userId).set(
   { merge: true }
 );
 
-// ✅ Enviar imagen si viene incluida
-if (req.body.imageUrl) {
+if (req.body.imageUrl || message) {
   await db.collection("mensajes").add({
     idConversacion: userId,
     rol: "asistente",
-    mensaje: req.body.imageUrl,
-    original: req.body.imageUrl,
+    mensaje: req.body.imageUrl || traduccion,
+    original: req.body.imageUrl || message,
     idiomaDetectado: idiomaDestino,
-    tipo: "imagen",
-    timestamp: timestampAhora,
-    manual: true,
-    agenteUid: agente.uid || null,
-  });
-}
-
-// ✅ Enviar texto si hay mensaje
-if (message) {
-  await db.collection("mensajes").add({
-    idConversacion: userId,
-    rol: "asistente",
-    mensaje: traduccion,
-    original: message,
-    idiomaDetectado: idiomaDestino,
-    tipo: "texto",
+    tipo: req.body.imageUrl ? "imagen" : "texto",
     timestamp: timestampAhora,
     manual: true,
     agenteUid: agente.uid || null,
