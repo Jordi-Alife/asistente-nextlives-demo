@@ -2,10 +2,6 @@ const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('messageInput');
 const fileInput = document.getElementById('fileInput');
 const sendBtn = document.querySelector('.send-button');
-const chatSystem = window.chatSystem || {};
-const userUuid = chatSystem.currentUser || null;
-const lineUuid = chatSystem.currentLine || null;
-const languageFromChatSystem = chatSystem.language || null;
 
 function getUserId() {
   let id = localStorage.getItem("userId");
@@ -212,16 +208,20 @@ async function sendMessage() {
     const tempId = `typing-${Date.now()}`;
     addTypingBubble(tempId);
 
+    const userUuid = window.chatSystem?.currentUser || null;
+    const lineUuid = window.chatSystem?.currentLine || null;
+    const languageFromChatSystem = window.chatSystem?.language || null;
+
     const bodyData = {
-  message: text,
-  userId,
-  userAgent: metadata.userAgent,
-  pais: metadata.pais,
-  historial: metadata.historial,
-  userUuid: userUuid || null,         // UUID del usuario real
-  lineUuid: lineUuid || null,         // UUID de la web del difunto
-  language: languageFromChatSystem || null  // Idioma inicial forzado (si viene)
-};
+      message: text,
+      userId,
+      userAgent: metadata.userAgent,
+      pais: metadata.pais,
+      historial: metadata.historial,
+      userUuid: userUuid || null,         // UUID del usuario real
+      lineUuid: lineUuid || null,         // UUID de la web del difunto
+      language: languageFromChatSystem || null  // Idioma inicial forzado (si viene)
+    };
 
     try {
       const res = await fetch("/api/chat", {

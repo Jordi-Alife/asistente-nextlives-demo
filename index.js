@@ -7,10 +7,9 @@ import OpenAI from "openai";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { v4 as uuidv4 } from "uuid";
 import admin from "firebase-admin";
 import serviceAccount from "./serviceAccountKey.json" assert { type: "json" };
-import sharp from "sharp";
+import { llamarWebhookContexto } from "./webhookContexto.js";
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -103,13 +102,20 @@ function shouldEscalateToHuman(message) {
     lower.includes("quiero una persona")
   );
 }
-  app.post("/api/chat", async (req, res) => {
-  const { message, system, userId, userAgent, pais, historial, datosContexto } = req.body;
+
+// Función para llamar al webhook de contexto con firma
+app.post("/api/chat", async (req, res) => {
+  const { message, system, userId, userAgent, pais, historial, userUuid, lineUuid, language } = req.body;
   const finalUserId = userId || "anon";
+
+  // Llamar al webhook de contexto solo si existen userUuid y lineUuid
+  const datosContexto = (userUuid && lineUuid) 
+    ? await llamarWebhookContexto({userUuid, lineUuid})
+    : null;
 
   // 🧠 Detectar idioma del mensaje
   let idiomaDetectado = await detectarIdiomaGPT(message);
-let idioma = idiomaDetectado;
+  let idioma = idiomaDetectado;
 
 // Fallback si no es válido
 if (!idioma || idioma === "zxx") {
