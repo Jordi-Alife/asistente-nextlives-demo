@@ -331,7 +331,7 @@ if (convData?.intervenida) {
       .map(doc => doc.data())
       .filter(a => a.notificarSMS && a.telefono);
 
-    const urlPanel = `https://panel-gestion-chats-production.up.railway.app/conversaciones?userId=${finalUserId}`;
+    const urlPanel = `${process.env.PANEL_GESTION_URL}/conversaciones?userId=${finalUserId}`;
     const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Accede al panel: ${urlPanel}`;
     const token = process.env.SMS_ARENA_KEY;
 
