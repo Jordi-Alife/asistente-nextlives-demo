@@ -165,7 +165,20 @@ await db.collection("conversaciones").doc(finalUserId).set(
     navegador: userAgent || "",
     pais: pais || "",
     historial: historial || [],
-    datosContexto: datosContexto || null,
+    datosContexto: datosContexto
+  ? {
+      name: datosContexto.name || null,
+      city: datosContexto.city || null,
+      language: datosContexto.language || null,
+      line: {
+        added: datosContexto.line?.added || null,
+      },
+      company: {
+        name: datosContexto.company?.name || null,
+        email: datosContexto.company?.email || null,
+      }
+    }
+  : null,
     noVistos: admin.firestore.FieldValue.increment(1),
     userUuid: req.body.userUuid || null,
     lineUuid: req.body.lineUuid || null,
