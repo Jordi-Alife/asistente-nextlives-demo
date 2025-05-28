@@ -604,11 +604,11 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
   
   // Configurar datos de usuario en el chat
   window.chatSystem = {
-    currentUser: userUuid,
-    currentLine: lineUuid,
-    language: language,
-    initialized: true
-  };
+  currentUser: "test-user-123",
+  currentLine: "test-line-456",
+  language: "es",
+  initialized: true
+};
   
   // Actualizar UI para mostrar información del usuario
   const userInfoElement = document.getElementById('userIdDisplay');
