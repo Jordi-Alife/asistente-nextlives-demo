@@ -409,11 +409,11 @@ const historialFormateado = convDoc2.exists && convDoc2.data().historialFormatea
 }
 
     const promptSystem = [
-      baseConocimiento,
-      `\nHistorial reciente de conversación:\n${historialFormateado}`,
-      datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
-      `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}".`,
-    ].join("\n");
+  baseConocimiento,
+  `\nHistorial reciente de conversación:\n${historialFormateado}`,
+  // datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
+  `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}".`,
+].join("\n");
 
     const response = await openai.chat.completions.create({
       model: "gpt-4",
