@@ -226,18 +226,10 @@ async function sendMessage() {
     try {
       try {
   const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(bodyData)
-  });
-
-  const data = await res.json();
-
-  alert("✅ Respuesta del servidor recibida: " + JSON.stringify(data));
-} catch (err) {
-  alert("❌ Error al hacer fetch: " + err.message);
-}
-
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(bodyData)
+});
       const data = await res.json();
       const delay = Math.max(0, 1500 - (Date.now() - parseInt(tempId.split('-')[1])));
 
