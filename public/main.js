@@ -147,7 +147,6 @@ function scrollToBottom(smooth = true) {
 }
 
 async function sendMessage() {
-  alert("✅ El botón de enviar funciona");
   // ⛔ Esperar a que window.chatSystem esté listo
   if (!window.chatSystem?.initialized) {
     console.warn("⏳ Esperando datos de chatSystem...");
