@@ -52,11 +52,27 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+const allowedOrigins = [
+  "https://panel-gestion-chats-staging.up.railway.app",
+  "http://localhost:5173" // (opcional, si haces pruebas locales)
+];
+
 app.use(cors({
-  origin: 'https://panel-gestion-chats-staging.up.railway.app',
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // permitir herramientas como Postman
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    console.warn("❌ CORS bloqueado para:", origin);
+    return callback(new Error("Not allowed by CORS"));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
+
+// 👇 Añade esta línea justo después para permitir solicitudes OPTIONS
+app.options("*", cors());
 app.use(express.json());
 app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
