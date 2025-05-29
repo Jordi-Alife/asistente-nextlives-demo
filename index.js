@@ -741,7 +741,8 @@ app.get("/api/vistas", async (req, res) => {
 });
 
 app.get("/api/conversaciones", async (req, res) => {
-  const tipo = req.query.tipo || "recientes"; // puede ser "recientes" o "archivo"
+  const tipoRaw = req.query.tipo || "recientes";
+const tipo = tipoRaw === "archivadas" ? "archivo" : tipoRaw;
 
   try {
     const snapshot = await db.collection("conversaciones").get();
