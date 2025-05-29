@@ -237,11 +237,12 @@ if (text) {
       removeMessageByTempId(tempId);
       if (data.reply?.trim()) addMessage(data.reply, 'assistant');
     }, delay);
-    } catch (err) {
+      } catch (err) {
     removeMessageByTempId(tempId);
     addMessage("Error al conectar con el servidor.", "assistant");
   }
-} // ✅ Cierre correcto de sendMessage
+} // <- ESTE cierre es el que te faltaba
+} // <- Este cierra la función sendMessage
 
 function avisarEscribiendo(texto) {
   const userId = getUserId();
