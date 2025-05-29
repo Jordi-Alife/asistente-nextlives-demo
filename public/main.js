@@ -581,12 +581,12 @@ window.chatSystem = {
 window.addEventListener('message', (event) => {
   // Por seguridad, podrías verificar el origen del mensaje
   // if (event.origin !== 'https://tu-dominio.com') return;
-  
+
   // Verificar si el mensaje es del tipo esperado
   if (event.data && event.data.type === 'CHAT_PARAMS') {
     // Extraer los datos recibidos
     const { userUuid, lineUuid, language } = event.data.data;
-      
+
     // Inicializar el chat con estos parámetros
     initializeChat(userUuid, lineUuid, language);
   }
@@ -600,16 +600,16 @@ window.addEventListener('message', (event) => {
  */
 function initializeChat(userUuid, lineUuid, language = 'en') {
   console.log('Inicializando chat con:', { userUuid, lineUuid, language });
-  
-  // Configurar datos de usuario en el chat
+
+  // ✅ Configurar correctamente los datos en window.chatSystem
   window.chatSystem = {
-  currentUser: null,
-  currentLine: null,
-  language: 'en',
-  initialized: false
-};
-  
-  // Actualizar UI para mostrar información del usuario
+    currentUser: userUuid,
+    currentLine: lineUuid,
+    language: language,
+    initialized: true
+  };
+
+  // ✅ Mostrar el ID de usuario en la interfaz
   const userInfoElement = document.getElementById('userIdDisplay');
   if (userInfoElement) {
     userInfoElement.textContent = `Usuario: ${getUserId()}`;
@@ -639,14 +639,12 @@ function closeChat() {
 }
 
 /**
- * Función para cerrar el chat desde el iframe
+ * Función para minimizar el chat desde el iframe
  */
 function minimizeChat() {
-  // Oculta el chat visualmente, si está embedded en un iframe
   if (window.parent && window.parent !== window) {
     notifyParentEvent('CHAT_MINIMIZED', { reason: 'User minimized chat' });
   } else {
-    // Si no está en un iframe, simplemente ocultamos el widget
     document.getElementById('chat-widget').style.display = 'none';
     document.getElementById('chat-toggle').style.display = 'flex';
     document.getElementById('scrollToBottomBtn').style.display = 'none';
@@ -662,7 +660,6 @@ function notifyParentEvent(eventType, data = {}) {
       type: eventType,
       data: data
     }, '*');
-    
   }
 }
 
