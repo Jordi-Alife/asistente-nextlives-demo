@@ -205,41 +205,42 @@ async function sendMessage() {
 
   // ✅ Si hay texto, enviar al backend
   if (text) {
-    const tempId = `typing-${Date.now()}`;
-    addTypingBubble(tempId);
+  const tempId = `typing-${Date.now()}`;
+  addTypingBubble(tempId);
 
-    const userUuid = window.chatSystem?.currentUser || null;
-    const lineUuid = window.chatSystem?.currentLine || null;
-    const languageFromChatSystem = window.chatSystem?.language || null;
+  const userUuid = window.chatSystem?.currentUser || null;
+  const lineUuid = window.chatSystem?.currentLine || null;
+  const languageFromChatSystem = window.chatSystem?.language || null;
 
-    const bodyData = {
-      message: text,
-      userId,
-      userAgent: metadata.userAgent,
-      pais: metadata.pais,
-      historial: metadata.historial,
-      userUuid: userUuid || null,         // UUID del usuario real
-      lineUuid: lineUuid || null,         // UUID de la web del difunto
-      language: languageFromChatSystem || null  // Idioma inicial forzado (si viene)
-    };
+  const bodyData = {
+    message: text,
+    userId,
+    userAgent: metadata.userAgent,
+    pais: metadata.pais,
+    historial: metadata.historial,
+    userUuid: userUuid || null,
+    lineUuid: lineUuid || null,
+    language: languageFromChatSystem || null
+  };
 
-    try {
-  const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(bodyData)
-  });
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bodyData)
+    });
 
-  const data = await res.json();
-  const delay = Math.max(0, 1500 - (Date.now() - parseInt(tempId.split('-')[1])));
+    const data = await res.json();
+    const delay = Math.max(0, 1500 - (Date.now() - parseInt(tempId.split('-')[1])));
 
-  setTimeout(() => {
+    setTimeout(() => {
+      removeMessageByTempId(tempId);
+      if (data.reply?.trim()) addMessage(data.reply, 'assistant');
+    }, delay);
+  } catch (err) {
     removeMessageByTempId(tempId);
-    if (data.reply?.trim()) addMessage(data.reply, 'assistant');
-  }, delay);
-} catch (err) {
-  removeMessageByTempId(tempId);
-  addMessage("Error al conectar con el servidor.", "assistant");
+    addMessage("Error al conectar con el servidor.", "assistant");
+  }
 }
 
 function avisarEscribiendo(texto) {
