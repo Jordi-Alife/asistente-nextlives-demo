@@ -1014,6 +1014,25 @@ app.get("/api/test-historial/:userId", async (req, res) => {
     res.status(500).json({ error: "Error consultando historial" });
   }
 });
+
+// Middleware de fallback para garantizar CORS en cualquier respuesta
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "https://panel-gestion-chats-staging.up.railway.app");
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  next();
+});
+
+// Middleware global para capturar errores y responder con CORS
+app.use((err, req, res, next) => {
+  console.error("❌ Error capturado:", err.stack || err);
+  res.status(500);
+  res.header("Access-Control-Allow-Origin", "https://panel-gestion-chats-staging.up.railway.app");
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.json({ error: "Error interno del servidor" });
+});
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
 });
