@@ -104,6 +104,28 @@
     </svg>
   </button>
 
+  <script>
+    // Bloque que envía los parámetros al iframe o a la misma ventana
+    window.addEventListener("load", () => {
+      const iframe = document.querySelector("iframe");
+      const target = iframe?.contentWindow || window;
+
+      const chatParams = {
+        type: "CHAT_PARAMS",
+        data: {
+          userUuid: "demo-user-uuid",
+          lineUuid: "demo-line-uuid",
+          language: "es"
+        }
+      };
+
+      setTimeout(() => {
+        target.postMessage(chatParams, "*");
+        console.log("📤 CHAT_PARAMS enviados:", chatParams);
+      }, 500);
+    });
+  </script>
+
   <script src="main.js"></script>
 </body>
 </html>
