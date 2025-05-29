@@ -936,7 +936,7 @@ app.get("/api/poll/:userId", async (req, res) => {
       };
     });
 
-    res.json({ mensajes }); // ✅ ENVÍA OBJETO con clave 'mensajes'
+    res.json(mensajes); // ✅ ENVÍA OBJETO con clave 'mensajes'
   } catch (error) {
     console.error("❌ Error en /api/poll:", error);
     res.status(500).json({ error: "Error obteniendo mensajes manuales" });
