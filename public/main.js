@@ -429,13 +429,15 @@ if (mensajes && Array.isArray(mensajes)) {
           }
           messageDiv.dataset.panelId = msg.id;
 
-          if (/\.(jpeg|jpg|png|gif|webp)$/i.test(msg.mensaje)) {
-            messageDiv.innerHTML = `<img src="${msg.mensaje}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
-          } else {
-            messageDiv.innerText = msg.mensaje;
-          }
+          const contenido = msg.message || msg.mensaje || "";
 
-          messagesDiv.appendChild(messageDiv);
+if (/\.(jpeg|jpg|png|gif|webp)$/i.test(contenido)) {
+  messageDiv.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+} else {
+  messageDiv.innerText = contenido;
+}
+
+messagesDiv.appendChild(messageDiv);
 
           // ✅ Limitar a los últimos 50 mensajes
           const todos = messagesDiv.querySelectorAll('.message');
