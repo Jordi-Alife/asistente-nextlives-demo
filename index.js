@@ -17,7 +17,7 @@ admin.initializeApp({
 const db = admin.firestore();
 
 const app = express();
-const PORT = 80;
+const PORT = process.env.PORT || 80;
 const HISTORIAL_PATH = "./historial.json";
 
 let conversaciones = [];
@@ -52,23 +52,40 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+// Configurar orígenes permitidos incluyendo la URL del panel de gestión
 const allowedOrigins = [
-  "https://panel-gestion-chats-staging.up.railway.app",
-  "http://localhost:5173" // (opcional, si haces pruebas locales)
-];
+  process.env.PANEL_GESTION_URL, // URL dinámica del panel de gestión
+  "http://localhost:3000" // puerto por defecto del servidor
+].filter(Boolean); // Filtra valores undefined o null
+
+// Log para verificar configuración de CORS
+console.log("🔧 CORS configurado con los siguientes orígenes permitidos:");
+allowedOrigins.forEach((origin, index) => {
+  console.log(`   ${index + 1}. ${origin}`);
+});
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // permitir herramientas como Postman
-    if (allowedOrigins.includes(origin)) {
+    console.log("🌐 Solicitud CORS desde origen:", origin);
+    
+    if (!origin) {
+      console.log("✅ Permitiendo solicitud sin origen (Postman, apps móviles, etc.)");
       return callback(null, true);
     }
-    console.warn("❌ CORS bloqueado para:", origin);
+    
+    if (allowedOrigins.includes(origin)) {
+      console.log("✅ Origen permitido:", origin);
+      return callback(null, true);
+    }
+    
+    console.warn("❌ CORS bloqueado para origen:", origin);
+    console.warn("💡 Orígenes permitidos:", allowedOrigins);
     return callback(new Error("Not allowed by CORS"));
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true,
+  optionsSuccessStatus: 200 // Para compatibilidad con navegadores legacy
 }));
 
 // 👇 Añade esta línea justo después para permitir solicitudes OPTIONS
@@ -1017,22 +1034,49 @@ app.get("/api/test-historial/:userId", async (req, res) => {
 
 // Middleware de fallback para garantizar CORS en cualquier respuesta
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://panel-gestion-chats-staging.up.railway.app");
+  const origin = req.headers.origin;
+  
+  // Si el origen está en la lista de permitidos, usarlo; si no, usar wildcard solo para desarrollo
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  } else if (!origin) {
+    // Para requests sin origen (Postman, apps móviles)
+    res.header("Access-Control-Allow-Origin", "*");
+  } else {
+    // Para desarrollo local, permitir localhost
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      res.header("Access-Control-Allow-Origin", origin);
+    } else {
+      res.header("Access-Control-Allow-Origin", process.env.PANEL_GESTION_URL || "*");
+    }
+  }
+  
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+  res.header("Access-Control-Allow-Credentials", "true");
   next();
 });
 
 // Middleware global para capturar errores y responder con CORS
 app.use((err, req, res, next) => {
   console.error("❌ Error capturado:", err.stack || err);
-  res.status(500);
-  res.header("Access-Control-Allow-Origin", "https://panel-gestion-chats-staging.up.railway.app");
+  
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  } else {
+    res.header("Access-Control-Allow-Origin", process.env.PANEL_GESTION_URL || "*");
+  }
+  
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+  res.status(500).json({ error: "Error interno del servidor" });
   res.json({ error: "Error interno del servidor" });
 });
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
+  console.log(`🌐 Panel de gestión configurado en: ${process.env.PANEL_GESTION_URL || 'NO CONFIGURADO'}`);
+  console.log(`📧 SMS configurado: ${process.env.SMS_ARENA_KEY ? 'SÍ' : 'NO'}`);
+  console.log(`🤖 OpenAI configurado: ${process.env.OPENAI_API_KEY ? 'SÍ' : 'NO'}`);
 });
