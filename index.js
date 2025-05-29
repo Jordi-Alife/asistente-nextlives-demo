@@ -925,12 +925,18 @@ app.get("/api/poll/:userId", async (req, res) => {
       const data = doc.data();
       return {
         id: doc.id,
-        mensaje: data.mensaje,
+        userId,
+        lastInteraction: data.timestamp,
+        message: data.mensaje,
+        original: data.original || null,
+        from: data.rol || "asistente",
+        tipo: data.tipo || "texto",
         manual: data.manual || false,
+        estado: data.estado || null
       };
     });
 
-    res.json(mensajes); // ✅ RESPUESTA COMO ARRAY, no como objeto
+    res.json({ mensajes }); // ✅ ENVÍA OBJETO con clave 'mensajes'
   } catch (error) {
     console.error("❌ Error en /api/poll:", error);
     res.status(500).json({ error: "Error obteniendo mensajes manuales" });
