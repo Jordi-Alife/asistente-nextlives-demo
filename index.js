@@ -922,19 +922,13 @@ app.get("/api/poll/:userId", async (req, res) => {
       .get();
 
     const mensajes = mensajesSnapshot.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        userId,
-        lastInteraction: data.timestamp,
-        message: data.mensaje,
-        original: data.original || null,
-        from: data.rol || "asistente",
-        tipo: data.tipo || "texto",
-        manual: data.manual || false,
-        estado: data.estado || null
-      };
-    });
+  const data = doc.data();
+  return {
+    id: doc.id,
+    mensaje: data.mensaje,                   // ✅ clave corregida
+    manual: data.manual || false             // ✅ conservamos este campo
+  };
+});
 
     res.json(mensajes); // ✅ ENVÍA OBJETO con clave 'mensajes'
   } catch (error) {
