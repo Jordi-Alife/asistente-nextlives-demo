@@ -787,18 +787,18 @@ const tipo = tipoRaw === "archivadas" ? "archivo" : tipoRaw;
     let filtradas = todas;
 
     if (tipo === "recientes") {
-      filtradas = todas.filter(
-        (c) =>
-          (c.estado || "").toLowerCase() !== "cerrado" &&
-          (c.estado || "").toLowerCase() !== "archivado"
-      );
-    } else if (tipo === "archivo") {
-      filtradas = todas.filter(
-        (c) =>
-          (c.estado || "").toLowerCase() === "cerrado" ||
-          (c.estado || "").toLowerCase() === "archivado"
-      );
-    }
+  filtradas = todas.filter(
+    (c) =>
+      (c.estado || "").toLowerCase() !== "cerrado" &&
+      (c.estado || "").toLowerCase() !== "archivado"
+  );
+} else if (tipo === "archivo" || tipo === "archivadas") {
+  filtradas = todas.filter(
+    (c) =>
+      (c.estado || "").toLowerCase() === "cerrado" ||
+      (c.estado || "").toLowerCase() === "archivado"
+  );
+}
 
     res.json(filtradas);
   } catch (error) {
