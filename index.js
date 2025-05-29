@@ -930,7 +930,7 @@ app.get("/api/poll/:userId", async (req, res) => {
       };
     });
 
-    res.json({ mensajes });
+    res.json(mensajes); // ✅ RESPUESTA COMO ARRAY, no como objeto
   } catch (error) {
     console.error("❌ Error en /api/poll:", error);
     res.status(500).json({ error: "Error obteniendo mensajes manuales" });
