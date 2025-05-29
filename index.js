@@ -1055,7 +1055,11 @@ app.get("/api/test-historial/:userId", async (req, res) => {
     res.status(500).json({ error: "Error consultando historial" });
   }
 });
-
+const allowedOrigins = [
+  "https://panel-gestion-chats-staging.up.railway.app",
+  "https://panel-gestion-chats.nextlives.com",
+  "http://localhost:3000"
+];
 // Middleware de fallback para garantizar CORS en cualquier respuesta
 app.use((req, res, next) => {
   const origin = req.headers.origin;
@@ -1084,18 +1088,17 @@ app.use((req, res, next) => {
 // Middleware global para capturar errores y responder con CORS
 app.use((err, req, res, next) => {
   console.error("❌ Error capturado:", err.stack || err);
-  
+
   const origin = req.headers.origin;
   if (origin && allowedOrigins.includes(origin)) {
     res.header("Access-Control-Allow-Origin", origin);
   } else {
     res.header("Access-Control-Allow-Origin", process.env.PANEL_GESTION_URL || "*");
   }
-  
+
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
-  res.status(500).json({ error: "Error interno del servidor" });
-  res.json({ error: "Error interno del servidor" });
+  res.status(500).json({ error: "Error interno del servidor" }); // ✅ solo esta línea
 });
 
 app.listen(PORT, "0.0.0.0", () => {
