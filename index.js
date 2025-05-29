@@ -52,34 +52,58 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// Configurar orígenes permitidos incluyendo la URL del panel de gestión
+// Configurar orígenes permitidos con lógica flexible
 const allowedOrigins = [
   process.env.PANEL_GESTION_URL, // URL dinámica del panel de gestión
-  "http://localhost:3000" // puerto por defecto del servidor
+  'http://localhost'
 ].filter(Boolean); // Filtra valores undefined o null
 
-// Log para verificar configuración de CORS
-console.log("🔧 CORS configurado con los siguientes orígenes permitidos:");
-allowedOrigins.forEach((origin, index) => {
-  console.log(`   ${index + 1}. ${origin}`);
-});
+// Función para verificar si el origen está permitido
+function isOriginAllowed(origin) {
+  if (!origin) return true; // Solicitudes sin origen (Postman, apps móviles, etc.)
+  
+  // Permitir orígenes específicos en la lista
+  if (allowedOrigins.includes(origin)) return true;
+  
+  // Permitir localhost CON cualquier puerto (desarrollo)
+  if (origin.match(/^http:\/\/localhost:\d+$/) || origin.match(/^http:\/\/127\.0\.0\.1:\d+$/)) {
+    return true;
+  }
+  
+  // Permitir https localhost en cualquier puerto (desarrollo con SSL)
+  if (origin.match(/^https:\/\/localhost:\d+$/) || origin.match(/^https:\/\/127\.0\.0\.1:\d+$/)) {
+    return true;
+  }
+  
+  // Permitir 127.0.0.1 SIN puerto
+  if (origin === "http://127.0.0.1" || origin === "https://127.0.0.1") {
+    return true;
+  }
+  
+  // Permitir el propio dominio (donde está desplegada la aplicación)
+  if (process.env.RAILWAY_STATIC_URL && origin === `https://${process.env.RAILWAY_STATIC_URL}`) {
+    return true;
+  }
+  
+  // Para otros servicios de hosting, permitir el dominio actual
+  const currentHost = process.env.HOST || process.env.VERCEL_URL || process.env.RENDER_EXTERNAL_URL;
+  if (currentHost && origin === `https://${currentHost}`) {
+    return true;
+  }
+  
+  return false;
+}
 
 app.use(cors({
   origin: function (origin, callback) {
     console.log("🌐 Solicitud CORS desde origen:", origin);
     
-    if (!origin) {
-      console.log("✅ Permitiendo solicitud sin origen (Postman, apps móviles, etc.)");
-      return callback(null, true);
-    }
-    
-    if (allowedOrigins.includes(origin)) {
-      console.log("✅ Origen permitido:", origin);
+    if (isOriginAllowed(origin)) {
+      console.log("✅ Origen permitido:", origin || "sin origen");
       return callback(null, true);
     }
     
     console.warn("❌ CORS bloqueado para origen:", origin);
-    console.warn("💡 Orígenes permitidos:", allowedOrigins);
     return callback(new Error("Not allowed by CORS"));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
