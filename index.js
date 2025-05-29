@@ -1023,7 +1023,6 @@ app.get("/api/estado-conversacion/:userId", async (req, res) => {
   }
 });
 
-// 🔧 Función para obtener los últimos mensajes
 async function obtenerUltimosMensajesUsuario(userId, limite = 6) {
   const snapshot = await db
     .collection("mensajes")
@@ -1038,7 +1037,7 @@ async function obtenerUltimosMensajesUsuario(userId, limite = 6) {
   return mensajes.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 }
 
-// 🔧 Función para formatear como diálogo
+// NUEVA función para formatear historial como texto tipo diálogo
 function formatearHistorialParaPrompt(mensajes) {
   return mensajes.map(msg => {
     const autor = msg.rol === 'usuario' ? 'Usuario' : 'Asistente';
@@ -1046,7 +1045,6 @@ function formatearHistorialParaPrompt(mensajes) {
   }).join('\n');
 }
 
-// ✅ Endpoint de prueba
 app.get("/api/test-historial/:userId", async (req, res) => {
   const { userId } = req.params;
   try {
@@ -1058,51 +1056,48 @@ app.get("/api/test-historial/:userId", async (req, res) => {
   }
 });
 
-// 🌐 Orígenes permitidos para CORS
-const allowedOrigins = [
-  "https://panel-gestion-chats-staging.up.railway.app",
-  "https://panel-gestion-chats.nextlives.com",
-  "http://localhost:3000"
-];
-
-// 🌍 Middleware para CORS (todas las rutas)
+// Middleware de fallback para garantizar CORS en cualquier respuesta
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-
+  
+  // Si el origen está en la lista de permitidos, usarlo; si no, usar wildcard solo para desarrollo
   if (origin && allowedOrigins.includes(origin)) {
     res.header("Access-Control-Allow-Origin", origin);
   } else if (!origin) {
+    // Para requests sin origen (Postman, apps móviles)
     res.header("Access-Control-Allow-Origin", "*");
-  } else if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
-    res.header("Access-Control-Allow-Origin", origin);
   } else {
-    res.header("Access-Control-Allow-Origin", process.env.PANEL_GESTION_URL || "*");
+    // Para desarrollo local, permitir localhost
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      res.header("Access-Control-Allow-Origin", origin);
+    } else {
+      res.header("Access-Control-Allow-Origin", process.env.PANEL_GESTION_URL || "*");
+    }
   }
-
+  
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
   res.header("Access-Control-Allow-Credentials", "true");
   next();
 });
 
-// 🛡️ Middleware global para errores (con CORS)
+// Middleware global para capturar errores y responder con CORS
 app.use((err, req, res, next) => {
   console.error("❌ Error capturado:", err.stack || err);
-
+  
   const origin = req.headers.origin;
   if (origin && allowedOrigins.includes(origin)) {
     res.header("Access-Control-Allow-Origin", origin);
   } else {
     res.header("Access-Control-Allow-Origin", process.env.PANEL_GESTION_URL || "*");
   }
-
+  
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
-
   res.status(500).json({ error: "Error interno del servidor" });
+  res.json({ error: "Error interno del servidor" });
 });
 
-// 🚀 Inicio del servidor
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
   console.log(`🌐 Panel de gestión configurado en: ${process.env.PANEL_GESTION_URL || 'NO CONFIGURADO'}`);
