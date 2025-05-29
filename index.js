@@ -904,7 +904,7 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
       .filter((msg) => msg !== null)
       .sort((a, b) => new Date(a.lastInteraction) - new Date(b.lastInteraction)); // orden ascendente
 
-    res.json(mensajes);
+    res.json({ mensajes }); // ✅ Esto es lo que el frontend espera
   } catch (error) {
     console.error("❌ Error crítico obteniendo mensajes:", error);
     res.status(500).json({ error: "Error crítico obteniendo mensajes" });
