@@ -17,7 +17,7 @@ admin.initializeApp({
 const db = admin.firestore();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 80;
 const HISTORIAL_PATH = "./historial.json";
 
 let conversaciones = [];
