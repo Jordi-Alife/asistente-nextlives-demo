@@ -414,9 +414,9 @@ async function checkPanelMessages() {
   const userId = getUserId();
   try {
     const res = await fetch(`/api/poll/${userId}`);
-    const data = await res.json();
-    if (data && Array.isArray(data.mensajes)) {
-      data.mensajes.forEach((msg) => {
+const data = await res.json();
+if (data && Array.isArray(data)) {
+  data.forEach((msg) => {
         if (msg.id && !document.querySelector(`[data-panel-id="${msg.id}"]`)) {
           console.log("📨 Mensaje manual recibido:", msg);
           const messageDiv = document.createElement('div');
