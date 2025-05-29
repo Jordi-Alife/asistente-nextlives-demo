@@ -224,24 +224,22 @@ async function sendMessage() {
     };
 
     try {
-      try {
   const res = await fetch("/api/chat", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(bodyData)
-});
-      const data = await res.json();
-      const delay = Math.max(0, 1500 - (Date.now() - parseInt(tempId.split('-')[1])));
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(bodyData)
+  });
 
-      setTimeout(() => {
-        removeMessageByTempId(tempId);
-        if (data.reply?.trim()) addMessage(data.reply, 'assistant');
-      }, delay);
-    } catch (err) {
-      removeMessageByTempId(tempId);
-      addMessage("Error al conectar con el servidor.", "assistant");
-    }
-  }
+  const data = await res.json();
+  const delay = Math.max(0, 1500 - (Date.now() - parseInt(tempId.split('-')[1])));
+
+  setTimeout(() => {
+    removeMessageByTempId(tempId);
+    if (data.reply?.trim()) addMessage(data.reply, 'assistant');
+  }, delay);
+} catch (err) {
+  removeMessageByTempId(tempId);
+  addMessage("Error al conectar con el servidor.", "assistant");
 }
 
 function avisarEscribiendo(texto) {
