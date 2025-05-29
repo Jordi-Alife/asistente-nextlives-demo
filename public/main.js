@@ -204,7 +204,7 @@ async function sendMessage() {
   }
 
   // ✅ Si hay texto, enviar al backend
-  if (text) {
+if (text) {
   const tempId = `typing-${Date.now()}`;
   addTypingBubble(tempId);
 
