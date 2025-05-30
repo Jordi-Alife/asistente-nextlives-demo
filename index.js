@@ -739,28 +739,16 @@ await db.collection("conversaciones").doc(userId).set(
     historialFormateado: nuevoHistorial,
     ultimaRespuesta: timestampAhora,
     lastMessage: traduccion,
-    intervenida: true,
-    intervenidaPor: {
-      nombre: agente.nombre,
-      foto: agente.foto,
-      uid: agente.uid || null,
-    },
   },
   { merge: true }
 );
-    await db.collection("conversaciones").doc(userId).set(
-  {
-    intervenida: true,
-    intervenidaPor: {
-      nombre: agente.nombre,
-      foto: agente.foto,
-      uid: agente.uid || null,
-    },
-    ultimaRespuesta: new Date().toISOString(),  // ✅ nuevo campo
-    lastMessage: traduccion,                    // ✅ nuevo campo
-  },
-  { merge: true }
-);
+
+// ✅ Marcamos la conversación como intervenida de forma centralizada
+await marcarComoIntervenida(userId, {
+  nombre: agente.nombre,
+  foto: agente.foto,
+  uid: agente.uid || null,
+});
 
     res.json({ ok: true });
   } catch (error) {
