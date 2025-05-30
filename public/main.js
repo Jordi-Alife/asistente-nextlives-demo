@@ -461,6 +461,8 @@ async function checkPanelMessages() {
 let intervaloMensajes = null;
 
 function iniciarCheckPanelMessages() {
+  console.log("▶️ Entrando en iniciarCheckPanelMessages()");
+
   if (intervaloMensajes) clearInterval(intervaloMensajes);
 
   const estado = localStorage.getItem('chatEstado');
@@ -469,10 +471,14 @@ function iniciarCheckPanelMessages() {
     return;
   }
 
-  intervaloMensajes = setInterval(checkPanelMessages, 5000);
-  console.log("▶️ Polling activado");
+  console.log("📡 Activando polling con setInterval de checkPanelMessages()");
+  intervaloMensajes = setInterval(() => {
+    console.log("📡 Ejecutando checkPanelMessages()");
+    checkPanelMessages();
+  }, 5000);
 }
 
+// ⬇️ Coloca la llamada después de definir la función
 iniciarCheckPanelMessages();
 
 const estadoChat = localStorage.getItem('chatEstado');
@@ -485,7 +491,6 @@ if (estadoChat !== 'cerrado') {
     messagesDiv.innerHTML = saved;
   }
 }
-
 getUserId();
 
 const scrollBtn = document.getElementById('scrollToBottomBtn');
