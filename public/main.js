@@ -532,26 +532,6 @@ input.addEventListener('blur', () => {
   }, 200);
 });
 
-// ✅ Inactividad: minimiza si pasan 2 minutos sin actividad
-let inactividadTimer;
-
-function reiniciarInactividad() {
-  clearTimeout(inactividadTimer);
-  inactividadTimer = setTimeout(() => {
-    const estado = localStorage.getItem('chatEstado');
-    if (estado !== 'cerrado' && estado !== 'minimizado') {
-      minimizarChat();
-      console.log("⏱️ Chat minimizado automáticamente por inactividad.");
-    }
-  }, 2 * 60 * 1000); // 2 minutos
-}
-
-// Eventos que reinician el contador
-input.addEventListener("input", reiniciarInactividad);
-messagesDiv.addEventListener("click", reiniciarInactividad);
-fileInput.addEventListener("change", reiniciarInactividad);
-document.addEventListener("click", reiniciarInactividad);
-
 document.addEventListener('DOMContentLoaded', () => {
   const btnConfirmar = document.getElementById('btnConfirmar');
   if (btnConfirmar) {
