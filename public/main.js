@@ -496,6 +496,33 @@ iniciarCheckPanelMessages();
 const estadoChat = localStorage.getItem('chatEstado');
 if (estadoChat !== 'cerrado') {
   restoreChat();
+
+  // ✅ Si no hay historial guardado, pedimos saludo inicial
+  if (!localStorage.getItem("chatMessages")) {
+    const userId = getUserId();
+    fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: "__saludo_inicial__",
+        userId,
+        userAgent: metadata.userAgent,
+        pais: metadata.pais,
+        historial: metadata.historial,
+        userUuid: window.chatSystem?.currentUser || null,
+        lineUuid: window.chatSystem?.currentLine || null,
+        language: window.chatSystem?.language || "es"
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.reply) {
+        addMessage(data.reply, 'assistant');
+        saveChat(); // ✅ guardamos para no repetir saludo
+      }
+    })
+    .catch(err => console.error("❌ Error saludo inicial:", err));
+  }
 } else {
   // ✅ Mostrar solo el mensaje de saludo guardado
   const saved = localStorage.getItem('chatMessages');
