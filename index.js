@@ -912,7 +912,6 @@ const tipo = tipoRaw === "archivadas" ? "archivo" : tipoRaw;
         message: data.lastMessage || "",
         mensajes: [],
         noVistos: data.noVistos || 0,
-        datosContexto: data.datosContexto || null,
       });
     }
 
