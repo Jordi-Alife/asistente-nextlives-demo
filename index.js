@@ -1,4 +1,4 @@
-import dotenv from "dotenv";
+fimport dotenv from "dotenv";
 dotenv.config();
 
 import express from "express";
@@ -912,6 +912,7 @@ const tipo = tipoRaw === "archivadas" ? "archivo" : tipoRaw;
         message: data.lastMessage || "",
         mensajes: [],
         noVistos: data.noVistos || 0,
+        datosContexto: data.datosContexto || null,
       });
     }
 
