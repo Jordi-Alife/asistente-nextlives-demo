@@ -456,6 +456,57 @@ async function checkPanelMessages() {
     console.error("Error al obtener mensajes manuales:", error);
   }
 }
+
+async function checkPanelMessages() {
+  const estado = localStorage.getItem('chatEstado');
+  if (estado === 'cerrado') return;
+
+  const userId = getUserId();
+  try {
+    const res = await fetch(`/api/poll/${userId}`);
+    const data = await res.json();
+    const mensajes = Array.isArray(data) ? data : data.mensajes;
+
+    if (mensajes && Array.isArray(mensajes)) {
+      mensajes.forEach((msg) => {
+        if (msg.id && !document.querySelector(`[data-panel-id="${msg.id}"]`)) {
+          console.log("📨 Mensaje manual recibido:", msg);
+
+          const messageDiv = document.createElement('div');
+          messageDiv.className = 'message assistant';
+          if (msg.manual) {
+            messageDiv.classList.add('manual');
+          }
+          messageDiv.dataset.panelId = msg.id;
+
+          const contenido = msg.message || msg.mensaje || msg.original || "";
+
+          if (/\.(jpeg|jpg|png|gif|webp)$/i.test(contenido)) {
+            messageDiv.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+          } else {
+            messageDiv.innerText = contenido;
+          }
+
+          messagesDiv.appendChild(messageDiv);
+
+          // ✅ Limitar a los últimos 50 mensajes
+          const todos = messagesDiv.querySelectorAll('.message');
+          if (todos.length > 50) {
+            for (let i = 0; i < todos.length - 50; i++) {
+              todos[i].remove();
+            }
+          }
+
+          scrollToBottom();
+          saveChat();
+        }
+      });
+    }
+  } catch (error) {
+    console.error("Error al obtener mensajes manuales:", error);
+  }
+}
+
 let intervaloMensajes = null;
 
 function iniciarCheckPanelMessages() {
