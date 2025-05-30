@@ -37,6 +37,7 @@ export async function llamarWebhookContexto(payload) {
       },
       body: payloadString
     });
+    console.log("🔄 Respuesta cruda del webhook:", response.status, await response.text());
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
