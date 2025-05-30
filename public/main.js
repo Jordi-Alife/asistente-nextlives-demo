@@ -362,11 +362,6 @@ async function cerrarChatConfirmado() {
 // ✅ Eliminar historial por completo antes de guardar solo el saludo
 localStorage.removeItem("chatMessages");
 
-const saludo = document.createElement("div");
-saludo.className = "message assistant";
-saludo.innerText = "Hola, ¿en qué puedo ayudarte?";
-localStorage.setItem("chatMessages", saludo.outerHTML);
-
 localStorage.setItem('chatEstado', 'cerrado');
 document.getElementById('chat-widget').style.display = 'none';
 document.getElementById('chat-toggle').style.display = 'flex';
