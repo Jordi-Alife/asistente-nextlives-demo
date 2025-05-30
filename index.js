@@ -900,19 +900,20 @@ const tipo = tipoRaw === "archivadas" ? "archivo" : tipoRaw;
   console.log(`✅ Conversación archivada automáticamente: ${userId}`);
 }
 
-      todas.push({
-        userId,
-        lastInteraction: ultima || new Date().toISOString(),
-        estado: data.estado || "abierta",
-        intervenida: data.intervenida || false,
-        intervenidaPor: data.intervenidaPor || null,
-        pais: data.pais || "🌐",
-        navegador: data.navegador || "Desconocido",
-        historial: data.historial || [],
-        message: data.lastMessage || "",
-        mensajes: [],
-        noVistos: data.noVistos || 0,
-      });
+        todas.push({
+    userId,
+    lastInteraction: ultima || new Date().toISOString(),
+    estado: data.estado || "abierta",
+    intervenida: data.intervenida || false,
+    intervenidaPor: data.intervenidaPor || null,
+    pais: data.pais || "🌐",
+    navegador: data.navegador || "Desconocido",
+    historial: data.historial || [],
+    message: data.lastMessage || "",
+    mensajes: [],
+    noVistos: data.noVistos || 0,
+    datosContexto: data.datosContexto || null // 👈 AÑADIR ESTA LÍNEA
+  });
     }
 
     let filtradas = todas;
