@@ -614,6 +614,46 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
     initialized: true
   };
 
+    // ✅ Mensaje inicial automático
+  const userId = getUserId();
+  const tempId = `saludo-${Date.now()}`;
+  addTypingBubble(tempId); // Opcional: muestra los puntos suspensivos
+
+  const datosContexto = {
+    userUuid,
+    lineUuid,
+    language
+  };
+
+  const bodyData = {
+    message: "__saludo_inicial__", // ⛔ frase clave que debes controlar en el backend
+    userId,
+    userAgent: navigator.userAgent,
+    pais: metadata.pais,
+    historial: metadata.historial,
+    userUuid,
+    lineUuid,
+    language,
+    datosContexto
+  };
+
+  fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(bodyData)
+  })
+    .then(res => res.json())
+    .then(data => {
+      removeMessageByTempId(tempId);
+      if (data.reply?.trim()) {
+        addMessage(data.reply, 'assistant');
+      }
+    })
+    .catch(() => {
+      removeMessageByTempId(tempId);
+      addMessage("Hola, ¿en qué puedo ayudarte?", 'assistant');
+    });
+
   // ✅ Mostrar el ID de usuario en la interfaz
   const userInfoElement = document.getElementById('userIdDisplay');
   if (userInfoElement) {
