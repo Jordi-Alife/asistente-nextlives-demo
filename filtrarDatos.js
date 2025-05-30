@@ -242,6 +242,7 @@ export function filtrarDatosContexto(data) {
 
   // Filtrar datos de user
   if (data.user) {
+    console.log("🧪 data.user recibido:", JSON.stringify(data.user, null, 2));
     const user = data.user;
     resultado.user = {
       user_uuid: user.user_uuid,
