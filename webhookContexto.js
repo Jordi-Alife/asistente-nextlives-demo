@@ -37,13 +37,12 @@ export async function llamarWebhookContexto(payload) {
       },
       body: payloadString
     });
-    console.log("🔄 Respuesta cruda del webhook:", response.status, await response.text());
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
     const result = await response.json();
+console.log("🌐 Respuesta cruda del webhook:", response.status, JSON.stringify(result, null, 2));
+
+if (!response.ok) {
+  throw new Error(`HTTP error! status: ${response.status}`);
+}
     console.log("✅ Webhook de contexto ejecutado exitosamente");
     
     // Filtrar datos según especificaciones
