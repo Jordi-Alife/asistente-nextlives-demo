@@ -482,8 +482,11 @@ const historialFormateado = convDoc2.exists && convDoc2.data().historialFormatea
 let saludoInicial = "";
 if (!historialFormateado || historialFormateado.trim() === "") {
   const saludo = obtenerSaludoHoraActual(idioma);
-  const nombre = datosContexto?.name || "👤";
-  saludoInicial = `${saludo}, ${nombre}. `;
+  const nombre = datosContexto?.user?.name || null;
+
+  saludoInicial = nombre
+    ? `${saludo}, ${nombre}. `
+    : `${saludo}. `;
 }
 
 const response = await openai.chat.completions.create({
