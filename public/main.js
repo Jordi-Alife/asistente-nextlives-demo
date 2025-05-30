@@ -212,16 +212,26 @@ if (text) {
   const lineUuid = window.chatSystem?.currentLine || null;
   const languageFromChatSystem = window.chatSystem?.language || null;
 
-  const bodyData = {
-    message: text,
-    userId,
-    userAgent: metadata.userAgent,
-    pais: metadata.pais,
-    historial: metadata.historial,
-    userUuid: userUuid || null,
-    lineUuid: lineUuid || null,
-    language: languageFromChatSystem || null
-  };
+  const datosContexto = {
+  nombre: window.chatSystem?.nombre || null,
+  userUuid: window.chatSystem?.currentUser || null,
+  lineUuid: window.chatSystem?.currentLine || null,
+  language: window.chatSystem?.language || null
+};
+
+console.log("📦 datosContexto enviados a GPT:", datosContexto);
+
+const bodyData = {
+  message: text,
+  userId,
+  userAgent: metadata.userAgent,
+  pais: metadata.pais,
+  historial: metadata.historial,
+  userUuid: userUuid || null,
+  lineUuid: lineUuid || null,
+  language: languageFromChatSystem || null,
+  datosContexto // ✅ Añadido aquí
+};
 
   try {
     const res = await fetch("/api/chat", {
