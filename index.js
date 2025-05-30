@@ -163,7 +163,6 @@ function shouldEscalateToHuman(message) {
     lower.includes("quiero una persona")
   );
 }
-
 // ✅ NUEVA FUNCIÓN: genera saludo según hora e idioma
 function obtenerSaludoHoraActual(idioma = "es") {
   const hora = new Date().getHours();
@@ -184,10 +183,30 @@ function obtenerSaludoHoraActual(idioma = "es") {
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial, userUuid, lineUuid, language } = req.body;
   const finalUserId = userId || "anon";
+
   // Llamar al webhook de contexto solo si existen userUuid y lineUuid
   const datosContexto = (userUuid && lineUuid) 
-    ? await llamarWebhookContexto({userUuid, lineUuid})
+    ? await llamarWebhookContexto({ userUuid, lineUuid })
     : null;
+
+  // ✅ Si el mensaje es "__saludo_inicial__", devolver un saludo personalizado
+  if (message === '__saludo_inicial__') {
+    const saludo = obtenerSaludoHoraActual(language);
+    const nombre = datosContexto?.user?.name || "👤";
+    const saludoFinal = `${saludo}, ${nombre}. ¿En qué puedo ayudarte hoy?`;
+
+    await db.collection("mensajes").add({
+      idConversacion: finalUserId,
+      rol: "asistente",
+      mensaje: saludoFinal,
+      original: saludoFinal,
+      idiomaDetectado: language,
+      tipo: "texto",
+      timestamp: new Date().toISOString(),
+    });
+
+    return res.json({ reply: saludoFinal });
+  }
 
   // 🧠 Detectar idioma del mensaje
   let idiomaDetectado = await detectarIdiomaGPT(message);
