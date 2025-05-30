@@ -422,7 +422,9 @@ async function checkPanelMessages() {
         if (msg.id && !document.querySelector(`[data-panel-id="${msg.id}"]`)) {
           console.log("📨 Mensaje manual recibido:", msg);
 
-          const contenido = msg.mensaje || ""; // ✅ el campo correcto
+          const contenido = msg.mensaje || msg.message || msg.original || "";
+          if (!contenido) return; // ⛔ evita renderizar vacíos
+
           const messageDiv = document.createElement('div');
           messageDiv.className = 'message assistant';
           if (msg.manual) {
@@ -438,7 +440,7 @@ async function checkPanelMessages() {
 
           messagesDiv.appendChild(messageDiv);
 
-          // Limitar a los últimos 50 mensajes
+          // ✅ Limitar a los últimos 50 mensajes
           const todos = messagesDiv.querySelectorAll('.message');
           if (todos.length > 50) {
             for (let i = 0; i < todos.length - 50; i++) {
@@ -455,7 +457,6 @@ async function checkPanelMessages() {
     console.error("❌ Error al obtener mensajes manuales:", error);
   }
 }
-
 let intervaloMensajes = null;
 
 function iniciarCheckPanelMessages() {
