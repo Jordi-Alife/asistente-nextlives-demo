@@ -492,9 +492,10 @@ const estadoChat = localStorage.getItem('chatEstado');
 if (estadoChat !== 'cerrado') {
   restoreChat();
 
-  // ✅ Si no hay historial guardado, pedimos saludo inicial
+  // ✅ Si no hay historial guardado, pedimos saludo inicial personalizado
   if (!localStorage.getItem("chatMessages")) {
     const userId = getUserId();
+
     fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -513,10 +514,10 @@ if (estadoChat !== 'cerrado') {
     .then(data => {
       if (data.reply) {
         addMessage(data.reply, 'assistant');
-        saveChat(); // ✅ guardamos para no repetir saludo
+        saveChat(); // ✅ guardamos el saludo en localStorage
       }
     })
-    .catch(err => console.error("❌ Error saludo inicial:", err));
+    .catch(err => console.error("❌ Error al obtener saludo inicial:", err));
   }
 } else {
   // ✅ Mostrar solo el mensaje de saludo guardado
