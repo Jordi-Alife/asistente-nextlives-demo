@@ -758,14 +758,14 @@ app.post("/api/marcar-visto", async (req, res) => {
     let noVistos = 0;
     for (const doc of mensajesSnapshot.docs) {
       const msg = doc.data();
-      if (msg.timestamp > now) {
+      if (new Date(msg.timestamp) > new Date(now)) {
         noVistos++;
       }
     }
 
     // 3. Guardar conteo en la conversación
     await db.collection("conversaciones").doc(userId).set(
-      { noVistos: noVistos },
+      { noVistos },
       { merge: true }
     );
 
