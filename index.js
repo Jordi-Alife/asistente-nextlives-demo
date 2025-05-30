@@ -464,14 +464,15 @@ if (convData?.intervenida) {
   const convSnap = await convRef.get();
   const convData = convSnap.exists ? convSnap.data() : {};
 
-  const necesitaEscalada = !convData.intervenida; // ✅ simplificado
+  const necesitaEscalada = !convData.intervenida;
 
   if (necesitaEscalada) {
+    await marcarComoIntervenida(finalUserId); // 👈 UNIFICADO ✅
+
     await convRef.set(
       {
         pendienteIntervencion: true,
-        intervenida: true,
-        timestampIntervencion: new Date().toISOString(), // ✅ NUEVO CAMPO para lógica SMS
+        timestampIntervencion: new Date().toISOString(),
       },
       { merge: true }
     );
