@@ -408,6 +408,7 @@ fileInput.addEventListener('change', (event) => {
   }
 });
 async function checkPanelMessages() {
+  console.log("📡 Ejecutando checkPanelMessages()");
   const estado = localStorage.getItem('chatEstado');
   if (estado === 'cerrado') return;
 
