@@ -458,6 +458,8 @@ async function checkPanelMessages() {
     console.error("❌ Error al obtener mensajes manuales:", error);
   }
 }
+
+window.checkPanelMessages = checkPanelMessages; // ✅ Exportar para usar en consola
 let intervaloMensajes = null;
 
 function iniciarCheckPanelMessages() {
