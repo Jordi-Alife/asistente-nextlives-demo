@@ -47,6 +47,7 @@ if (!response.ok) {
     
     // Filtrar datos según especificaciones
     const rawData = result.data;
+    console.log("🔍 Datos recibidos del webhook antes del filtro:", JSON.stringify(rawData, null, 2));
     if (!rawData) {
       console.log("⚠️ No raw data received");
       return null;
