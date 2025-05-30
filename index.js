@@ -164,11 +164,26 @@ function shouldEscalateToHuman(message) {
   );
 }
 
+// ✅ NUEVA FUNCIÓN: genera saludo según hora e idioma
+function obtenerSaludoHoraActual(idioma = "es") {
+  const hora = new Date().getHours();
+
+  if (idioma === "en") {
+    if (hora < 12) return "Good morning";
+    if (hora < 20) return "Good afternoon";
+    return "Good evening";
+  }
+
+  // Español (por defecto)
+  if (hora < 12) return "Buenos días";
+  if (hora < 20) return "Buenas tardes";
+  return "Buenas noches";
+}
+
 // Función para llamar al webhook de contexto con firma
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial, userUuid, lineUuid, language } = req.body;
   const finalUserId = userId || "anon";
-
   // Llamar al webhook de contexto solo si existen userUuid y lineUuid
   const datosContexto = (userUuid && lineUuid) 
     ? await llamarWebhookContexto({userUuid, lineUuid})
