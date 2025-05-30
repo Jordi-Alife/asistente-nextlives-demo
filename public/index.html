@@ -105,26 +105,30 @@
   </button>
 
   <script>
-    // Bloque que envía los parámetros al iframe o a la misma ventana
-    window.addEventListener("load", () => {
-      const iframe = document.querySelector("iframe");
-      const target = iframe?.contentWindow || window;
+  window.addEventListener("DOMContentLoaded", () => {
+    const iframe = document.querySelector("iframe");
+    const target = iframe?.contentWindow || window;
 
-      const chatParams = {
-        type: "CHAT_PARAMS",
-        data: {
-          userUuid: "demo-user-uuid",
-          lineUuid: "demo-line-uuid",
-          language: "es"
-        }
-      };
+    // ✅ Leer valores reales desde atributos en <body>
+    const userUuid = document.body.dataset.userId || null;
+    const lineUuid = document.body.dataset.lineId || null;
+    const language = document.body.dataset.lang || "es";
 
-      setTimeout(() => {
-        target.postMessage(chatParams, "*");
-        console.log("📤 CHAT_PARAMS enviados:", chatParams);
-      }, 500);
-    });
-  </script>
+    const chatParams = {
+      type: "CHAT_PARAMS",
+      data: {
+        userUuid,
+        lineUuid,
+        language
+      }
+    };
+
+    setTimeout(() => {
+      target.postMessage(chatParams, "*");
+      console.log("📤 CHAT_PARAMS enviados:", chatParams);
+    }, 500);
+  });
+</script>
 
   <script src="main.js"></script>
 </body>
