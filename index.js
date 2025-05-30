@@ -25,6 +25,52 @@ let intervenidas = {};
 let vistasPorAgente = {};
 let escribiendoUsuarios = {};
 
+/**
+ * ✅ Función central para marcar una conversación como intervenida
+ * Puede llamarse desde el panel o desde el backend cuando un usuario lo solicita
+ */
+async function marcarComoIntervenida(userId, agente = null) {
+  if (!userId) return;
+
+  try {
+    const convRef = db.collection("conversaciones").doc(userId);
+    await convRef.set(
+      {
+        intervenida: true,
+        estado: "abierta",
+        intervenidaPor: agente || null,
+        ultimaRespuesta: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+
+    // ✅ Guardar mensaje de estado (evita duplicados)
+    const mensajesRef = db.collection("mensajes");
+    const yaExiste = await mensajesRef
+      .where("idConversacion", "==", userId)
+      .where("tipo", "==", "estado")
+      .where("estado", "==", "Intervenida")
+      .limit(1)
+      .get();
+
+    if (yaExiste.empty) {
+      await mensajesRef.add({
+        idConversacion: userId,
+        rol: "sistema",
+        mensaje: "Intervenida",
+        tipo: "estado",
+        estado: "Intervenida",
+        timestamp: new Date().toISOString(),
+        lastInteraction: new Date().toISOString(),
+      });
+    }
+
+    console.log(`✅ Conversación ${userId} marcada como intervenida`);
+  } catch (error) {
+    console.error("❌ Error al marcar como intervenida:", error);
+  }
+}
+
 if (fs.existsSync(HISTORIAL_PATH)) {
   const data = JSON.parse(fs.readFileSync(HISTORIAL_PATH, "utf8"));
   conversaciones = data.conversaciones || [];
