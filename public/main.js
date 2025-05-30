@@ -471,12 +471,12 @@ function iniciarCheckPanelMessages() {
   console.log("▶️ Polling activado");
 }
 
+iniciarCheckPanelMessages();
+
 const estadoChat = localStorage.getItem('chatEstado');
 if (estadoChat !== 'cerrado') {
   restoreChat();
-}
-
-iniciarCheckPanelMessages(); else {
+} else {
   // ✅ Mostrar solo el mensaje de saludo guardado
   const saved = localStorage.getItem('chatMessages');
   if (saved) {
@@ -518,7 +518,6 @@ input.addEventListener('focus', () => {
     }
   }, 500);
 });
-
 input.addEventListener('blur', () => {
   blurActivo = true;
   setTimeout(() => {
