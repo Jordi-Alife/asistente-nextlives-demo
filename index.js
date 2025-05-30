@@ -491,13 +491,21 @@ const historialFormateado = convDoc2.exists && convDoc2.data().historialFormatea
   `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}".`,
 ].join("\n");
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        { role: "system", content: promptSystem },
-        { role: "user", content: message },
-      ],
-    });
+// ✅ Generar saludo si es el primer mensaje
+let saludoInicial = "";
+if (!historialFormateado || historialFormateado.trim() === "") {
+  const saludo = obtenerSaludoHoraActual(idioma);
+  const nombre = datosContexto?.name || "👤";
+  saludoInicial = `${saludo}, ${nombre}. `;
+}
+
+const response = await openai.chat.completions.create({
+  model: "gpt-4",
+  messages: [
+    { role: "system", content: promptSystem },
+    { role: "user", content: saludoInicial + message },
+  ],
+});
 
     const reply = response.choices[0].message.content;
 
