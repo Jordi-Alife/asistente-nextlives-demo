@@ -922,15 +922,15 @@ app.get("/api/poll/:userId", async (req, res) => {
       .get();
 
     const mensajes = mensajesSnapshot.docs.map((doc) => {
-  const data = doc.data();
-  return {
-    id: doc.id,
-    mensaje: data.mensaje,                   // ✅ clave corregida
-    manual: data.manual || false             // ✅ conservamos este campo
-  };
-});
+      const data = doc.data();
+      return {
+        id: doc.id,
+        mensaje: data.mensaje,
+        manual: data.manual || false
+      };
+    });
 
-    res.json(mensajes); // ✅ ENVÍA OBJETO con clave 'mensajes'
+    res.json({ mensajes }); // ✅ Esto es lo que espera el frontend
   } catch (error) {
     console.error("❌ Error en /api/poll:", error);
     res.status(500).json({ error: "Error obteniendo mensajes manuales" });
