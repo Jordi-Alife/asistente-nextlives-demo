@@ -191,9 +191,12 @@ app.post("/api/chat", async (req, res) => {
 
   // ✅ Si el mensaje es "__saludo_inicial__", devolver un saludo personalizado
   if (message === '__saludo_inicial__') {
-    const saludo = obtenerSaludoHoraActual(language);
-    const nombre = datosContexto?.user?.name || "👤";
-    const saludoFinal = `${saludo}, ${nombre}. ¿En qué puedo ayudarte hoy?`;
+  const saludo = obtenerSaludoHoraActual(language || idioma);
+  const nombre = datosContexto?.user?.name?.trim();
+
+  const saludoFinal = nombre
+    ? `${saludo}, ${nombre}, ¿en qué puedo ayudarte?`
+    : `${saludo}, ¿en qué puedo ayudarte?`;
 
     await db.collection("mensajes").add({
       idConversacion: finalUserId,
