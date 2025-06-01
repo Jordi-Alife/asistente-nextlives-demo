@@ -7,10 +7,9 @@ import OpenAI from "openai";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { v4 as uuidv4 } from "uuid";
 import admin from "firebase-admin";
 import serviceAccount from "./serviceAccountKey.json" assert { type: "json" };
-import sharp from "sharp";
+import { llamarWebhookContexto } from "./webhookContexto.js";
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -18,13 +17,59 @@ admin.initializeApp({
 const db = admin.firestore();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 80;
 const HISTORIAL_PATH = "./historial.json";
 
 let conversaciones = [];
 let intervenidas = {};
 let vistasPorAgente = {};
 let escribiendoUsuarios = {};
+
+/**
+ * ✅ Función central para marcar una conversación como intervenida
+ * Puede llamarse desde el panel o desde el backend cuando un usuario lo solicita
+ */
+async function marcarComoIntervenida(userId, agente = null) {
+  if (!userId) return;
+
+  try {
+    const convRef = db.collection("conversaciones").doc(userId);
+    await convRef.set(
+      {
+        intervenida: true,
+        estado: "abierta",
+        intervenidaPor: agente || null,
+        ultimaRespuesta: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+
+    // ✅ Guardar mensaje de estado (evita duplicados)
+    const mensajesRef = db.collection("mensajes");
+    const yaExiste = await mensajesRef
+      .where("idConversacion", "==", userId)
+      .where("tipo", "==", "estado")
+      .where("estado", "==", "Intervenida")
+      .limit(1)
+      .get();
+
+    if (yaExiste.empty) {
+      await mensajesRef.add({
+        idConversacion: userId,
+        rol: "sistema",
+        mensaje: "Intervenida",
+        tipo: "estado",
+        estado: "Intervenida",
+        timestamp: new Date().toISOString(),
+        lastInteraction: new Date().toISOString(),
+      });
+    }
+
+    console.log(`✅ Conversación ${userId} marcada como intervenida`);
+  } catch (error) {
+    console.error("❌ Error al marcar como intervenida:", error);
+  }
+}
 
 if (fs.existsSync(HISTORIAL_PATH)) {
   const data = JSON.parse(fs.readFileSync(HISTORIAL_PATH, "utf8"));
@@ -53,7 +98,68 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-app.use(cors());
+// Configurar orígenes permitidos con lógica flexible
+const allowedOrigins = [
+  process.env.PANEL_GESTION_URL, // URL dinámica del panel de gestión
+  'http://localhost'
+].filter(Boolean); // Filtra valores undefined o null
+
+// Función para verificar si el origen está permitido
+function isOriginAllowed(origin) {
+  if (!origin) return true; // Solicitudes sin origen (Postman, apps móviles, etc.)
+  
+  // Permitir orígenes específicos en la lista
+  if (allowedOrigins.includes(origin)) return true;
+  
+  // Permitir localhost CON cualquier puerto (desarrollo)
+  if (origin.match(/^http:\/\/localhost:\d+$/) || origin.match(/^http:\/\/127\.0\.0\.1:\d+$/)) {
+    return true;
+  }
+  
+  // Permitir https localhost en cualquier puerto (desarrollo con SSL)
+  if (origin.match(/^https:\/\/localhost:\d+$/) || origin.match(/^https:\/\/127\.0\.0\.1:\d+$/)) {
+    return true;
+  }
+  
+  // Permitir 127.0.0.1 SIN puerto
+  if (origin === "http://127.0.0.1" || origin === "https://127.0.0.1") {
+    return true;
+  }
+  
+  // Permitir el propio dominio (donde está desplegada la aplicación)
+  if (process.env.RAILWAY_STATIC_URL && origin === `https://${process.env.RAILWAY_STATIC_URL}`) {
+    return true;
+  }
+  
+  // Para otros servicios de hosting, permitir el dominio actual
+  const currentHost = process.env.HOST || process.env.VERCEL_URL || process.env.RENDER_EXTERNAL_URL;
+  if (currentHost && origin === `https://${currentHost}`) {
+    return true;
+  }
+  
+  return false;
+}
+
+app.use(cors({
+  origin: function (origin, callback) {
+    console.log("🌐 Solicitud CORS desde origen:", origin);
+    
+    if (isOriginAllowed(origin)) {
+      console.log("✅ Origen permitido:", origin || "sin origen");
+      return callback(null, true);
+    }
+    
+    console.warn("❌ CORS bloqueado para origen:", origin);
+    return callback(new Error("Not allowed by CORS"));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true,
+  optionsSuccessStatus: 200 // Para compatibilidad con navegadores legacy
+}));
+
+// 👇 Añade esta línea justo después para permitir solicitudes OPTIONS
+app.options("*", cors());
 app.use(express.json());
 app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
@@ -103,13 +209,57 @@ function shouldEscalateToHuman(message) {
     lower.includes("quiero una persona")
   );
 }
-  app.post("/api/chat", async (req, res) => {
-  const { message, system, userId, userAgent, pais, historial, datosContexto } = req.body;
+// ✅ NUEVA FUNCIÓN: genera saludo según hora e idioma
+function obtenerSaludoHoraActual(idioma = "es") {
+  const hora = new Date().getHours();
+
+  if (idioma === "en") {
+    if (hora < 12) return "Good morning";
+    if (hora < 20) return "Good afternoon";
+    return "Good evening";
+  }
+
+  // Español (por defecto)
+  if (hora < 12) return "Buenos días";
+  if (hora < 20) return "Buenas tardes";
+  return "Buenas noches";
+}
+
+// Función para llamar al webhook de contexto con firma
+app.post("/api/chat", async (req, res) => {
+  const { message, system, userId, userAgent, pais, historial, userUuid, lineUuid, language } = req.body;
   const finalUserId = userId || "anon";
+
+  // Llamar al webhook de contexto solo si existen userUuid y lineUuid
+  const datosContexto = (userUuid && lineUuid) 
+    ? await llamarWebhookContexto({ userUuid, lineUuid })
+    : null;
+
+  // ✅ Si el mensaje es "__saludo_inicial__", devolver un saludo personalizado
+  if (message === '__saludo_inicial__') {
+  const saludo = obtenerSaludoHoraActual(language || idioma);
+  const nombre = datosContexto?.user?.name?.trim();
+
+  const saludoFinal = nombre
+    ? `${saludo}, ${nombre}, ¿en qué puedo ayudarte?`
+    : `${saludo}, ¿en qué puedo ayudarte?`;
+
+    await db.collection("mensajes").add({
+      idConversacion: finalUserId,
+      rol: "asistente",
+      mensaje: saludoFinal,
+      original: saludoFinal,
+      idiomaDetectado: language,
+      tipo: "texto",
+      timestamp: new Date().toISOString(),
+    });
+
+    return res.json({ reply: saludoFinal });
+  }
 
   // 🧠 Detectar idioma del mensaje
   let idiomaDetectado = await detectarIdiomaGPT(message);
-let idioma = idiomaDetectado;
+  let idioma = idiomaDetectado;
 
 // Fallback si no es válido
 if (!idioma || idioma === "zxx") {
@@ -159,7 +309,7 @@ await db.collection("conversaciones").doc(finalUserId).set(
     navegador: userAgent || "",
     pais: pais || "",
     historial: historial || [],
-    datosContexto: datosContexto || null,
+    datosContexto: datosContexto || null,  // 👈 MÁS LIMPIO Y FLEXIBLE
     noVistos: admin.firestore.FieldValue.increment(1),
     userUuid: req.body.userUuid || null,
     lineUuid: req.body.lineUuid || null,
@@ -314,14 +464,15 @@ if (convData?.intervenida) {
   const convSnap = await convRef.get();
   const convData = convSnap.exists ? convSnap.data() : {};
 
-  const necesitaEscalada = !convData.intervenida; // ✅ simplificado
+  const necesitaEscalada = !convData.intervenida;
 
   if (necesitaEscalada) {
+    await marcarComoIntervenida(finalUserId); // 👈 UNIFICADO ✅
+
     await convRef.set(
       {
         pendienteIntervencion: true,
-        intervenida: true,
-        timestampIntervencion: new Date().toISOString(), // ✅ NUEVO CAMPO para lógica SMS
+        timestampIntervencion: new Date().toISOString(),
       },
       { merge: true }
     );
@@ -331,7 +482,7 @@ if (convData?.intervenida) {
       .map(doc => doc.data())
       .filter(a => a.notificarSMS && a.telefono);
 
-    const urlPanel = `https://panel-gestion-chats-production.up.railway.app/conversaciones?userId=${finalUserId}`;
+    const urlPanel = `${process.env.PANEL_GESTION_URL}/conversaciones?userId=${finalUserId}`;
     const texto = `El usuario ${finalUserId} ha solicitado hablar con un Agente. Accede al panel: ${urlPanel}`;
     const token = process.env.SMS_ARENA_KEY;
 
@@ -390,19 +541,30 @@ const historialFormateado = convDoc2.exists && convDoc2.data().historialFormatea
 }
 
     const promptSystem = [
-      baseConocimiento,
-      `\nHistorial reciente de conversación:\n${historialFormateado}`,
-      datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
-      `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}".`,
-    ].join("\n");
+  baseConocimiento,
+  `\nHistorial reciente de conversación:\n${historialFormateado}`,
+  datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
+  `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}".`,
+].join("\n");
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        { role: "system", content: promptSystem },
-        { role: "user", content: message },
-      ],
-    });
+// ✅ Generar saludo si es el primer mensaje
+let saludoInicial = "";
+if (!historialFormateado || historialFormateado.trim() === "") {
+  const saludo = obtenerSaludoHoraActual(idioma);
+  const nombre = datosContexto?.user?.name || null;
+
+  saludoInicial = nombre
+    ? `${saludo}, ${nombre}. `
+    : `${saludo}. `;
+}
+
+const response = await openai.chat.completions.create({
+  model: "gpt-4",
+  messages: [
+    { role: "system", content: promptSystem },
+    { role: "user", content: saludoInicial + message },
+  ],
+});
 
     const reply = response.choices[0].message.content;
 
@@ -577,28 +739,16 @@ await db.collection("conversaciones").doc(userId).set(
     historialFormateado: nuevoHistorial,
     ultimaRespuesta: timestampAhora,
     lastMessage: traduccion,
-    intervenida: true,
-    intervenidaPor: {
-      nombre: agente.nombre,
-      foto: agente.foto,
-      uid: agente.uid || null,
-    },
   },
   { merge: true }
 );
-    await db.collection("conversaciones").doc(userId).set(
-  {
-    intervenida: true,
-    intervenidaPor: {
-      nombre: agente.nombre,
-      foto: agente.foto,
-      uid: agente.uid || null,
-    },
-    ultimaRespuesta: new Date().toISOString(),  // ✅ nuevo campo
-    lastMessage: traduccion,                    // ✅ nuevo campo
-  },
-  { merge: true }
-);
+
+// ✅ Marcamos la conversación como intervenida de forma centralizada
+await marcarComoIntervenida(userId, {
+  nombre: agente.nombre,
+  foto: agente.foto,
+  uid: agente.uid || null,
+});
 
     res.json({ ok: true });
   } catch (error) {
@@ -678,14 +828,14 @@ app.post("/api/marcar-visto", async (req, res) => {
     let noVistos = 0;
     for (const doc of mensajesSnapshot.docs) {
       const msg = doc.data();
-      if (msg.timestamp > now) {
+      if (new Date(msg.timestamp) > new Date(now)) {
         noVistos++;
       }
     }
 
     // 3. Guardar conteo en la conversación
     await db.collection("conversaciones").doc(userId).set(
-      { noVistos: noVistos },
+      { noVistos },
       { merge: true }
     );
 
@@ -722,7 +872,8 @@ app.get("/api/vistas", async (req, res) => {
 });
 
 app.get("/api/conversaciones", async (req, res) => {
-  const tipo = req.query.tipo || "recientes"; // puede ser "recientes" o "archivo"
+  const tipoRaw = req.query.tipo || "recientes";
+const tipo = tipoRaw === "archivadas" ? "archivo" : tipoRaw;
 
   try {
     const snapshot = await db.collection("conversaciones").get();
@@ -749,36 +900,37 @@ app.get("/api/conversaciones", async (req, res) => {
   console.log(`✅ Conversación archivada automáticamente: ${userId}`);
 }
 
-      todas.push({
-        userId,
-        lastInteraction: ultima || new Date().toISOString(),
-        estado: data.estado || "abierta",
-        intervenida: data.intervenida || false,
-        intervenidaPor: data.intervenidaPor || null,
-        pais: data.pais || "🌐",
-        navegador: data.navegador || "Desconocido",
-        historial: data.historial || [],
-        message: data.lastMessage || "",
-        mensajes: [],
-        noVistos: data.noVistos || 0,
-      });
+        todas.push({
+    userId,
+    lastInteraction: ultima || new Date().toISOString(),
+    estado: data.estado || "abierta",
+    intervenida: data.intervenida || false,
+    intervenidaPor: data.intervenidaPor || null,
+    pais: data.pais || "🌐",
+    navegador: data.navegador || "Desconocido",
+    historial: data.historial || [],
+    message: data.lastMessage || "",
+    mensajes: [],
+    noVistos: data.noVistos || 0,
+    datosContexto: data.datosContexto || null // 👈 AÑADIR ESTA LÍNEA
+  });
     }
 
     let filtradas = todas;
 
     if (tipo === "recientes") {
-      filtradas = todas.filter(
-        (c) =>
-          (c.estado || "").toLowerCase() !== "cerrado" &&
-          (c.estado || "").toLowerCase() !== "archivado"
-      );
-    } else if (tipo === "archivo") {
-      filtradas = todas.filter(
-        (c) =>
-          (c.estado || "").toLowerCase() === "cerrado" ||
-          (c.estado || "").toLowerCase() === "archivado"
-      );
-    }
+  filtradas = todas.filter(
+    (c) =>
+      (c.estado || "").toLowerCase() !== "cerrado" &&
+      (c.estado || "").toLowerCase() !== "archivado"
+  );
+} else if (tipo === "archivo" || tipo === "archivadas") {
+  filtradas = todas.filter(
+    (c) =>
+      (c.estado || "").toLowerCase() === "cerrado" ||
+      (c.estado || "").toLowerCase() === "archivado"
+  );
+}
 
     res.json(filtradas);
   } catch (error) {
@@ -823,7 +975,7 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
       .filter((msg) => msg !== null)
       .sort((a, b) => new Date(a.lastInteraction) - new Date(b.lastInteraction)); // orden ascendente
 
-    res.json(mensajes);
+    res.json(mensajes); // ← volver al array directo
   } catch (error) {
     console.error("❌ Error crítico obteniendo mensajes:", error);
     res.status(500).json({ error: "Error crítico obteniendo mensajes" });
@@ -845,11 +997,11 @@ app.get("/api/poll/:userId", async (req, res) => {
       return {
         id: doc.id,
         mensaje: data.mensaje,
-        manual: data.manual || false,
+        manual: data.manual || false
       };
     });
 
-    res.json({ mensajes });
+    res.json({ mensajes }); // ✅ Esto es lo que espera el frontend
   } catch (error) {
     console.error("❌ Error en /api/poll:", error);
     res.status(500).json({ error: "Error obteniendo mensajes manuales" });
@@ -974,6 +1126,52 @@ app.get("/api/test-historial/:userId", async (req, res) => {
     res.status(500).json({ error: "Error consultando historial" });
   }
 });
+
+// Middleware de fallback para garantizar CORS en cualquier respuesta
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  // Si el origen está en la lista de permitidos, usarlo; si no, usar wildcard solo para desarrollo
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  } else if (!origin) {
+    // Para requests sin origen (Postman, apps móviles)
+    res.header("Access-Control-Allow-Origin", "*");
+  } else {
+    // Para desarrollo local, permitir localhost
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      res.header("Access-Control-Allow-Origin", origin);
+    } else {
+      res.header("Access-Control-Allow-Origin", process.env.PANEL_GESTION_URL || "*");
+    }
+  }
+  
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+  res.header("Access-Control-Allow-Credentials", "true");
+  next();
+});
+
+// Middleware global para capturar errores y responder con CORS
+app.use((err, req, res, next) => {
+  console.error("❌ Error capturado:", err.stack || err);
+  
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  } else {
+    res.header("Access-Control-Allow-Origin", process.env.PANEL_GESTION_URL || "*");
+  }
+  
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+  res.status(500).json({ error: "Error interno del servidor" });
+  res.json({ error: "Error interno del servidor" });
+});
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
+  console.log(`🌐 Panel de gestión configurado en: ${process.env.PANEL_GESTION_URL || 'NO CONFIGURADO'}`);
+  console.log(`📧 SMS configurado: ${process.env.SMS_ARENA_KEY ? 'SÍ' : 'NO'}`);
+  console.log(`🤖 OpenAI configurado: ${process.env.OPENAI_API_KEY ? 'SÍ' : 'NO'}`);
 });
