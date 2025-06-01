@@ -479,10 +479,17 @@ function iniciarCheckPanelMessages() {
   }
 
   console.log("📡 Activando polling con setInterval de checkPanelMessages()");
-  intervaloMensajes = setInterval(() => {
-    console.log("📡 Ejecutando checkPanelMessages()");
-    checkPanelMessages();
-  }, 5000);
+  setInterval(() => {
+  const asistenteVisible = document.querySelector("#chatbot-panel")?.style.display !== "none";
+  const minimizado = localStorage.getItem("chatMinimizado") === "true";
+
+  if (!asistenteVisible || minimizado) {
+    console.log("🛑 Asistente cerrado o minimizado. No hago polling.");
+    return;
+  }
+
+  checkPanelMessages(userId);
+}, 5000);
 }
 
 // ⬇️ Coloca la llamada después de definir la función
