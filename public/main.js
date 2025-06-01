@@ -2,10 +2,6 @@ const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('messageInput');
 const fileInput = document.getElementById('fileInput');
 const sendBtn = document.querySelector('.send-button');
-const chatSystem = window.chatSystem || {};
-const userUuid = chatSystem.currentUser || null;
-const lineUuid = chatSystem.currentLine || null;
-const languageFromChatSystem = chatSystem.language || null;
 
 function getUserId() {
   let id = localStorage.getItem("userId");
@@ -208,41 +204,55 @@ async function sendMessage() {
   }
 
   // ✅ Si hay texto, enviar al backend
-  if (text) {
-    const tempId = `typing-${Date.now()}`;
-    addTypingBubble(tempId);
+if (text) {
+  const tempId = `typing-${Date.now()}`;
+  addTypingBubble(tempId);
 
-    const bodyData = {
+  const userUuid = window.chatSystem?.currentUser || null;
+  const lineUuid = window.chatSystem?.currentLine || null;
+  const languageFromChatSystem = window.chatSystem?.language || null;
+
+  const datosContexto = {
+  nombre: window.chatSystem?.nombre || null,
+  userUuid: window.chatSystem?.currentUser || null,
+  lineUuid: window.chatSystem?.currentLine || null,
+  language: window.chatSystem?.language || null
+};
+
+console.log("📦 datosContexto enviados a GPT:", datosContexto);
+
+const bodyData = {
   message: text,
   userId,
   userAgent: metadata.userAgent,
   pais: metadata.pais,
   historial: metadata.historial,
-  userUuid: userUuid || null,         // UUID del usuario real
-  lineUuid: lineUuid || null,         // UUID de la web del difunto
-  language: languageFromChatSystem || null  // Idioma inicial forzado (si viene)
+  userUuid: userUuid || null,
+  lineUuid: lineUuid || null,
+  language: languageFromChatSystem || null,
+  datosContexto // ✅ Añadido aquí
 };
 
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(bodyData)
-      });
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bodyData)
+    });
 
-      const data = await res.json();
-      const delay = Math.max(0, 1500 - (Date.now() - parseInt(tempId.split('-')[1])));
+    const data = await res.json();
+    const delay = Math.max(0, 1500 - (Date.now() - parseInt(tempId.split('-')[1])));
 
-      setTimeout(() => {
-        removeMessageByTempId(tempId);
-        if (data.reply?.trim()) addMessage(data.reply, 'assistant');
-      }, delay);
-    } catch (err) {
+    setTimeout(() => {
       removeMessageByTempId(tempId);
-      addMessage("Error al conectar con el servidor.", "assistant");
-    }
+      if (data.reply?.trim()) addMessage(data.reply, 'assistant');
+    }, delay);
+      } catch (err) {
+    removeMessageByTempId(tempId);
+    addMessage("Error al conectar con el servidor.", "assistant");
   }
-}
+} // <- ESTE cierre es el que te faltaba
+} // <- Este cierra la función sendMessage
 
 function avisarEscribiendo(texto) {
   const userId = getUserId();
@@ -267,6 +277,7 @@ async function notificarEvento(tipo) {
     console.error(`❌ Error notificando evento "${tipo}"`, err);
   }
 }
+
 async function mostrarModal() {
   const userId = getUserId();
 
@@ -351,11 +362,6 @@ async function cerrarChatConfirmado() {
 // ✅ Eliminar historial por completo antes de guardar solo el saludo
 localStorage.removeItem("chatMessages");
 
-const saludo = document.createElement("div");
-saludo.className = "message assistant";
-saludo.innerText = "Hola, ¿en qué puedo ayudarte?";
-localStorage.setItem("chatMessages", saludo.outerHTML);
-
 localStorage.setItem('chatEstado', 'cerrado');
 document.getElementById('chat-widget').style.display = 'none';
 document.getElementById('chat-toggle').style.display = 'flex';
@@ -407,6 +413,7 @@ fileInput.addEventListener('change', (event) => {
   }
 });
 async function checkPanelMessages() {
+  console.log("📡 Ejecutando checkPanelMessages()");
   const estado = localStorage.getItem('chatEstado');
   if (estado === 'cerrado') return;
 
@@ -414,10 +421,16 @@ async function checkPanelMessages() {
   try {
     const res = await fetch(`/api/poll/${userId}`);
     const data = await res.json();
-    if (data && Array.isArray(data.mensajes)) {
-      data.mensajes.forEach((msg) => {
+    const mensajes = Array.isArray(data) ? data : data.mensajes;
+
+    if (mensajes && Array.isArray(mensajes)) {
+      mensajes.forEach((msg) => {
         if (msg.id && !document.querySelector(`[data-panel-id="${msg.id}"]`)) {
           console.log("📨 Mensaje manual recibido:", msg);
+
+          const contenido = msg.mensaje || msg.message || msg.original || "";
+          if (!contenido) return; // ⛔ evita renderizar vacíos
+
           const messageDiv = document.createElement('div');
           messageDiv.className = 'message assistant';
           if (msg.manual) {
@@ -425,10 +438,10 @@ async function checkPanelMessages() {
           }
           messageDiv.dataset.panelId = msg.id;
 
-          if (/\.(jpeg|jpg|png|gif|webp)$/i.test(msg.mensaje)) {
-            messageDiv.innerHTML = `<img src="${msg.mensaje}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+          if (/\.(jpeg|jpg|png|gif|webp)$/i.test(contenido)) {
+            messageDiv.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
           } else {
-            messageDiv.innerText = msg.mensaje;
+            messageDiv.innerText = contenido;
           }
 
           messagesDiv.appendChild(messageDiv);
@@ -447,12 +460,16 @@ async function checkPanelMessages() {
       });
     }
   } catch (error) {
-    console.error("Error al obtener mensajes manuales:", error);
+    console.error("❌ Error al obtener mensajes manuales:", error);
   }
 }
+
+window.checkPanelMessages = checkPanelMessages; // ✅ Exportar para usar en consola
 let intervaloMensajes = null;
 
 function iniciarCheckPanelMessages() {
+  console.log("▶️ Entrando en iniciarCheckPanelMessages()");
+
   if (intervaloMensajes) clearInterval(intervaloMensajes);
 
   const estado = localStorage.getItem('chatEstado');
@@ -461,15 +478,54 @@ function iniciarCheckPanelMessages() {
     return;
   }
 
-  intervaloMensajes = setInterval(checkPanelMessages, 5000);
-  console.log("▶️ Polling activado");
+  console.log("📡 Activando polling con setInterval de checkPanelMessages()");
+  setInterval(() => {
+  const asistenteVisible = document.querySelector("#chatbot-panel")?.style.display !== "none";
+  const minimizado = localStorage.getItem("chatMinimizado") === "true";
+
+  if (!asistenteVisible || minimizado) {
+    console.log("🛑 Asistente cerrado o minimizado. No hago polling.");
+    return;
+  }
+
+  checkPanelMessages(userId);
+}, 5000);
 }
 
+// ⬇️ Coloca la llamada después de definir la función
 iniciarCheckPanelMessages();
 
 const estadoChat = localStorage.getItem('chatEstado');
 if (estadoChat !== 'cerrado') {
   restoreChat();
+
+  // ✅ Si no hay historial guardado, pedimos saludo inicial personalizado
+  if (!localStorage.getItem("chatMessages")) {
+    const userId = getUserId();
+
+    fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: "__saludo_inicial__",
+        userId,
+        userAgent: metadata.userAgent,
+        pais: metadata.pais,
+        historial: metadata.historial,
+        userUuid: window.chatSystem?.currentUser || null,
+        lineUuid: window.chatSystem?.currentLine || null,
+        language: window.chatSystem?.language || "es"
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.reply) {
+        addMessage(data.reply, 'assistant');
+        saveChat(); // ✅ guardamos el saludo en localStorage
+      }
+    })
+    .catch(err => console.error("❌ Error al obtener saludo inicial:", err));
+  }
 } else {
   // ✅ Mostrar solo el mensaje de saludo guardado
   const saved = localStorage.getItem('chatMessages');
@@ -477,7 +533,6 @@ if (estadoChat !== 'cerrado') {
     messagesDiv.innerHTML = saved;
   }
 }
-
 getUserId();
 
 const scrollBtn = document.getElementById('scrollToBottomBtn');
@@ -512,33 +567,12 @@ input.addEventListener('focus', () => {
     }
   }, 500);
 });
-
 input.addEventListener('blur', () => {
   blurActivo = true;
   setTimeout(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, 200);
 });
-
-// ✅ Inactividad: minimiza si pasan 2 minutos sin actividad
-let inactividadTimer;
-
-function reiniciarInactividad() {
-  clearTimeout(inactividadTimer);
-  inactividadTimer = setTimeout(() => {
-    const estado = localStorage.getItem('chatEstado');
-    if (estado !== 'cerrado' && estado !== 'minimizado') {
-      minimizarChat();
-      console.log("⏱️ Chat minimizado automáticamente por inactividad.");
-    }
-  }, 2 * 60 * 1000); // 2 minutos
-}
-
-// Eventos que reinician el contador
-input.addEventListener("input", reiniciarInactividad);
-messagesDiv.addEventListener("click", reiniciarInactividad);
-fileInput.addEventListener("change", reiniciarInactividad);
-document.addEventListener("click", reiniciarInactividad);
 
 document.addEventListener('DOMContentLoaded', () => {
   const btnConfirmar = document.getElementById('btnConfirmar');
@@ -582,12 +616,12 @@ window.chatSystem = {
 window.addEventListener('message', (event) => {
   // Por seguridad, podrías verificar el origen del mensaje
   // if (event.origin !== 'https://tu-dominio.com') return;
-  
+
   // Verificar si el mensaje es del tipo esperado
   if (event.data && event.data.type === 'CHAT_PARAMS') {
     // Extraer los datos recibidos
     const { userUuid, lineUuid, language } = event.data.data;
-      
+
     // Inicializar el chat con estos parámetros
     initializeChat(userUuid, lineUuid, language);
   }
@@ -601,16 +635,16 @@ window.addEventListener('message', (event) => {
  */
 function initializeChat(userUuid, lineUuid, language = 'en') {
   console.log('Inicializando chat con:', { userUuid, lineUuid, language });
-  
-  // Configurar datos de usuario en el chat
+
+  // ✅ Configurar correctamente los datos en window.chatSystem
   window.chatSystem = {
     currentUser: userUuid,
     currentLine: lineUuid,
     language: language,
     initialized: true
   };
-  
-  // Actualizar UI para mostrar información del usuario
+
+  // ✅ Mostrar el ID de usuario en la interfaz
   const userInfoElement = document.getElementById('userIdDisplay');
   if (userInfoElement) {
     userInfoElement.textContent = `Usuario: ${getUserId()}`;
@@ -640,14 +674,12 @@ function closeChat() {
 }
 
 /**
- * Función para cerrar el chat desde el iframe
+ * Función para minimizar el chat desde el iframe
  */
 function minimizeChat() {
-  // Oculta el chat visualmente, si está embedded en un iframe
   if (window.parent && window.parent !== window) {
     notifyParentEvent('CHAT_MINIMIZED', { reason: 'User minimized chat' });
   } else {
-    // Si no está en un iframe, simplemente ocultamos el widget
     document.getElementById('chat-widget').style.display = 'none';
     document.getElementById('chat-toggle').style.display = 'flex';
     document.getElementById('scrollToBottomBtn').style.display = 'none';
@@ -663,7 +695,6 @@ function notifyParentEvent(eventType, data = {}) {
       type: eventType,
       data: data
     }, '*');
-    
   }
 }
 
