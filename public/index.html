@@ -31,7 +31,7 @@
   border-radius: 30px;
   border: 1px solid #ddd;
   font-size: 16px;
-  line-height: 1.2;              /* ✅ Alineación óptima sin agrandar */
+  line-height: 1.2;
   outline: none;
   background-color: #fafafa;
   -webkit-appearance: none;
@@ -52,7 +52,14 @@
     .message img { transform: rotate(0deg) !important; max-width: 100%; border-radius: 12px; object-fit: contain; }
   </style>
 </head>
-<body>
+
+<!-- ⚠️ Aquí está el cambio: atributos añadidos -->
+<body
+  data-user-id="89814b0f-df2c-4044-9c0c-780fbac73dbb"
+  data-line-id="090170ad-3271-41c5-bd2d-de77cc818957"
+  data-lang="es"
+>
+
   <button id="chat-toggle" onclick="abrirChat()">💬</button>
   <div id="chat-widget">
     <div class="chat-header">
@@ -69,7 +76,6 @@
     <div class="chat-messages" id="messages"></div>
     <div id="userIdDisplay"></div>
     <div class="chat-input">
-      <input
   <input
   id="messageInput"
   type="text"
@@ -104,6 +110,32 @@
       <path d="M6 9l6 6 6-6"></path>
     </svg>
   </button>
+
+  <script>
+  window.addEventListener("DOMContentLoaded", () => {
+    const iframe = document.querySelector("iframe");
+    const target = iframe?.contentWindow || window;
+
+    // ✅ Leer valores reales desde atributos en <body>
+    const userUuid = document.body.dataset.userId || null;
+    const lineUuid = document.body.dataset.lineId || null;
+    const language = document.body.dataset.lang || "es";
+
+    const chatParams = {
+      type: "CHAT_PARAMS",
+      data: {
+        userUuid,
+        lineUuid,
+        language
+      }
+    };
+
+    setTimeout(() => {
+      target.postMessage(chatParams, "*");
+      console.log("📤 CHAT_PARAMS enviados:", chatParams);
+    }, 500);
+  });
+  </script>
 
   <script src="main.js"></script>
 </body>
