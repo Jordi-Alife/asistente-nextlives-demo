@@ -230,6 +230,14 @@ app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial, userUuid, lineUuid, language } = req.body;
   const finalUserId = userId || "anon";
 
+  // ✅ Si el chat estaba cerrado y el usuario vuelve a escribir, reabrir la conversación
+const convRef = db.collection("conversaciones").doc(finalUserId);
+const convSnap = await convRef.get();
+if (convSnap.exists && convSnap.data().chatCerrado === true) {
+  await convRef.update({ chatCerrado: false, estado: "abierta" });
+  console.log(`🔓 Conversación ${finalUserId} reabierta al recibir mensaje del usuario`);
+}
+
   // Llamar al webhook de contexto solo si existen userUuid y lineUuid
   const datosContexto = (userUuid && lineUuid) 
     ? await llamarWebhookContexto({ userUuid, lineUuid })
