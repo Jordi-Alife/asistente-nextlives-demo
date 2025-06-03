@@ -370,7 +370,8 @@ document.getElementById('modalConfirm').style.display = 'none'; // ✅ CIERRA MO
 }
 
 function abrirChat() {
-  window.location.reload();
+  localStorage.setItem("chatEstado", "abierto"); // ✅ Restaurar estado
+  window.location.reload(); // 🔄 Recarga para reiniciar polling
 }
 
 let imagenSeleccionada = null;
