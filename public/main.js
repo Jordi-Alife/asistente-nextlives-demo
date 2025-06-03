@@ -424,40 +424,44 @@ async function checkPanelMessages() {
     const mensajes = Array.isArray(data) ? data : data.mensajes;
 
     if (mensajes && Array.isArray(mensajes)) {
-  mensajes.forEach((msg) => {
-    if (msg.id && !document.querySelector(`[data-panel-id="${msg.id}"]`)) {
-      console.log("📨 Mensaje manual recibido:", msg);
+      mensajes.forEach((msg) => {
+        if (msg.id && !document.querySelector(`[data-panel-id="${msg.id}"]`)) {
+          console.log("📨 Mensaje manual recibido:", msg);
 
-      const contenido = msg.text || msg.mensaje || msg.message || msg.original || "";
-      if (!contenido) return; // ⛔ evita renderizar vacíos
+          const contenido = msg.mensaje || msg.message || msg.original || "";
+          if (!contenido) return; // ⛔ evita renderizar vacíos
 
-      const messageDiv = document.createElement('div');
-      messageDiv.className = 'message assistant';
-      if (msg.manual) {
-        messageDiv.classList.add('manual');
-      }
-      messageDiv.dataset.panelId = msg.id;
+          const messageDiv = document.createElement('div');
+          messageDiv.className = 'message assistant';
+          if (msg.manual) {
+            messageDiv.classList.add('manual');
+          }
+          messageDiv.dataset.panelId = msg.id;
 
-      if (/\.(jpeg|jpg|png|gif|webp)$/i.test(contenido)) {
-        messageDiv.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
-      } else {
-        messageDiv.innerText = contenido;
-      }
+          if (/\.(jpeg|jpg|png|gif|webp)$/i.test(contenido)) {
+            messageDiv.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+          } else {
+            messageDiv.innerText = contenido;
+          }
 
-      messagesDiv.appendChild(messageDiv);
+          messagesDiv.appendChild(messageDiv);
 
-      // ✅ Limitar a los últimos 50 mensajes
-      const todos = messagesDiv.querySelectorAll('.message');
-      if (todos.length > 50) {
-        for (let i = 0; i < todos.length - 50; i++) {
-          todos[i].remove();
+          // ✅ Limitar a los últimos 50 mensajes
+          const todos = messagesDiv.querySelectorAll('.message');
+          if (todos.length > 50) {
+            for (let i = 0; i < todos.length - 50; i++) {
+              todos[i].remove();
+            }
+          }
+
+          scrollToBottom();
+          saveChat();
         }
-      }
-
-      scrollToBottom();
-      saveChat();
+      });
     }
-  });
+  } catch (error) {
+    console.error("❌ Error al obtener mensajes manuales:", error);
+  }
 }
 
 window.checkPanelMessages = checkPanelMessages; // ✅ Exportar para usar en consola
