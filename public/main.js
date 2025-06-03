@@ -569,9 +569,17 @@ input.addEventListener('blur', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  notifyReadyToReceiveParams();
+
   const btnConfirmar = document.getElementById('btnConfirmar');
   if (btnConfirmar) {
     btnConfirmar.addEventListener('click', cerrarChatConfirmado);
+  }
+
+  // ✅ Detectar clic en el botón de reapertura del chat
+  const chatToggle = document.getElementById('chat-toggle');
+  if (chatToggle) {
+    chatToggle.addEventListener('click', abrirChat);
   }
 });
 
