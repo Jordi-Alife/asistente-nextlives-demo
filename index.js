@@ -897,9 +897,9 @@ const tipo = tipoRaw === "archivadas" ? "archivo" : tipoRaw;
       const ultima = data.ultimaRespuesta || data.fechaInicio;
       const minutos = ultima ? (ahora - new Date(ultima)) / 60000 : Infinity;
 
-      // Si lleva inactiva más de 10 minutos y no está cerrada ni archivada, marcar como archivada
+      // Si lleva inactiva más de 5 minutos y no está cerrada ni archivada, marcar como archivada
       const estadoRaw = (data.estado || "").toLowerCase();
-      if (minutos > 10 && (data.estado || "").toLowerCase() === "abierta") {
+      if (minutos > 5 && (data.estado || "").toLowerCase() === "abierta") {
   db.collection("conversaciones").doc(userId).set(
     { estado: "archivado" },
     { merge: true }
