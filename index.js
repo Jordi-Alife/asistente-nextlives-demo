@@ -713,16 +713,17 @@ await db.collection("conversaciones").doc(userId).set(
 
 if (req.body.imageUrl || message) {
   await db.collection("mensajes").add({
-    idConversacion: userId,
-    rol: "asistente",
-    mensaje: req.body.imageUrl || traduccion,
-    original: req.body.imageUrl || message,
-    idiomaDetectado: idiomaDestino,
-    tipo: req.body.imageUrl ? "imagen" : "texto",
-    timestamp: timestampAhora,
-    manual: true,
-    agenteUid: agente.uid || null,
-  });
+  idConversacion: userId,
+  rol: "asistente",
+  mensaje: req.body.imageUrl || traduccion,
+  original: req.body.imageUrl || message,
+  idiomaDetectado: idiomaDestino,
+  tipo: req.body.imageUrl ? "imagen" : "texto",
+  timestamp: timestampAhora,
+  lastInteraction: timestampAhora, // ✅ ESTE CAMPO ES CLAVE
+  manual: true,
+  agenteUid: agente.uid || null,
+});
 }
 
 const convDoc = await db.collection("conversaciones").doc(userId).get();
