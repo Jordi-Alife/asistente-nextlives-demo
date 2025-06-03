@@ -441,7 +441,13 @@ async function checkPanelMessages() {
           if (/\.(jpeg|jpg|png|gif|webp)$/i.test(contenido)) {
             messageDiv.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
           } else {
-            messageDiv.innerText = contenido;
+            console.log("🧪 Contenido a renderizar:", JSON.stringify(contenido)); // 👈 ESTE LOG
+            try {
+  messageDiv.innerText = contenido;
+} catch (e) {
+  console.warn("⚠️ No se pudo renderizar contenido manual:", contenido, e);
+  messageDiv.innerText = "[Mensaje no válido]";
+}
           }
 
           messagesDiv.appendChild(messageDiv);
