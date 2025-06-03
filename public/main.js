@@ -428,7 +428,7 @@ async function checkPanelMessages() {
         if (msg.id && !document.querySelector(`[data-panel-id="${msg.id}"]`)) {
           console.log("📨 Mensaje manual recibido:", msg);
 
-          const contenido = msg.message || msg.mensaje || msg.original || "";
+          const contenido = msg.mensaje || msg.message || msg.original || "";
           if (!contenido) return; // ⛔ evita renderizar vacíos
 
           const messageDiv = document.createElement('div');
@@ -441,13 +441,7 @@ async function checkPanelMessages() {
           if (/\.(jpeg|jpg|png|gif|webp)$/i.test(contenido)) {
             messageDiv.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
           } else {
-            console.log("🧪 Contenido a renderizar:", JSON.stringify(contenido)); // 👈 ESTE LOG
-            try {
-  messageDiv.innerText = contenido;
-} catch (e) {
-  console.warn("⚠️ No se pudo renderizar contenido manual:", contenido, e);
-  messageDiv.innerText = "[Mensaje no válido]";
-}
+            messageDiv.innerText = contenido;
           }
 
           messagesDiv.appendChild(messageDiv);
