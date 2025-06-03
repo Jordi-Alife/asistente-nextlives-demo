@@ -881,9 +881,11 @@ app.get("/api/vistas", async (req, res) => {
 
 app.get("/api/conversaciones", async (req, res) => {
   const tipoRaw = req.query.tipo || "recientes";
-const tipo = tipoRaw === "archivadas" ? "archivo" : tipoRaw;
+  const tipo = tipoRaw === "archivadas" ? "archivo" : tipoRaw;
 
   try {
+    console.log("📥 [GET] /api/conversaciones → tipo:", tipo);
+
     const snapshot = await db.collection("conversaciones").get();
     const ahora = new Date();
 
@@ -893,6 +895,9 @@ const tipo = tipoRaw === "archivadas" ? "archivo" : tipoRaw;
       const data = doc.data();
       const userId = data.idUsuario;
       if (!userId) continue;
+
+      // 🔍 Log por conversación
+      console.log(`📄 Procesando conversación ${userId} con estado: ${data.estado}`);
 
       const ultima = data.ultimaRespuesta || data.fechaInicio;
       const minutos = ultima ? (ahora - new Date(ultima)) / 60000 : Infinity;
