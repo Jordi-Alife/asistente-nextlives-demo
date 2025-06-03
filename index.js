@@ -954,7 +954,9 @@ app.get("/api/conversaciones", async (req, res) => {
 
 app.get("/api/conversaciones/:userId", async (req, res) => {
   const { userId } = req.params;
-  const hasta = req.query.hasta; // timestamp ISO
+  const hasta = req.query.hasta;
+
+  console.log(`📥 [GET] /api/conversaciones/${userId} → hasta=${hasta || "sin límite"}`);
 
   try {
     let query = db
@@ -964,7 +966,7 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
       .limit(25);
 
     if (hasta) {
-      query = query.where("timestamp", "<", new Date(hasta)); // trae más antiguos
+      query = query.where("timestamp", "<", new Date(hasta));
     }
 
     const snapshot = await query.get();
@@ -985,13 +987,12 @@ app.get("/api/conversaciones/:userId", async (req, res) => {
           estado: data.estado || null,
         };
       })
-      .filter((msg) => msg !== null)
-      .sort((a, b) => new Date(a.lastInteraction) - new Date(b.lastInteraction)); // orden ascendente
 
-    res.json(mensajes); // ← volver al array directo
-  } catch (error) {
-    console.error("❌ Error crítico obteniendo mensajes:", error);
-    res.status(500).json({ error: "Error crítico obteniendo mensajes" });
+    console.log(`📦 Devueltos ${mensajes.length} mensajes para ${userId}`);
+    res.json(mensajes);
+  } catch (err) {
+    console.error("❌ Error cargando mensajes:", err);
+    res.status(500).send("Error");
   }
 });
 app.get("/api/poll/:userId", async (req, res) => {
