@@ -428,7 +428,7 @@ async function checkPanelMessages() {
         if (msg.id && !document.querySelector(`[data-panel-id="${msg.id}"]`)) {
           console.log("📨 Mensaje manual recibido:", msg);
 
-          const contenido = msg.mensaje || msg.message || msg.original || "";
+          const contenido = msg.message || msg.mensaje || msg.original || "";
           if (!contenido) return; // ⛔ evita renderizar vacíos
 
           const messageDiv = document.createElement('div');
