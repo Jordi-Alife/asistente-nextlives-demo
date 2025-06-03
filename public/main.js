@@ -374,6 +374,10 @@ function abrirChat() {
   window.location.reload(); // 🔄 Recarga para reiniciar polling
 }
 
+if (localStorage.getItem("chatEstado") === "abierto") {
+  iniciarCheckPanelMessages();
+}
+
 let imagenSeleccionada = null;
 
 fileInput.addEventListener('change', (event) => {
