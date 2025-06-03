@@ -883,6 +883,8 @@ app.get("/api/conversaciones", async (req, res) => {
   const tipoRaw = req.query.tipo || "recientes";
   const tipo = tipoRaw === "archivadas" ? "archivo" : tipoRaw;
 
+  console.log("🧭 [GET] /api/conversaciones desde", req.headers.origin, req.headers["user-agent"]);
+
   try {
     console.log("📥 [GET] /api/conversaciones → tipo:", tipo);
 
