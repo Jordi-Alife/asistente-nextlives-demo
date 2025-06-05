@@ -525,7 +525,13 @@ window.checkPanelMessages = checkPanelMessages; // ✅ Exportar para usar en con
 let intervaloMensajes = null;
 
 function iniciarCheckPanelMessages() {
-  console.log("▶️ Entrando en iniciarCheckPanelMessages()");
+  console.log("▶️ iniciarCheckPanelMessages()");
+
+  // Si ya está el listener de Firebase, no usamos polling
+  if (window.listenerRealtimeActivo) {
+    console.log("🛑 Polling NO necesario, ya hay listener en tiempo real.");
+    return;
+  }
 
   if (intervaloMensajes) clearInterval(intervaloMensajes);
 
