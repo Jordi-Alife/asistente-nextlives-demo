@@ -542,9 +542,6 @@ function iniciarCheckPanelMessages() {
   }, 5000);
 }
 
-// ⬇️ Coloca la llamada después de definir la función
-iniciarCheckPanelMessages();
-
 const userIdRealtime = getUserId();
 if (window.escucharMensajesUsuario && userIdRealtime) {
   window.escucharMensajesUsuario(userIdRealtime, (mensajes) => {
