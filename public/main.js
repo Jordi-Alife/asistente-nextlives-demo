@@ -370,8 +370,21 @@ document.getElementById('modalConfirm').style.display = 'none'; // ✅ CIERRA MO
 }
 
 function abrirChat() {
-  localStorage.setItem("chatEstado", "abierto"); // ✅ Restaurar estado
-  window.location.reload(); // 🔄 Recarga para reiniciar polling
+  localStorage.setItem("chatEstado", "abierto");
+
+  // ✅ Restaurar la conversación desde localStorage
+  restoreChat();
+
+  // ✅ Activar polling (por si acaso)
+  iniciarCheckPanelMessages();
+
+  // ✅ Activar listener en tiempo real
+  activarListenerRealtime();
+
+  // ✅ Mostrar el chat
+  document.getElementById('chat-widget').style.display = 'flex';
+  document.getElementById('chat-toggle').style.display = 'none';
+  document.getElementById('scrollToBottomBtn').style.display = 'none';
 }
 
 if (localStorage.getItem("chatEstado") === "abierto") {
