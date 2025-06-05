@@ -570,8 +570,8 @@ if (window.escucharMensajesUsuario && userIdRealtime) {
 
 const estadoChat = localStorage.getItem('chatEstado');
 if (estadoChat !== 'cerrado') {
+  localStorage.removeItem("chatMessages"); // 🧹 Limpiamos historial anterior
   restoreChat();
-
   // ✅ Si no hay historial guardado, pedimos saludo inicial personalizado
   if (!localStorage.getItem("chatMessages")) {
     const userId = getUserId();
