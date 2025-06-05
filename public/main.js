@@ -4,11 +4,7 @@ const fileInput = document.getElementById('fileInput');
 const sendBtn = document.querySelector('.send-button');
 
 function getUserId() {
-  let id = localStorage.getItem("userId");
-  if (!id) {
-    id = Math.random().toString(36).substring(2, 10);
-    localStorage.setItem("userId", id);
-  }
+  let id = window.chatSystem?.currentUser || Math.random().toString(36).substring(2, 10);
   const display = document.getElementById("userIdDisplay");
   if (display) display.textContent = `ID de usuario: ${id}`;
   return id;
