@@ -12,11 +12,9 @@ function getUserId() {
 
 const metadata = {
   userAgent: navigator.userAgent,
-  historial: JSON.parse(localStorage.getItem("historialPaginas") || "[]"),
+  historial: [window.location.href],
   pais: null
 };
-metadata.historial.push(window.location.href);
-localStorage.setItem("historialPaginas", JSON.stringify(metadata.historial));
 
 fetch("https://ipapi.co/json")
   .then(res => res.json())
