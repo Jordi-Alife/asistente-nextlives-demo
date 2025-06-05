@@ -779,6 +779,53 @@ function notifyParentEvent(eventType, data = {}) {
   }
 }
 
+// 👇 AÑADE AQUÍ ESTA FUNCIÓN
+function activarListenerRealtime() {
+  const userId = getUserId();
+  if (!window.escucharMensajesUsuario || !userId) return;
+
+  window.escucharMensajesUsuario(userId, (mensajes) => {
+    mensajes.forEach((msg) => {
+      if (
+        msg.manual &&
+        msg.id &&
+        !document.querySelector(`[data-panel-id="${msg.id}"]`)
+      ) {
+        localStorage.removeItem("chatMessages"); // 🧹 Forzar refresco
+        const contenido = msg.mensaje || msg.message || msg.original || "";
+        if (!contenido) return;
+
+        const div = document.createElement("div");
+        div.className = "message assistant";
+        div.dataset.panelId = msg.id;
+
+        if (/\.(jpeg|jpg|png|gif|webp)$/i.test(contenido)) {
+          div.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+        } else {
+          div.innerText = contenido;
+        }
+
+        messagesDiv.appendChild(div);
+
+        const todos = messagesDiv.querySelectorAll(".message");
+        if (todos.length > 50) {
+          for (let i = 0; i < todos.length - 50; i++) {
+            todos[i].remove();
+          }
+        }
+
+        scrollToBottom();
+        saveChat();
+      }
+    });
+  });
+}
+
+// 🟢 Este bloque ya lo tienes
+document.addEventListener('DOMContentLoaded', () => {
+  notifyReadyToReceiveParams();
+});
+
 // Cuando el DOM esté cargado, notificar que estamos listos
 document.addEventListener('DOMContentLoaded', () => {
   notifyReadyToReceiveParams();
