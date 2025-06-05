@@ -536,32 +536,33 @@ if (window.escucharMensajesUsuario && userIdRealtime) {
   window.escucharMensajesUsuario(userIdRealtime, (mensajes) => {
     mensajes.forEach((msg) => {
       if (msg.manual && msg.id && !document.querySelector(`[data-panel-id="${msg.id}"]`)) {
-        const contenido = msg.mensaje || msg.message || msg.original || "";
-        if (!contenido) return;
+  localStorage.removeItem("chatMessages"); // ✅ Limpiar historial para forzar refresco
 
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'message assistant';
-        messageDiv.dataset.panelId = msg.id;
+  const contenido = msg.mensaje || msg.message || msg.original || "";
+  if (!contenido) return;
 
-        if (/\.(jpeg|jpg|png|gif|webp)$/i.test(contenido)) {
-          messageDiv.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
-        } else {
-          messageDiv.innerText = contenido;
-        }
+  const messageDiv = document.createElement('div');
+  messageDiv.className = 'message assistant';
+  messageDiv.dataset.panelId = msg.id;
 
-        messagesDiv.appendChild(messageDiv);
+  if (/\.(jpeg|jpg|png|gif|webp)$/i.test(contenido)) {
+    messageDiv.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+  } else {
+    messageDiv.innerText = contenido;
+  }
 
-        // Limitar a los últimos 50 mensajes
-        const todos = messagesDiv.querySelectorAll('.message');
-        if (todos.length > 50) {
-          for (let i = 0; i < todos.length - 50; i++) {
-            todos[i].remove();
-          }
-        }
+  messagesDiv.appendChild(messageDiv);
 
-        scrollToBottom();
-        saveChat();
-      }
+  const todos = messagesDiv.querySelectorAll('.message');
+  if (todos.length > 50) {
+    for (let i = 0; i < todos.length - 50; i++) {
+      todos[i].remove();
+    }
+  }
+
+  scrollToBottom();
+  saveChat();
+}
     });
   });
 }
