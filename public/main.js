@@ -375,8 +375,6 @@ function abrirChat() {
   // ✅ Restaurar la conversación desde localStorage
   restoreChat();
 
-  // ✅ Activar polling (por si acaso)
-  iniciarCheckPanelMessages();
 
   // ✅ Activar listener en tiempo real
   activarListenerRealtime();
