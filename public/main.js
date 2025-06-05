@@ -464,32 +464,6 @@ fileInput.addEventListener('change', (event) => {
   }
 });
 
-let intervaloMensajes = null;
-
-function iniciarCheckPanelMessages() {
-  console.log("▶️ iniciarCheckPanelMessages()");
-
-  // Si ya está el listener de Firebase, no usamos polling
-  if (window.listenerRealtimeActivo) {
-    console.log("🛑 Polling NO necesario, ya hay listener en tiempo real.");
-    return;
-  }
-
-  if (intervaloMensajes) clearInterval(intervaloMensajes);
-
-  const estado = localStorage.getItem('chatEstado');
-  if (estado === 'cerrado' || estado === 'minimizado') {
-    console.log("⏸️ Polling detenido (estado cerrado o minimizado)");
-    return;
-  }
-
-  console.log("📡 Activando polling con setInterval de checkPanelMessages()");
-  intervaloMensajes = setInterval(() => {
-    console.log("📡 Ejecutando checkPanelMessages()");
-    checkPanelMessages();
-  }, 5000);
-}
-
 const userIdRealtime = getUserId();
 if (window.escucharMensajesUsuario && userIdRealtime) {
   window.escucharMensajesUsuario(userIdRealtime, (mensajes) => {
