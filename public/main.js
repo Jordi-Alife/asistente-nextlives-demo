@@ -792,3 +792,6 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('load', () => {
   notifyReadyToReceiveParams();
 });
+
+// ✅ Exportar función para el atributo oninput del HTML
+window.avisarEscribiendo = avisarEscribiendo;
