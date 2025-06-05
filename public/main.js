@@ -385,10 +385,6 @@ function abrirChat() {
   document.getElementById('scrollToBottomBtn').style.display = 'none';
 }
 
-if (localStorage.getItem("chatEstado") === "abierto") {
-  iniciarCheckPanelMessages();
-}
-
 if (window.escucharMensajesUsuario && localStorage.getItem("chatEstado") === "abierto") {
   const userId = getUserId();
 
