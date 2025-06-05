@@ -314,9 +314,7 @@ async function cerrarChatConfirmado() {
   }
 
 // ✅ Eliminar historial por completo antes de guardar solo el saludo
-localStorage.removeItem("chatMessages");
 
-localStorage.setItem('chatEstado', 'cerrado');
 document.getElementById('chat-widget').style.display = 'none';
 document.getElementById('chat-toggle').style.display = 'flex';
 document.getElementById('scrollToBottomBtn').style.display = 'none';
@@ -324,10 +322,8 @@ document.getElementById('modalConfirm').style.display = 'none'; // ✅ CIERRA MO
 }
 
 function abrirChat() {
-  localStorage.setItem("chatEstado", "abierto");
 
   // ✅ Restaurar la conversación desde localStorage
-  restoreChat();
 
 
   // ✅ Activar listener en tiempo real
