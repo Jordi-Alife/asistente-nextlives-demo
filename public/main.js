@@ -4,7 +4,11 @@ const fileInput = document.getElementById('fileInput');
 const sendBtn = document.querySelector('.send-button');
 
 function getUserId() {
-  let id = window.chatSystem?.currentUser || Math.random().toString(36).substring(2, 10);
+  let id = localStorage.getItem("userId");
+  if (!id) {
+    id = Math.random().toString(36).substring(2, 10);
+    localStorage.setItem("userId", id);
+  }
   const display = document.getElementById("userIdDisplay");
   if (display) display.textContent = `ID de usuario: ${id}`;
   return id;
@@ -12,9 +16,11 @@ function getUserId() {
 
 const metadata = {
   userAgent: navigator.userAgent,
-  historial: [window.location.href],
+  historial: JSON.parse(localStorage.getItem("historialPaginas") || "[]"),
   pais: null
 };
+metadata.historial.push(window.location.href);
+localStorage.setItem("historialPaginas", JSON.stringify(metadata.historial));
 
 fetch("https://ipapi.co/json")
   .then(res => res.json())
@@ -308,7 +314,9 @@ async function cerrarChatConfirmado() {
   }
 
 // ✅ Eliminar historial por completo antes de guardar solo el saludo
+localStorage.removeItem("chatMessages");
 
+localStorage.setItem('chatEstado', 'cerrado');
 document.getElementById('chat-widget').style.display = 'none';
 document.getElementById('chat-toggle').style.display = 'flex';
 document.getElementById('scrollToBottomBtn').style.display = 'none';
@@ -316,8 +324,10 @@ document.getElementById('modalConfirm').style.display = 'none'; // ✅ CIERRA MO
 }
 
 function abrirChat() {
+  localStorage.setItem("chatEstado", "abierto");
 
   // ✅ Restaurar la conversación desde localStorage
+  restoreChat();
 
 
   // ✅ Activar listener en tiempo real
