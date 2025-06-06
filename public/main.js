@@ -489,9 +489,6 @@ if (window.escucharMensajesUsuario && userIdRealtime) {
   });
 }
 
-// ✅ Restaurar historial guardado
-restoreChat();
-
 // ✅ Activar listener en tiempo real para recibir mensajes manuales
 activarListenerRealtime();
 
@@ -517,7 +514,6 @@ if (messagesDiv.children.length === 0) {
   .then(data => {
     if (data.reply) {
       addMessage(data.reply, 'assistant');
-      saveChat();
     }
   })
   .catch(err => console.error("❌ Error al obtener saludo inicial:", err));
