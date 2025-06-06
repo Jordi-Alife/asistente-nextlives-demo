@@ -653,59 +653,50 @@ window.addEventListener('message', (event) => {
 function initializeChat(userUuid, lineUuid, language = 'en') {
   console.log('Inicializando chat con:', { userUuid, lineUuid, language });
 
-  // ✅ Configurar correctamente los datos en window.chatSystem
-  window.chatSystem = {
-    currentUser: userUuid,
-    currentLine: lineUuid,
-    language: language,
-    initialized: true
-  };
+  const esperarYContinuar = () => {
+    if (!window.firestore?.collection) {
+      console.warn("⏳ Esperando window.firestore...");
+      setTimeout(esperarYContinuar, 200);
+      return;
+    }
 
-  // ✅ Mostrar el ID de usuario en la interfaz
-  const userInfoElement = document.getElementById('userIdDisplay');
-  if (userInfoElement) {
-    userInfoElement.textContent = `Usuario: ${getUserId()}`;
-  }
-  if (userInfoElement) {
-    userInfoElement.textContent = `Usuario: ${getUserId()}`;
-  }
+    // ✅ Configurar correctamente los datos en window.chatSystem
+    window.chatSystem = {
+      currentUser: userUuid,
+      currentLine: lineUuid,
+      language: language,
+      initialized: true
+    };
 
-  // 🔁 ACTIVAR LISTENER DE MENSAJES MANUALES DESDE PANEL
-  if (window.chatSystem?.currentUser) {
+    // ✅ Mostrar el ID de usuario en la interfaz
+    const userInfoElement = document.getElementById('userIdDisplay');
+    if (userInfoElement) {
+      userInfoElement.textContent = `Usuario: ${getUserId()}`;
+    }
+
     const userId = window.chatSystem.currentUser;
+    if (!userId) return;
 
-    esperarFirestore(() => {
-  window.escucharMensajesUsuario = (callback) => {
-    const mensajesRef = window.firestore.collection(window.firestore.db, 'conversaciones', userId, 'mensajes');
-    const q = window.firestore.query(mensajesRef, window.firestore.where("manual", "==", true));
+    // ✅ Listener realtime Firestore
+    window.escucharMensajesUsuario = (callback) => {
+      const mensajesRef = window.firestore.collection(window.firestore.db, 'conversaciones', userId, 'mensajes');
+      const q = window.firestore.query(mensajesRef, window.firestore.where("manual", "==", true));
 
-    return window.firestore.onSnapshot(q, (snapshot) => {
-      console.log("🔥 Snapshot recibido:", snapshot.size);
-      console.log("📦 Cambios detectados:", snapshot.docChanges().map(c => c.doc.data()));
+      return window.firestore.onSnapshot(q, (snapshot) => {
+        console.log("🔥 Snapshot recibido:", snapshot.size);
+        console.log("📦 Cambios detectados:", snapshot.docChanges().map(c => c.doc.data()));
 
-      const nuevosMensajes = snapshot.docChanges()
-        .filter(change => change.type === "added")
-        .map(change => change.doc.data());
+        const nuevosMensajes = snapshot.docChanges()
+          .filter(change => change.type === "added")
+          .map(change => change.doc.data());
 
-      if (nuevosMensajes.length > 0) {
-        callback(nuevosMensajes);
-      }
-    });
-  };
-
-  console.log("✅ window.escucharMensajesUsuario definido");
-
-  if (!window._listenerManualActivo) {
-    window._listenerManualActivo = true;
-
-    window.escucharMensajesUsuario((mensajes) => {
-      mensajes.forEach((msg) => {
-        const texto = msg.mensaje || msg.message || msg.original;
-        if (texto) mostrarMensaje(texto, 'agente');
+        if (nuevosMensajes.length > 0) {
+          callback(nuevosMensajes);
+        }
       });
-    });
-  }
-});
+    };
+
+    console.log("✅ window.escucharMensajesUsuario definido");
 
     if (!window._listenerManualActivo) {
       window._listenerManualActivo = true;
@@ -717,7 +708,10 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
         });
       });
     }
-  }
+  };
+
+  // 🔁 Lanzar la espera
+  esperarYContinuar();
 }
 
 /**
