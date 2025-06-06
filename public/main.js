@@ -669,6 +669,8 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
       const q = query(mensajesRef, where("manual", "==", true));
 
       return onSnapshot(q, (snapshot) => {
+        console.log("🔥 Snapshot recibido:", snapshot.size);
+console.log("📦 Cambios detectados:", snapshot.docChanges().map(c => c.doc.data()));
         const nuevosMensajes = snapshot.docChanges()
           .filter(change => change.type === "added")
           .map(change => change.doc.data());
