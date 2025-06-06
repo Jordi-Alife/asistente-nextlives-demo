@@ -391,7 +391,6 @@ if (window.escucharMensajesUsuario && localStorage.getItem("chatEstado") === "ab
     });
 
     mensajesNuevos.forEach((msg) => {
-      localStorage.removeItem("chatMessages");
       const contenido = msg.mensaje || msg.message || msg.original || "";
       if (!contenido) return;
 
