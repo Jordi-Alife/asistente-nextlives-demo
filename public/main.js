@@ -367,13 +367,7 @@ document.getElementById('modalConfirm').style.display = 'none'; // ✅ CIERRA MO
 }
 
 function abrirChat() {
-  localStorage.setItem("chatEstado", "abierto");
-
-  // ✅ Restaurar la conversación desde localStorage
-  restoreChat();
-
-
-  // ✅ Activar listener en tiempo real
+  // ✅ Activar listener en tiempo real (ya se encarga de mostrar mensajes)
   activarListenerRealtime();
 
   // ✅ Mostrar el chat
