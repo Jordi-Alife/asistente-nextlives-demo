@@ -490,7 +490,6 @@ if (window.escucharMensajesUsuario && userIdRealtime) {
 }
 
 const estadoChat = localStorage.getItem('chatEstado');
-if (estadoChat !== 'cerrado') {
   restoreChat();
   restoreChat();
 
