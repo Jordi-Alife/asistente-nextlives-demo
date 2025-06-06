@@ -631,19 +631,14 @@ window.chatSystem = {
 
 // Agregar el listener para recibir mensajes del padre
 window.addEventListener('message', (event) => {
-  // Por seguridad, podrías verificar el origen del mensaje
-  // if (event.origin !== 'https://tu-dominio.com') return;
-
-  // Verificar si el mensaje es del tipo esperado
   if (event.data && event.data.type === 'CHAT_PARAMS') {
-    // Extraer los datos recibidos
     const { userUuid, lineUuid, language } = event.data.data;
 
-    // Inicializar el chat con estos parámetros
-    initializeChat(userUuid, lineUuid, language);
+    esperarFirestore(() => {
+      initializeChat(userUuid, lineUuid, language);
+    });
   }
 });
-
 /**
  * Función para inicializar el chat con los parámetros recibidos
  * @param {string} userUuid - UUID del usuario
