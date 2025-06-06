@@ -754,7 +754,6 @@ function activarListenerRealtime() {
         msg.id &&
         !document.querySelector(`[data-panel-id="${msg.id}"]`)
       ) {
-        localStorage.removeItem("chatMessages"); // 🧹 Forzar refresco
         const contenido = msg.mensaje || msg.message || msg.original || "";
         if (!contenido) return;
 
