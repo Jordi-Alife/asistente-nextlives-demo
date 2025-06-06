@@ -489,8 +489,46 @@ if (window.escucharMensajesUsuario && userIdRealtime) {
   });
 }
 
-activarListenerRealtime();
+const estadoChat = localStorage.getItem('chatEstado');
+if (estadoChat !== 'cerrado') {
+  restoreChat();
+  restoreChat();
 
+// ✅ Reactivar listener después de restaurar
+const userIdRealtime = getUserId();
+if (window.escucharMensajesUsuario && userIdRealtime) {
+  window.escucharMensajesUsuario(userIdRealtime, (mensajes) => {
+    mensajes.forEach((msg) => {
+      if (msg.manual && msg.id && !document.querySelector(`[data-panel-id="${msg.id}"]`)) {
+
+        const contenido = msg.mensaje || msg.message || msg.original || "";
+        if (!contenido) return;
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message assistant';
+        messageDiv.dataset.panelId = msg.id;
+
+        if (/\.(jpeg|jpg|png|gif|webp)$/i.test(contenido)) {
+          messageDiv.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+        } else {
+          messageDiv.innerText = contenido;
+        }
+
+        messagesDiv.appendChild(messageDiv);
+
+        const todos = messagesDiv.querySelectorAll('.message');
+        if (todos.length > 50) {
+          for (let i = 0; i < todos.length - 50; i++) {
+            todos[i].remove();
+          }
+        }
+
+        scrollToBottom();
+        saveChat();
+      }
+    });
+  });
+}
   // ✅ Si no hay historial guardado, pedimos saludo inicial personalizado
   if (!localStorage.getItem("chatMessages")) {
     const userId = getUserId();
