@@ -497,7 +497,6 @@ if (window.escucharMensajesUsuario && userIdRealtime) {
 
 const estadoChat = localStorage.getItem('chatEstado');
 if (estadoChat !== 'cerrado') {
-  localStorage.removeItem("chatMessages"); // 🧹 Limpiamos historial anterior
   restoreChat();
   restoreChat();
 
