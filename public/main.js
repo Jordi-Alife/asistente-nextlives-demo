@@ -359,9 +359,6 @@ async function cerrarChatConfirmado() {
     }
   }
 
-// ✅ Eliminar historial por completo antes de guardar solo el saludo
-localStorage.removeItem("chatMessages");
-
 localStorage.setItem('chatEstado', 'cerrado');
 document.getElementById('chat-widget').style.display = 'none';
 document.getElementById('chat-toggle').style.display = 'flex';
