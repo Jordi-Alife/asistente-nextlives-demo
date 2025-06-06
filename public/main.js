@@ -14,6 +14,16 @@ function getUserId() {
   return id;
 }
 
+function esperarFirestore(callback, intentos = 0) {
+  if (window.firestore?.collection) {
+    callback();
+  } else if (intentos < 20) {
+    setTimeout(() => esperarFirestore(callback, intentos + 1), 200);
+  } else {
+    console.warn("❌ Firestore no disponible tras esperar.");
+  }
+}
+
 const metadata = {
   userAgent: navigator.userAgent,
   historial: JSON.parse(localStorage.getItem("historialPaginas") || "[]"),
