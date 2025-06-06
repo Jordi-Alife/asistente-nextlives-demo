@@ -157,7 +157,7 @@
   db: db,
   collection: (...args) => db.collection(...args),
   doc: (...args) => db.doc(...args),
-  query: (...args) => firebase.firestore().collection(...args), // solo si usas query() como en v9 modular
+  query: (...args) => args[0],  // ✅ compat: solo devuelve la ref directamente
   where: (...args) => firebase.firestore().where(...args),
   onSnapshot: (...args) => firebase.firestore().onSnapshot(...args)
 };
