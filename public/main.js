@@ -646,6 +646,40 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
   if (userInfoElement) {
     userInfoElement.textContent = `Usuario: ${getUserId()}`;
   }
+  if (userInfoElement) {
+    userInfoElement.textContent = `Usuario: ${getUserId()}`;
+  }
+
+  // 🔁 ACTIVAR LISTENER DE MENSAJES MANUALES DESDE PANEL
+  if (window.chatSystem?.currentUser) {
+    const userId = window.chatSystem.currentUser;
+
+    window.escucharMensajesUsuario = (callback) => {
+      const mensajesRef = collection(db, 'conversaciones', userId, 'mensajes');
+      const q = query(mensajesRef, where("manual", "==", true));
+
+      return onSnapshot(q, (snapshot) => {
+        const nuevosMensajes = snapshot.docChanges()
+          .filter(change => change.type === "added")
+          .map(change => change.doc.data());
+
+        if (nuevosMensajes.length > 0) {
+          callback(nuevosMensajes);
+        }
+      });
+    };
+
+    if (!window._listenerManualActivo) {
+      window._listenerManualActivo = true;
+
+      window.escucharMensajesUsuario((mensajes) => {
+        mensajes.forEach((msg) => {
+          const texto = msg.mensaje || msg.message || msg.original;
+          if (texto) mostrarMensaje(texto, 'agente');
+        });
+      });
+    }
+  }
 }
 
 /**
