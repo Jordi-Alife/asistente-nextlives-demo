@@ -382,7 +382,7 @@ function abrirChat() {
   document.getElementById('scrollToBottomBtn').style.display = 'none';
 }
 
-if (window.escucharMensajesUsuario && localStorage.getItem("chatEstado") === "abierto") {
+if (window.escucharMensajesUsuario) {
   const userId = getUserId();
 
   window.escucharMensajesUsuario(userId, (lista) => {
