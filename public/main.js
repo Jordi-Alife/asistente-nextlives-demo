@@ -668,6 +668,7 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
         }
       });
     };
+    console.log("✅ window.escucharMensajesUsuario definido");
 
     if (!window._listenerManualActivo) {
       window._listenerManualActivo = true;
