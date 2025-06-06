@@ -380,8 +380,20 @@ activarListenerRealtime();
   document.getElementById('scrollToBottomBtn').style.display = 'none';
 }
 
-if (window.escucharMensajesUsuario) {
+// ⏳ Esperar a que window.escucharMensajesUsuario esté disponible
+function esperarListenerManual(callback, intentos = 0) {
+  if (typeof window.escucharMensajesUsuario === "function") {
+    callback();
+  } else if (intentos < 20) {
+    setTimeout(() => esperarListenerManual(callback, intentos + 1), 200);
+  } else {
+    console.warn("❌ No se definió window.escucharMensajesUsuario tras esperar.");
+  }
+}
+
+esperarListenerManual(() => {
   const userId = getUserId();
+  if (!userId) return;
 
   window.escucharMensajesUsuario(userId, (lista) => {
     const mensajesNuevos = lista.filter((msg) => {
@@ -404,7 +416,6 @@ if (window.escucharMensajesUsuario) {
 
       messagesDiv.appendChild(messageDiv);
 
-      // ✅ Limitar a los últimos 50
       const todos = messagesDiv.querySelectorAll(".message");
       if (todos.length > 50) {
         for (let i = 0; i < todos.length - 50; i++) {
@@ -416,8 +427,7 @@ if (window.escucharMensajesUsuario) {
       saveChat();
     });
   });
-}
-
+});
 let imagenSeleccionada = null;
 
 fileInput.addEventListener('change', (event) => {
