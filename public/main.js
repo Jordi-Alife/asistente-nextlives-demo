@@ -664,24 +664,38 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
   if (window.chatSystem?.currentUser) {
     const userId = window.chatSystem.currentUser;
 
-    window.escucharMensajesUsuario = (callback) => {
-  const mensajesRef = window.firestore.collection(window.firestore.db, 'conversaciones', userId, 'mensajes');
-  const q = window.firestore.query(mensajesRef, window.firestore.where("manual", "==", true));
+    esperarFirestore(() => {
+  window.escucharMensajesUsuario = (callback) => {
+    const mensajesRef = window.firestore.collection(window.firestore.db, 'conversaciones', userId, 'mensajes');
+    const q = window.firestore.query(mensajesRef, window.firestore.where("manual", "==", true));
 
-  return window.firestore.onSnapshot(q, (snapshot) => {
-    console.log("🔥 Snapshot recibido:", snapshot.size);
-    console.log("📦 Cambios detectados:", snapshot.docChanges().map(c => c.doc.data()));
+    return window.firestore.onSnapshot(q, (snapshot) => {
+      console.log("🔥 Snapshot recibido:", snapshot.size);
+      console.log("📦 Cambios detectados:", snapshot.docChanges().map(c => c.doc.data()));
 
-    const nuevosMensajes = snapshot.docChanges()
-      .filter(change => change.type === "added")
-      .map(change => change.doc.data());
+      const nuevosMensajes = snapshot.docChanges()
+        .filter(change => change.type === "added")
+        .map(change => change.doc.data());
 
-    if (nuevosMensajes.length > 0) {
-      callback(nuevosMensajes);
-    }
-  });
-};
-    console.log("✅ window.escucharMensajesUsuario definido");
+      if (nuevosMensajes.length > 0) {
+        callback(nuevosMensajes);
+      }
+    });
+  };
+
+  console.log("✅ window.escucharMensajesUsuario definido");
+
+  if (!window._listenerManualActivo) {
+    window._listenerManualActivo = true;
+
+    window.escucharMensajesUsuario((mensajes) => {
+      mensajes.forEach((msg) => {
+        const texto = msg.mensaje || msg.message || msg.original;
+        if (texto) mostrarMensaje(texto, 'agente');
+      });
+    });
+  }
+});
 
     if (!window._listenerManualActivo) {
       window._listenerManualActivo = true;
