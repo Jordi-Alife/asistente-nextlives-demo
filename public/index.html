@@ -154,13 +154,13 @@
   const db = firebase.firestore();
 
   window.firestore = {
-    db: db,
-    collection: (...args) => db.collection(...args),
-    doc: (...args) => db.doc(...args),
-    query: (ref) => ref, // compat no necesita wrapper
-    where: (...args) => firebase.firestore.FieldPath.documentId().where(...args),
-    onSnapshot: (...args) => firebase.firestore().onSnapshot(...args)
-  };
+  db: db,
+  collection: (...args) => db.collection(...args),
+  doc: (...args) => db.doc(...args),
+  query: (...args) => firebase.firestore().collection(...args), // solo si usas query() como en v9 modular
+  where: (...args) => firebase.firestore().where(...args),
+  onSnapshot: (...args) => firebase.firestore().onSnapshot(...args)
+};
 </script>
   
   <script src="main.js"></script>
