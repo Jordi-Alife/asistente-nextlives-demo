@@ -4,7 +4,11 @@ const fileInput = document.getElementById('fileInput');
 const sendBtn = document.querySelector('.send-button');
 
 function getUserId() {
-  let id = window.chatSystem?.currentUser || Math.random().toString(36).substring(2, 10);
+  let id = localStorage.getItem("userId");
+  if (!id) {
+    id = Math.random().toString(36).substring(2, 10);
+    localStorage.setItem("userId", id);
+  }
   const display = document.getElementById("userIdDisplay");
   if (display) display.textContent = `ID de usuario: ${id}`;
   return id;
@@ -88,7 +92,53 @@ function removeMessageByTempId(tempId) {
   if (temp) temp.remove();
 }
 
+function saveChat() {
+  const allMessages = Array.from(messagesDiv.children).filter((el) =>
+    el.classList.contains("message")
+  );
 
+  const limitados = allMessages.slice(-50); // Solo los últimos 50
+  const tempContainer = document.createElement("div");
+  limitados.forEach((el) => tempContainer.appendChild(el.cloneNode(true)));
+
+  localStorage.setItem("chatMessages", tempContainer.innerHTML);
+}
+
+function restoreChat() {
+  const saved = localStorage.getItem('chatMessages');
+  if (saved) {
+    const tempContainer = document.createElement("div");
+    tempContainer.innerHTML = saved;
+
+    const mensajes = Array.from(tempContainer.children).filter((el) =>
+      el.classList.contains("message")
+    );
+
+    // ✅ Limitar a los últimos 50
+    if (mensajes.length > 50) {
+      mensajes.splice(0, mensajes.length - 50);
+    }
+
+    messagesDiv.innerHTML = "";
+    mensajes.forEach((el) => messagesDiv.appendChild(el));
+
+    // ✅ Eliminar imágenes con blobs expirados
+    const images = messagesDiv.querySelectorAll('img[data-is-image="true"]');
+    images.forEach((img) => {
+      if (img.src.startsWith("blob:")) {
+        img.parentElement.remove();
+      }
+    });
+
+    // ✅ Eliminar mensajes vacíos
+    const allMessages = messagesDiv.querySelectorAll(".message");
+    allMessages.forEach((msg) => {
+      const isEmpty = !msg.textContent.trim() && msg.children.length === 0;
+      if (isEmpty) msg.remove();
+    });
+  }
+  scrollToBottom(false);
+}
 function scrollToBottom(smooth = true) {
   messagesDiv.scrollTo({
     top: messagesDiv.scrollHeight,
@@ -310,7 +360,9 @@ async function cerrarChatConfirmado() {
   }
 
 // ✅ Eliminar historial por completo antes de guardar solo el saludo
+localStorage.removeItem("chatMessages");
 
+localStorage.setItem('chatEstado', 'cerrado');
 document.getElementById('chat-widget').style.display = 'none';
 document.getElementById('chat-toggle').style.display = 'flex';
 document.getElementById('scrollToBottomBtn').style.display = 'none';
@@ -318,8 +370,10 @@ document.getElementById('modalConfirm').style.display = 'none'; // ✅ CIERRA MO
 }
 
 function abrirChat() {
+  localStorage.setItem("chatEstado", "abierto");
 
   // ✅ Restaurar la conversación desde localStorage
+  restoreChat();
 
 
   // ✅ Activar listener en tiempo real
