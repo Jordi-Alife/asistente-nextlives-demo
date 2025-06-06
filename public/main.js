@@ -469,7 +469,6 @@ if (window.escucharMensajesUsuario && userIdRealtime) {
   window.escucharMensajesUsuario(userIdRealtime, (mensajes) => {
     mensajes.forEach((msg) => {
       if (msg.manual && msg.id && !document.querySelector(`[data-panel-id="${msg.id}"]`)) {
-  localStorage.removeItem("chatMessages"); // ✅ Limpiar historial para forzar refresco
 
   const contenido = msg.mensaje || msg.message || msg.original || "";
   if (!contenido) return;
