@@ -367,8 +367,12 @@ document.getElementById('modalConfirm').style.display = 'none'; // ✅ CIERRA MO
 }
 
 function abrirChat() {
-  // ✅ Activar listener en tiempo real (ya se encarga de mostrar mensajes)
-  activarListenerRealtime();
+ // ✅ Limpiar mensajes viejos de localStorage (si existen)
+localStorage.removeItem("chatMessages");
+messagesDiv.innerHTML = "";
+
+// ✅ Activar listener en tiempo real para recibir mensajes manuales
+activarListenerRealtime();
 
   // ✅ Mostrar el chat
   document.getElementById('chat-widget').style.display = 'flex';
