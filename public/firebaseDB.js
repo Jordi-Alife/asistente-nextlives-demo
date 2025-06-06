@@ -96,3 +96,5 @@ window.firestore = {
   where,
   onSnapshot
 };
+
+
