@@ -4,11 +4,7 @@ const fileInput = document.getElementById('fileInput');
 const sendBtn = document.querySelector('.send-button');
 
 function getUserId() {
-  let id = localStorage.getItem("userId");
-  if (!id) {
-    id = Math.random().toString(36).substring(2, 10);
-    localStorage.setItem("userId", id);
-  }
+  let id = window.chatSystem?.currentUser || Math.random().toString(36).substring(2, 10);
   const display = document.getElementById("userIdDisplay");
   if (display) display.textContent = `ID de usuario: ${id}`;
   return id;
@@ -92,53 +88,7 @@ function removeMessageByTempId(tempId) {
   if (temp) temp.remove();
 }
 
-function saveChat() {
-  const allMessages = Array.from(messagesDiv.children).filter((el) =>
-    el.classList.contains("message")
-  );
 
-  const limitados = allMessages.slice(-50); // Solo los últimos 50
-  const tempContainer = document.createElement("div");
-  limitados.forEach((el) => tempContainer.appendChild(el.cloneNode(true)));
-
-  localStorage.setItem("chatMessages", tempContainer.innerHTML);
-}
-
-function restoreChat() {
-  const saved = localStorage.getItem('chatMessages');
-  if (saved) {
-    const tempContainer = document.createElement("div");
-    tempContainer.innerHTML = saved;
-
-    const mensajes = Array.from(tempContainer.children).filter((el) =>
-      el.classList.contains("message")
-    );
-
-    // ✅ Limitar a los últimos 50
-    if (mensajes.length > 50) {
-      mensajes.splice(0, mensajes.length - 50);
-    }
-
-    messagesDiv.innerHTML = "";
-    mensajes.forEach((el) => messagesDiv.appendChild(el));
-
-    // ✅ Eliminar imágenes con blobs expirados
-    const images = messagesDiv.querySelectorAll('img[data-is-image="true"]');
-    images.forEach((img) => {
-      if (img.src.startsWith("blob:")) {
-        img.parentElement.remove();
-      }
-    });
-
-    // ✅ Eliminar mensajes vacíos
-    const allMessages = messagesDiv.querySelectorAll(".message");
-    allMessages.forEach((msg) => {
-      const isEmpty = !msg.textContent.trim() && msg.children.length === 0;
-      if (isEmpty) msg.remove();
-    });
-  }
-  scrollToBottom(false);
-}
 function scrollToBottom(smooth = true) {
   messagesDiv.scrollTo({
     top: messagesDiv.scrollHeight,
@@ -360,9 +310,7 @@ async function cerrarChatConfirmado() {
   }
 
 // ✅ Eliminar historial por completo antes de guardar solo el saludo
-localStorage.removeItem("chatMessages");
 
-localStorage.setItem('chatEstado', 'cerrado');
 document.getElementById('chat-widget').style.display = 'none';
 document.getElementById('chat-toggle').style.display = 'flex';
 document.getElementById('scrollToBottomBtn').style.display = 'none';
@@ -370,13 +318,9 @@ document.getElementById('modalConfirm').style.display = 'none'; // ✅ CIERRA MO
 }
 
 function abrirChat() {
-  localStorage.setItem("chatEstado", "abierto");
 
   // ✅ Restaurar la conversación desde localStorage
-  restoreChat();
 
-  // ✅ Activar polling (por si acaso)
-  iniciarCheckPanelMessages();
 
   // ✅ Activar listener en tiempo real
   activarListenerRealtime();
@@ -385,10 +329,6 @@ function abrirChat() {
   document.getElementById('chat-widget').style.display = 'flex';
   document.getElementById('chat-toggle').style.display = 'none';
   document.getElementById('scrollToBottomBtn').style.display = 'none';
-}
-
-if (localStorage.getItem("chatEstado") === "abierto") {
-  iniciarCheckPanelMessages();
 }
 
 if (window.escucharMensajesUsuario && localStorage.getItem("chatEstado") === "abierto") {
@@ -469,87 +409,6 @@ fileInput.addEventListener('change', (event) => {
     sendBtn.classList.add('active');
   }
 });
-async function checkPanelMessages() {
-  console.log("📡 Ejecutando checkPanelMessages()");
-  const estado = localStorage.getItem('chatEstado');
-  if (estado === 'cerrado') return;
-
-  const userId = getUserId();
-  try {
-    const res = await fetch(`/api/poll/${userId}`);
-    const data = await res.json();
-    const mensajes = Array.isArray(data) ? data : data.mensajes;
-
-    if (mensajes && Array.isArray(mensajes)) {
-      mensajes.forEach((msg) => {
-        if (msg.id && !document.querySelector(`[data-panel-id="${msg.id}"]`)) {
-          console.log("📨 Mensaje manual recibido:", msg);
-
-          const contenido = msg.mensaje || msg.message || msg.original || "";
-          if (!contenido) return; // ⛔ evita renderizar vacíos
-
-          const messageDiv = document.createElement('div');
-          messageDiv.className = 'message assistant';
-          if (msg.manual) {
-            messageDiv.classList.add('manual');
-          }
-          messageDiv.dataset.panelId = msg.id;
-
-          if (/\.(jpeg|jpg|png|gif|webp)$/i.test(contenido)) {
-            messageDiv.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
-          } else {
-            messageDiv.innerText = contenido;
-          }
-
-          messagesDiv.appendChild(messageDiv);
-
-          // ✅ Limitar a los últimos 50 mensajes
-          const todos = messagesDiv.querySelectorAll('.message');
-          if (todos.length > 50) {
-            for (let i = 0; i < todos.length - 50; i++) {
-              todos[i].remove();
-            }
-          }
-
-          scrollToBottom();
-          saveChat();
-        }
-      });
-    }
-  } catch (error) {
-    console.error("❌ Error al obtener mensajes manuales:", error);
-  }
-}
-
-window.checkPanelMessages = checkPanelMessages; // ✅ Exportar para usar en consola
-let intervaloMensajes = null;
-
-function iniciarCheckPanelMessages() {
-  console.log("▶️ iniciarCheckPanelMessages()");
-
-  // Si ya está el listener de Firebase, no usamos polling
-  if (window.listenerRealtimeActivo) {
-    console.log("🛑 Polling NO necesario, ya hay listener en tiempo real.");
-    return;
-  }
-
-  if (intervaloMensajes) clearInterval(intervaloMensajes);
-
-  const estado = localStorage.getItem('chatEstado');
-  if (estado === 'cerrado' || estado === 'minimizado') {
-    console.log("⏸️ Polling detenido (estado cerrado o minimizado)");
-    return;
-  }
-
-  console.log("📡 Activando polling con setInterval de checkPanelMessages()");
-  intervaloMensajes = setInterval(() => {
-    console.log("📡 Ejecutando checkPanelMessages()");
-    checkPanelMessages();
-  }, 5000);
-}
-
-// ⬇️ Coloca la llamada después de definir la función
-iniciarCheckPanelMessages();
 
 const userIdRealtime = getUserId();
 if (window.escucharMensajesUsuario && userIdRealtime) {
