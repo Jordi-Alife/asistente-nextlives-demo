@@ -1,3 +1,6 @@
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { db } from "./firebaseDB";
+
 const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('messageInput');
 const fileInput = document.getElementById('fileInput');
