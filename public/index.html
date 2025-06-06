@@ -157,10 +157,15 @@
   db: db,
   collection: (...args) => db.collection(...args),
   doc: (...args) => db.doc(...args),
-  query: (...args) => args[0],  // ✅ compat: solo devuelve la ref directamente
-  where: (...args) => firebase.firestore().where(...args),
-  onSnapshot: (...args) => firebase.firestore().onSnapshot(...args)
+  query: (...args) => args[0],  // compat: solo se usa como pasarela
+  where: (...args) => args,     // ✅ pasa el array tal cual
+  onSnapshot: (ref, [whereClause], callback) => {
+    // ✅ aplicar el filtro manualmente en compat
+    const query = ref.where(...whereClause);
+    return query.onSnapshot(callback);
+  }
 };
+  
 </script>
   
   <script src="main.js"></script>
