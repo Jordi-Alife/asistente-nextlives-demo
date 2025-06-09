@@ -685,36 +685,37 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
     const userId = window.chatSystem.currentUser;
     if (!userId) return;
 
-    // ✅ Listener realtime Firestore
-    window.escucharMensajesUsuario = (userId, callback) => {
+    // ✅ Listener realtime Firestore (filtrado manual)
+window.escucharMensajesUsuario = (userId, callback) => {
   if (!userId) {
     console.warn("❌ No se pudo iniciar listener: userId indefinido.");
     return;
   }
 
-  const mensajesRef = window.firestore.collection(window.firestore.db, 'conversaciones', userId, 'mensajes');
-  const q = window.firestore.query(mensajesRef, window.firestore.where("manual", "==", true));
+  const ref = window.firestore.collection(window.firestore.db, 'conversaciones', userId, 'mensajes');
 
-  return window.firestore.onSnapshot(q, (snapshot) => {
+  return window.firestore.onSnapshot(ref, (snapshot) => {
     console.log("🔥 Snapshot recibido:", snapshot.size);
     console.log("📦 Cambios detectados:", snapshot.docChanges().map(c => c.doc.data()));
 
     const nuevosMensajes = snapshot.docChanges()
-  .filter(change => change.type === "added")
-  .map(change => {
-    const data = change.doc.data();
-    return {
-      ...data,
-      id: change.doc.id  // ✅ Añade el ID del documento como campo usable
-    };
-  });
+      .filter(change => change.type === "added")
+      .map(change => {
+        const data = change.doc.data();
+        return {
+          ...data,
+          id: change.doc.id
+        };
+      })
+      .filter(msg => msg.manual); // ✅ Filtro hecho después del mapeo
 
     if (nuevosMensajes.length > 0) {
+      console.log("🟢 MENSAJES MANUALES NUEVOS:", nuevosMensajes);
       callback(nuevosMensajes);
     }
   });
 };
-    console.log("✅ window.escucharMensajesUsuario definido");
+console.log("✅ window.escucharMensajesUsuario definido");
 
     if (!window._listenerManualActivo) {
   window._listenerManualActivo = true;
