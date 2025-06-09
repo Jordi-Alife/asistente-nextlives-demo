@@ -382,6 +382,7 @@ localStorage.removeItem("chatMessages");
 messagesDiv.innerHTML = "";
 
 // ✅ Activar listener en tiempo real para recibir mensajes manuales
+activarListenerRealtime();
 
   // ✅ Mostrar el chat
   document.getElementById('chat-widget').style.display = 'flex';
@@ -389,6 +390,54 @@ messagesDiv.innerHTML = "";
   document.getElementById('scrollToBottomBtn').style.display = 'none';
 }
 
+// ⏳ Esperar a que window.escucharMensajesUsuario esté disponible
+function esperarListenerManual(callback, intentos = 0) {
+  if (typeof window.escucharMensajesUsuario === "function") {
+    callback();
+  } else if (intentos < 20) {
+    setTimeout(() => esperarListenerManual(callback, intentos + 1), 200);
+  } else {
+    console.warn("❌ No se definió window.escucharMensajesUsuario tras esperar.");
+  }
+}
+
+esperarListenerManual(() => {
+  const userId = getUserId();
+  if (!userId) return;
+
+  window.escucharMensajesUsuario(userId, (lista) => {
+    const mensajesNuevos = lista.filter((msg) => {
+      return msg.manual && msg.id && !document.querySelector(`[data-panel-id="${msg.id}"]`);
+    });
+
+    mensajesNuevos.forEach((msg) => {
+      const contenido = msg.mensaje || msg.message || msg.original || "";
+      if (!contenido) return;
+
+      const messageDiv = document.createElement("div");
+      messageDiv.className = "message assistant";
+      messageDiv.dataset.panelId = msg.id;
+
+      if (/\.(jpeg|jpg|png|gif|webp)$/i.test(contenido)) {
+        messageDiv.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+      } else {
+        messageDiv.innerText = contenido;
+      }
+
+      messagesDiv.appendChild(messageDiv);
+
+      const todos = messagesDiv.querySelectorAll(".message");
+      if (todos.length > 50) {
+        for (let i = 0; i < todos.length - 50; i++) {
+          todos[i].remove();
+        }
+      }
+
+      scrollToBottom();
+      saveChat();
+    });
+  });
+});
 let imagenSeleccionada = null;
 
 fileInput.addEventListener('change', (event) => {
@@ -428,6 +477,41 @@ fileInput.addEventListener('change', (event) => {
     sendBtn.classList.add('active');
   }
 });
+
+const userIdRealtime = getUserId();
+if (window.escucharMensajesUsuario && userIdRealtime) {
+  window.escucharMensajesUsuario(userIdRealtime, (mensajes) => {
+    mensajes.forEach((msg) => {
+      if (msg.manual && msg.id && !document.querySelector(`[data-panel-id="${msg.id}"]`)) {
+
+  const contenido = msg.mensaje || msg.message || msg.original || "";
+  if (!contenido) return;
+
+  const messageDiv = document.createElement('div');
+  messageDiv.className = 'message assistant';
+  messageDiv.dataset.panelId = msg.id;
+
+  if (/\.(jpeg|jpg|png|gif|webp)$/i.test(contenido)) {
+    messageDiv.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+  } else {
+    messageDiv.innerText = contenido;
+  }
+
+  messagesDiv.appendChild(messageDiv);
+
+  const todos = messagesDiv.querySelectorAll('.message');
+  if (todos.length > 50) {
+    for (let i = 0; i < todos.length - 50; i++) {
+      todos[i].remove();
+    }
+  }
+
+  scrollToBottom();
+  saveChat();
+}
+    });
+  });
+}
 
 // ✅ Activar listener en tiempo real para recibir mensajes manuales
 activarListenerRealtime();
