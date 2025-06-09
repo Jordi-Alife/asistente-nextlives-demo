@@ -674,22 +674,22 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
 
     // ✅ Listener realtime Firestore
     window.escucharMensajesUsuario = (userId, callback) => {
-      const mensajesRef = window.firestore.collection(window.firestore.db, 'conversaciones', userId, 'mensajes');
-      const q = window.firestore.query(mensajesRef, window.firestore.where("manual", "==", true));
+  const mensajesRef = window.firestore.collection(window.firestore.db, 'conversaciones', userId, 'mensajes');
+  const q = window.firestore.query(mensajesRef, window.firestore.where("manual", "==", true));
 
-      return window.firestore.onSnapshot(q, (snapshot) => {
-        console.log("🔥 Snapshot recibido:", snapshot.size);
-        console.log("📦 Cambios detectados:", snapshot.docChanges().map(c => c.doc.data()));
+  return window.firestore.onSnapshot(q, (snapshot) => {
+    console.log("🔥 Snapshot recibido:", snapshot.size);
+    console.log("📦 Cambios detectados:", snapshot.docChanges().map(c => c.doc.data()));
 
-        const nuevosMensajes = snapshot.docChanges()
-          .filter(change => change.type === "added")
-          .map(change => change.doc.data());
+    const nuevosMensajes = snapshot.docChanges()
+      .filter(change => change.type === "added")
+      .map(change => change.doc.data());
 
-        if (nuevosMensajes.length > 0) {
-          callback(nuevosMensajes);
-        }
-      });
-    };
+    if (nuevosMensajes.length > 0) {
+      callback(nuevosMensajes);
+    }
+  });
+};
 
     console.log("✅ window.escucharMensajesUsuario definido");
 
