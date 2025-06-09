@@ -720,8 +720,10 @@ await db.collection("conversaciones").doc(userId).set(
 );
 
 if (req.body.imageUrl || message) {
-  await db.collection("mensajes").add({
-    idConversacion: userId,
+  await db.collection("conversaciones")
+  .doc(userId)
+  .collection("mensajes")
+  .add({
     rol: "asistente",
     mensaje: req.body.imageUrl || traduccion,
     original: req.body.imageUrl || message,
