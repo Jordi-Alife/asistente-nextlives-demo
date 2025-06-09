@@ -692,9 +692,12 @@ window.escucharMensajesUsuario = (userId, callback) => {
     return;
   }
 
-  const ref = window.firestore.collection(window.firestore.db, 'conversaciones', userId, 'mensajes');
+  const ref = window.firestore.collection(window.firestore.db, 'mensajes');
+  const q = ref
+    .where("idConversacion", "==", userId)
+    .where("manual", "==", true);
 
-  return window.firestore.onSnapshot(ref, (snapshot) => {
+  return window.firestore.onSnapshot(q, (snapshot) => {
     console.log("🔥 Snapshot recibido:", snapshot.size);
     console.log("📦 Cambios detectados:", snapshot.docChanges().map(c => c.doc.data()));
 
@@ -706,8 +709,7 @@ window.escucharMensajesUsuario = (userId, callback) => {
           ...data,
           id: change.doc.id
         };
-      })
-      .filter(msg => msg.manual); // ✅ Filtro hecho después del mapeo
+      });
 
     if (nuevosMensajes.length > 0) {
       console.log("🟢 MENSAJES MANUALES NUEVOS:", nuevosMensajes);
