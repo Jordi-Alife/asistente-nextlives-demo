@@ -673,8 +673,7 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
     if (!userId) return;
 
     // ✅ Listener realtime Firestore
-    window.escucharMensajesUsuario = (callback) => {
-  const userId = window.chatSystem?.currentUser;
+    window.escucharMensajesUsuario = (userId, callback) => {
   if (!userId) {
     console.warn("❌ No se pudo iniciar listener: userId indefinido.");
     return;
@@ -696,7 +695,6 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
     }
   });
 };
-
     console.log("✅ window.escucharMensajesUsuario definido");
 
     if (!window._listenerManualActivo) {
