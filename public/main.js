@@ -687,8 +687,14 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
     console.log("📦 Cambios detectados:", snapshot.docChanges().map(c => c.doc.data()));
 
     const nuevosMensajes = snapshot.docChanges()
-      .filter(change => change.type === "added")
-      .map(change => change.doc.data());
+  .filter(change => change.type === "added")
+  .map(change => {
+    const data = change.doc.data();
+    return {
+      ...data,
+      id: change.doc.id  // ✅ Añade el ID del documento como campo usable
+    };
+  });
 
     if (nuevosMensajes.length > 0) {
       callback(nuevosMensajes);
