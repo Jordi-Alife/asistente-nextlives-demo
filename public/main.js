@@ -382,7 +382,6 @@ localStorage.removeItem("chatMessages");
 messagesDiv.innerHTML = "";
 
 // ✅ Activar listener en tiempo real para recibir mensajes manuales
-activarListenerRealtime();
 
   // ✅ Mostrar el chat
   document.getElementById('chat-widget').style.display = 'flex';
