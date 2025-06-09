@@ -692,9 +692,9 @@ window.escucharMensajesUsuario = (userId, callback) => {
     return;
   }
 
-  const ref = window.firestore.collection('mensajes')
-  .where("idConversacion", "==", userId)
-  .where("manual", "==", true);
+  const q = window.firestore.collection('mensajes')
+    .where("idConversacion", "==", userId)
+    .where("manual", "==", true);
 
   return window.firestore.onSnapshot(q, (snapshot) => {
     console.log("🔥 Snapshot recibido:", snapshot.size);
