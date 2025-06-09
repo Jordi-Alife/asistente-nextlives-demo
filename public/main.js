@@ -632,6 +632,7 @@ window.chatSystem = {
 // Agregar el listener para recibir mensajes del padre
 window.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'CHAT_PARAMS') {
+    console.log("🛎️ Recibido CHAT_PARAMS", event.data.data);
     const { userUuid, lineUuid, language } = event.data.data;
 
     esperarFirestore(() => {
