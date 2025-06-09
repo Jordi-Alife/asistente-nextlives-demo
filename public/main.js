@@ -673,7 +673,7 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
     if (!userId) return;
 
     // ✅ Listener realtime Firestore
-    window.escucharMensajesUsuario = (callback) => {
+    window.escucharMensajesUsuario = (userId, callback) => {
       const mensajesRef = window.firestore.collection(window.firestore.db, 'conversaciones', userId, 'mensajes');
       const q = window.firestore.query(mensajesRef, window.firestore.where("manual", "==", true));
 
