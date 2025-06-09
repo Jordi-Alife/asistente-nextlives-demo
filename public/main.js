@@ -390,16 +390,6 @@ activarListenerRealtime();
   document.getElementById('scrollToBottomBtn').style.display = 'none';
 }
 
-// ⏳ Esperar a que window.escucharMensajesUsuario esté disponible
-function esperarListenerManual(callback, intentos = 0) {
-  if (typeof window.escucharMensajesUsuario === "function") {
-    callback();
-  } else if (intentos < 20) {
-    setTimeout(() => esperarListenerManual(callback, intentos + 1), 200);
-  } else {
-    console.warn("❌ No se definió window.escucharMensajesUsuario tras esperar.");
-  }
-}
 
 esperarListenerManual(() => {
   const userId = getUserId();
