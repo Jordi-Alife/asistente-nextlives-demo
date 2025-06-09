@@ -3,6 +3,18 @@ const input = document.getElementById('messageInput');
 const fileInput = document.getElementById('fileInput');
 const sendBtn = document.querySelector('.send-button');
 
+function esperarFirestore(callback, intentos = 0) {
+  if (window.firestore?.collection) {
+    console.log("✅ Firestore listo.");
+    callback();
+  } else if (intentos < 30) {
+    console.warn(`⏳ Firestore aún no disponible. Reintentando (${intentos})...`);
+    setTimeout(() => esperarFirestore(callback, intentos + 1), 200);
+  } else {
+    console.error("❌ Firestore no disponible tras esperar.");
+  }
+}
+
 function getUserId() {
   let id = localStorage.getItem("userId");
   if (!id) {
