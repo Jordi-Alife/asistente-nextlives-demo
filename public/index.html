@@ -157,11 +157,17 @@
   db: db,
   collection: (...args) => db.collection(...args),
   doc: (...args) => db.doc(...args),
-  query: (...args) => args[0],  // compat: solo se usa como pasarela
-  where: (...args) => args,     // ✅ pasa el array tal cual
-  onSnapshot: (ref, [whereClause], callback) => {
-    // ✅ aplicar el filtro manualmente en compat
-    const query = ref.where(...whereClause);
+  query: (ref, ...clauses) => {
+    let q = ref;
+    clauses.forEach(clause => {
+      if (Array.isArray(clause)) {
+        q = q.where(...clause);
+      }
+    });
+    return q;
+  },
+  where: (...args) => args, // usada como pasarela
+  onSnapshot: (query, callback) => {
     return query.onSnapshot(callback);
   }
 };
