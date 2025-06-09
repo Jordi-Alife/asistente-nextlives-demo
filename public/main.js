@@ -694,15 +694,15 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
     console.log("✅ window.escucharMensajesUsuario definido");
 
     if (!window._listenerManualActivo) {
-      window._listenerManualActivo = true;
+  window._listenerManualActivo = true;
 
-      window.escucharMensajesUsuario((mensajes) => {
-        mensajes.forEach((msg) => {
-          const texto = msg.mensaje || msg.message || msg.original;
-          if (texto) mostrarMensaje(texto, 'agente');
-        });
-      });
-    }
+  window.escucharMensajesUsuario(userId, (mensajes) => {
+    mensajes.forEach((msg) => {
+      const texto = msg.mensaje || msg.message || msg.original;
+      if (texto) mostrarMensaje(texto, 'agente');
+    });
+  });
+}
   };
 
   // 🔁 Lanzar la espera
