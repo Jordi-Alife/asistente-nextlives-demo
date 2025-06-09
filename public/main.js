@@ -490,40 +490,50 @@ fileInput.addEventListener('change', (event) => {
   }
 });
 
-const userIdRealtime = getUserId();
-if (window.escucharMensajesUsuario && userIdRealtime) {
-  window.escucharMensajesUsuario(userIdRealtime, (mensajes) => {
+function esperarChatSystem(callback, intentos = 0) {
+  if (window.chatSystem?.currentUser) {
+    console.log("✅ chatSystem inicializado:", window.chatSystem.currentUser);
+    callback(window.chatSystem.currentUser);
+  } else if (intentos < 30) {
+    setTimeout(() => esperarChatSystem(callback, intentos + 1), 200);
+  } else {
+    console.warn("❌ chatSystem no se inicializó tras esperar.");
+  }
+}
+
+// 👇 Llamamos al listener cuando esté listo el chatSystem
+esperarChatSystem((userId) => {
+  window.escucharMensajesUsuario(userId, (mensajes) => {
     mensajes.forEach((msg) => {
       if (msg.manual && msg.id && !document.querySelector(`[data-panel-id="${msg.id}"]`)) {
+        const contenido = msg.mensaje || msg.message || msg.original || "";
+        if (!contenido) return;
 
-  const contenido = msg.mensaje || msg.message || msg.original || "";
-  if (!contenido) return;
+        const messageDiv = document.createElement("div");
+        messageDiv.className = "message assistant";
+        messageDiv.dataset.panelId = msg.id;
 
-  const messageDiv = document.createElement('div');
-  messageDiv.className = 'message assistant';
-  messageDiv.dataset.panelId = msg.id;
+        if (/\.(jpeg|jpg|png|gif|webp)$/i.test(contenido)) {
+          messageDiv.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+        } else {
+          messageDiv.innerText = contenido;
+        }
 
-  if (/\.(jpeg|jpg|png|gif|webp)$/i.test(contenido)) {
-    messageDiv.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
-  } else {
-    messageDiv.innerText = contenido;
-  }
+        messagesDiv.appendChild(messageDiv);
 
-  messagesDiv.appendChild(messageDiv);
+        const todos = messagesDiv.querySelectorAll(".message");
+        if (todos.length > 50) {
+          for (let i = 0; i < todos.length - 50; i++) {
+            todos[i].remove();
+          }
+        }
 
-  const todos = messagesDiv.querySelectorAll('.message');
-  if (todos.length > 50) {
-    for (let i = 0; i < todos.length - 50; i++) {
-      todos[i].remove();
-    }
-  }
-
-  scrollToBottom();
-  saveChat();
-}
+        scrollToBottom();
+        saveChat();
+      }
     });
   });
-}
+});
 
 // ✅ Activar listener en tiempo real para recibir mensajes manuales
 activarListenerRealtime();
