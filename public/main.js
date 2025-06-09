@@ -835,6 +835,26 @@ function activarListenerRealtime() {
   });
 }
 
+// ✅ FUNCIÓN NECESARIA PARA QUE SE MUESTRE LA RESPUESTA DE GPT DESDE BACKEND
+function mostrarMensaje(texto, sender = 'assistant') {
+  if (!texto || typeof texto !== "string") return;
+
+  const div = document.createElement("div");
+  div.className = `message ${sender}`;
+  div.innerText = texto;
+  messagesDiv.appendChild(div);
+
+  const todos = messagesDiv.querySelectorAll(".message");
+  if (todos.length > 50) {
+    for (let i = 0; i < todos.length - 50; i++) {
+      todos[i].remove();
+    }
+  }
+
+  scrollToBottom();
+  saveChat();
+}
+
 // 🟢 Este bloque ya lo tienes
 document.addEventListener('DOMContentLoaded', () => {
   notifyReadyToReceiveParams();
