@@ -845,11 +845,27 @@ app.post("/api/marcar-visto", async (req, res) => {
     res.status(500).json({ error: "Error en marcar-visto" });
   }
 });
-app.post("/api/escribiendo", (req, res) => {
+app.post("/api/escribiendo", async (req, res) => {
   const { userId, texto } = req.body;
-  if (!userId) return res.status(400).json({ error: "Falta userId" });
-  escribiendoUsuarios[userId] = texto || "";
-  res.json({ ok: true });
+
+  if (!userId) {
+    return res.status(400).json({ error: "Falta userId" });
+  }
+
+  try {
+    const ref = firestore.collection("escribiendo").doc(userId);
+    await ref.set(
+      {
+        texto: texto || "",
+        timestamp: Date.now()
+      },
+      { merge: true }
+    );
+    res.status(200).json({ ok: true });
+  } catch (err) {
+    console.error("❌ Error al guardar texto escribiendo:", err);
+    res.status(500).json({ error: "Error al guardar texto escribiendo" });
+  }
 });
 
 app.get("/api/escribiendo/:userId", (req, res) => {
