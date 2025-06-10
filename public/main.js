@@ -278,16 +278,12 @@ const bodyData = {
 
 function avisarEscribiendo(texto) {
   const userId = getUserId();
-  if (!userId || !window.firestore?.collection) return;
+  if (!userId || !window.firestore?.db) return;
 
-  const docRef = window.firestore.doc(
-    window.firestore.db,
-    "escribiendo",
-    userId
-  );
-
-  window.firestore
-    .setDoc(docRef, {
+  window.firestore.db
+    .collection("escribiendo")
+    .doc(userId)
+    .set({
       texto: texto || "",
       timestamp: Date.now()
     })
