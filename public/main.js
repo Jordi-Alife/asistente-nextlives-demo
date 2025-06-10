@@ -278,12 +278,22 @@ const bodyData = {
 
 function avisarEscribiendo(texto) {
   const userId = getUserId();
-  if (!userId) return;
-  fetch("/api/escribiendo", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId, texto })
-  });
+  if (!userId || !window.firestore?.collection) return;
+
+  const docRef = window.firestore.doc(
+    window.firestore.db,
+    "escribiendo",
+    userId
+  );
+
+  window.firestore
+    .setDoc(docRef, {
+      texto: texto || "",
+      timestamp: Date.now()
+    })
+    .catch((err) => {
+      console.warn("❌ Error actualizando escribiendo:", err);
+    });
 }
 
 async function notificarEvento(tipo) {
