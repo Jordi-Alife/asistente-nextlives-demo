@@ -731,76 +731,85 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
     if (!userId) return;
 
     // ✅ Listener realtime Firestore (filtrado manual)
-window.escucharMensajesUsuario = (userId, callback) => {
-  if (!userId) {
-    console.warn("❌ No se pudo iniciar listener: userId indefinido.");
-    return;
-  }
+    window.escucharMensajesUsuario = (userId, callback) => {
+      if (!userId) {
+        console.warn("❌ No se pudo iniciar listener: userId indefinido.");
+        return;
+      }
 
-  const q = window.firestore.collection('mensajes')
-    .where("idConversacion", "==", userId)
-    .where("manual", "==", true);
+      const q = window.firestore.collection('mensajes')
+        .where("idConversacion", "==", userId)
+        .where("manual", "==", true);
 
-  return window.firestore.onSnapshot(q, (snapshot) => {
-    console.log("🔥 Snapshot recibido:", snapshot.size);
-    console.log("📦 Cambios detectados:", snapshot.docChanges().map(c => c.doc.data()));
+      return window.firestore.onSnapshot(q, (snapshot) => {
+        console.log("🔥 Snapshot recibido:", snapshot.size);
+        console.log("📦 Cambios detectados:", snapshot.docChanges().map(c => c.doc.data()));
 
-    const nuevosMensajes = snapshot.docChanges()
-      .filter(change => change.type === "added")
-      .map(change => {
-        const data = change.doc.data();
-        return {
-          ...data,
-          id: change.doc.id
-        };
+        const nuevosMensajes = snapshot.docChanges()
+          .filter(change => change.type === "added")
+          .map(change => {
+            const data = change.doc.data();
+            return {
+              ...data,
+              id: change.doc.id
+            };
+          });
+
+        if (nuevosMensajes.length > 0) {
+          console.log("🟢 MENSAJES MANUALES NUEVOS:", nuevosMensajes);
+          callback(nuevosMensajes);
+        }
       });
-
-    if (nuevosMensajes.length > 0) {
-      console.log("🟢 MENSAJES MANUALES NUEVOS:", nuevosMensajes);
-      callback(nuevosMensajes);
-    }
-  });
-};
-console.log("✅ window.escucharMensajesUsuario definido");
+    };
+    console.log("✅ window.escucharMensajesUsuario definido");
 
     if (!window._listenerManualActivo) {
-  window._listenerManualActivo = true;
+      window._listenerManualActivo = true;
 
-  window.escucharMensajesUsuario(userId, (mensajes) => {
-    mensajes.forEach((msg) => {
-      if (
-        msg.manual &&
-        msg.id &&
-        !document.querySelector(`[data-panel-id="${msg.id}"]`)
-      ) {
-        const contenido = msg.mensaje || msg.message || msg.original || "";
-        if (!contenido) return;
+      window.escucharMensajesUsuario(userId, (mensajes) => {
+        mensajes.forEach((msg) => {
+          if (
+            msg.manual &&
+            msg.id &&
+            !document.querySelector(`[data-panel-id="${msg.id}"]`)
+          ) {
+            const contenido = msg.mensaje || msg.message || msg.original || "";
+            if (!contenido) return;
 
-        const div = document.createElement("div");
-        div.className = "message assistant";
-        div.dataset.panelId = msg.id;
+            const div = document.createElement("div");
+            div.className = "message assistant";
+            div.dataset.panelId = msg.id;
 
-        if (/\.(jpeg|jpg|png|gif|webp)$/i.test(contenido)) {
-          div.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
-        } else {
-          div.innerText = contenido;
-        }
+            if (/\.(jpeg|jpg|png|gif|webp)$/i.test(contenido)) {
+              div.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+            } else {
+              div.innerText = contenido;
+            }
 
-        messagesDiv.appendChild(div);
+            messagesDiv.appendChild(div);
 
-        const todos = messagesDiv.querySelectorAll(".message");
-        if (todos.length > 50) {
-          for (let i = 0; i < todos.length - 50; i++) {
-            todos[i].remove();
+            const todos = messagesDiv.querySelectorAll(".message");
+            if (todos.length > 50) {
+              for (let i = 0; i < todos.length - 50; i++) {
+                todos[i].remove();
+              }
+            }
+
+            scrollToBottom();
+            saveChat();
           }
-        }
+        });
+      });
+    }
 
-        scrollToBottom();
-        saveChat();
-      }
-    });
-  });
-}
+    // ✅ ⏳ Iniciar temporizador de inactividad si no hay mensajes
+    const hayMensajes = messagesDiv && messagesDiv.children.length > 0;
+    if (!hayMensajes && !window.timeoutInactividad) {
+      console.log("⏳ Activando temporizador de cierre por inactividad (chat vacío)");
+      window.timeoutInactividad = setTimeout(() => {
+        cerrarChatConfirmado();
+      }, 2 * 60 * 1000); // 2 minutos
+    }
   };
 
   // 🔁 Lanzar la espera
