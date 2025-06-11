@@ -385,6 +385,13 @@ async function cerrarChatConfirmado() {
   // Notificar al padre que el chat se está cerrando
   closeChat();
 
+  // ✅ Detener listener en tiempo real si está activo
+  if (window._unsubscribeRealtime) {
+    console.log("🛑 Listener realtime detenido");
+    window._unsubscribeRealtime();
+    window._unsubscribeRealtime = null;
+  }
+
   if (userId) {
     try {
       await fetch("/api/cerrar-chat", {
@@ -398,11 +405,11 @@ async function cerrarChatConfirmado() {
     }
   }
 
-localStorage.setItem('chatEstado', 'cerrado');
-document.getElementById('chat-widget').style.display = 'none';
-document.getElementById('chat-toggle').style.display = 'flex';
-document.getElementById('scrollToBottomBtn').style.display = 'none';
-document.getElementById('modalConfirm').style.display = 'none'; // ✅ CIERRA MODAL EXPLÍCITAMENTE
+  localStorage.setItem('chatEstado', 'cerrado');
+  document.getElementById('chat-widget').style.display = 'none';
+  document.getElementById('chat-toggle').style.display = 'flex';
+  document.getElementById('scrollToBottomBtn').style.display = 'none';
+  document.getElementById('modalConfirm').style.display = 'none';
 }
 
 function abrirChat() {
