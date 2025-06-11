@@ -656,6 +656,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function minimizarChat() {
+  // ✅ Detener listener si está activo al minimizar el chat
+if (window._unsubscribeRealtime) {
+  console.log("🛑 Listener realtime detenido al minimizar");
+  window._unsubscribeRealtime();
+  window._unsubscribeRealtime = null;
+}
   localStorage.setItem('chatEstado', 'minimizado');
 
   minimizeChat();
