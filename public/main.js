@@ -258,23 +258,32 @@ const bodyData = {
 };
 
   try {
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(bodyData)
-    });
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(bodyData)
+  });
 
-    const data = await res.json();
-    const delay = Math.max(0, 1500 - (Date.now() - parseInt(tempId.split('-')[1])));
+  const data = await res.json();
+  const delay = Math.max(0, 1500 - (Date.now() - parseInt(tempId.split('-')[1])));
 
-    setTimeout(() => {
-      removeMessageByTempId(tempId);
-      if (data.reply?.trim()) addMessage(data.reply, 'assistant');
-    }, delay);
-      } catch (err) {
+  setTimeout(() => {
     removeMessageByTempId(tempId);
-    addMessage("Error al conectar con el servidor.", "assistant");
+    if (data.reply?.trim()) addMessage(data.reply, 'assistant');
+  }, delay);
+
+  // ✅ Activar escucha solo si la conversación está intervenida
+  if (data.intervenida) {
+    console.log("👂 Activando listener realtime porque la conversación está intervenida");
+    activarListenerRealtime(userId);
+  } else {
+    console.log("🛑 No se activa listener: conversación NO intervenida");
   }
+
+} catch (err) {
+  removeMessageByTempId(tempId);
+  addMessage("Error al conectar con el servidor.", "assistant");
+}
 } // <- ESTE cierre es el que te faltaba
 } // <- Este cierra la función sendMessage
 
