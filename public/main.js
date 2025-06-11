@@ -2,6 +2,7 @@ const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('messageInput');
 const fileInput = document.getElementById('fileInput');
 const sendBtn = document.querySelector('.send-button');
+let temporizadorInactividad = null; // ⏳ Controla el cierre automático por inactividad
 
 function esperarFirestore(callback, intentos = 0) {
   if (window.firestore?.collection) {
