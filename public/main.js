@@ -366,7 +366,16 @@ async function mostrarModal() {
   document.getElementById("btnConfirmar").innerText = textos[2];
   document.getElementById("modalConfirm").style.display = 'flex';
 }
+function reiniciarTemporizadorInactividad() {
+  if (temporizadorInactividad) {
+    clearTimeout(temporizadorInactividad);
+  }
 
+  temporizadorInactividad = setTimeout(() => {
+    console.log("⏳ Inactividad detectada. Cerrando chat...");
+    cerrarChatConfirmado();
+  }, 2 * 60 * 1000); // 2 minutos en milisegundos
+}
 async function cerrarChatConfirmado() {
   const userId = getUserId();
 
