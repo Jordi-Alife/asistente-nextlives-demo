@@ -610,7 +610,10 @@ await db.collection("conversaciones").doc(finalUserId).set(
       });
     }
 
-    res.json({ reply });
+    res.json({ 
+  reply, 
+  intervenida: convData?.intervenida || false 
+});
   } catch (error) {
     console.error("❌ Error general en /api/chat:", error);
     res.status(500).json({ reply: "Lo siento, ocurrió un error." });
