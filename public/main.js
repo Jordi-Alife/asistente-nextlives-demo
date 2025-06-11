@@ -602,6 +602,7 @@ input.addEventListener('input', () => {
 });
 
 input.addEventListener('focus', () => {
+  reiniciarTemporizadorInactividad();
   setTimeout(() => scrollToBottom(), 300);
 
   // ✅ Ajuste fino para iOS al volver a enfocar
