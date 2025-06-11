@@ -170,6 +170,7 @@ function scrollToBottom(smooth = true) {
 }
 
 async function sendMessage() {
+  reiniciarTemporizadorInactividad();
   // ⛔ Esperar a que window.chatSystem esté listo
   if (!window.chatSystem?.initialized) {
     console.warn("⏳ Esperando datos de chatSystem...");
