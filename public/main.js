@@ -843,7 +843,7 @@ function activarListenerRealtime() {
   const userId = getUserId();
   if (!window.escucharMensajesUsuario || !userId) return;
 
-  window.escucharMensajesUsuario(userId, (mensajes) => {
+  const unsubscribe = window.escucharMensajesUsuario(userId, (mensajes) => {
     mensajes.forEach((msg) => {
       if (
         msg.manual &&
@@ -877,6 +877,9 @@ function activarListenerRealtime() {
       }
     });
   });
+
+  // ✅ Guardamos el unsubscribe globalmente para cerrarlo después
+  window._unsubscribeRealtime = unsubscribe;
 }
 
 // ✅ FUNCIÓN NECESARIA PARA QUE SE MUESTRE LA RESPUESTA DE GPT DESDE BACKEND
