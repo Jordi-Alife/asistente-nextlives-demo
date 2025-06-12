@@ -153,12 +153,14 @@ function restoreChat() {
       }
     });
 
-    // ✅ Eliminar mensajes vacíos
-    const allMessages = messagesDiv.querySelectorAll(".message");
+    // ✅ Eliminar mensajes realmente vacíos (sin texto ni imagen)
+const allMessages = messagesDiv.querySelectorAll(".message");
 allMessages.forEach((msg) => {
-  const isEmpty = !msg.textContent.trim() && msg.children.length === 0;
-  const isUsuario = msg.classList.contains("user");
-  if (isEmpty && !isUsuario) msg.remove();
+  const tieneTexto = msg.innerText.trim().length > 0;
+  const tieneImagen = msg.querySelector("img");
+  const tieneContenido = tieneTexto || tieneImagen;
+
+  if (!tieneContenido) msg.remove();
 });
   }
   scrollToBottom(false);
