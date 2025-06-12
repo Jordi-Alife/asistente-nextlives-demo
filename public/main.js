@@ -535,7 +535,9 @@ function esperarChatSystem(callback, intentos = 0) {
 }
 
 // 👇 Llamamos al listener cuando esté listo el chatSystem
+// 👇 Llamamos al listener cuando esté listo el chatSystem
 esperarChatSystem((userId) => {
+  // 👂 Escuchar mensajes manuales (como ya tienes)
   window.escucharMensajesUsuario(userId, (mensajes) => {
     mensajes.forEach((msg) => {
       if (msg.manual && msg.id && !document.querySelector(`[data-panel-id="${msg.id}"]`)) {
@@ -566,8 +568,15 @@ esperarChatSystem((userId) => {
       }
     });
   });
-});
 
+  // ✅ Activar listener de escribiendo solo si está intervenida
+  if (window.chatSystem?.intervenida) {
+    console.log("✍️ Activando listener de escribiendo porque está intervenida");
+    activarListenerEscribiendo(userId);
+  } else {
+    console.log("🛑 No se activa listener de escribiendo: conversación NO intervenida");
+  }
+});
 // ✅ Activar listener en tiempo real para recibir mensajes manuales
 activarListenerRealtime();
 
