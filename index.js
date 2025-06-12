@@ -795,7 +795,20 @@ app.get("/api/conversaciones", async (req, res) => {
   try {
     console.log("📥 [GET] /api/conversaciones → tipo:", tipo);
 
-    const snapshot = await db.collection("conversaciones").get();
+    let filtroEstados = [];
+
+if (tipo === "recientes") {
+  filtroEstados = ["abierta"];
+} else if (tipo === "archivo" || tipo === "archivadas") {
+  filtroEstados = ["cerrado", "archivado"];
+}
+
+let query = db.collection("conversaciones");
+if (filtroEstados.length > 0) {
+  query = query.where("estado", "in", filtroEstados);
+}
+
+const snapshot = await query.get();
     const ahora = new Date();
 
     const todas = [];
