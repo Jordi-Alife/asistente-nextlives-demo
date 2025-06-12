@@ -824,19 +824,14 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
         });
       });
     }
-
-    // ✅ ⏳ Iniciar temporizador de inactividad si no hay mensajes
-    const hayMensajes = messagesDiv && messagesDiv.children.length > 0;
-    if (!hayMensajes && !window.timeoutInactividad) {
-      console.log("⏳ Activando temporizador de cierre por inactividad (chat vacío)");
-      window.timeoutInactividad = setTimeout(() => {
-        cerrarChatConfirmado();
-      }, 2 * 60 * 1000); // 2 minutos
-    }
   };
 
-  // 🔁 Lanzar la espera
-  esperarYContinuar();
+// 🔁 Lanzar la espera
+esperarYContinuar();
+
+// ✅ Iniciar temporizador normal de actividad
+reiniciarTemporizadorInactividad();
+  console.log("🔁 Temporizador de inactividad iniciado desde initializeChat");
 }
 
 /**
