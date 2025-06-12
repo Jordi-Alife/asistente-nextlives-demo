@@ -427,8 +427,8 @@ async function cerrarChatConfirmado() {
   document.getElementById('modalConfirm').style.display = 'none';
 }
 function abrirChat() {
-  // ✅ Restaurar mensajes guardados (si existen)
-  restoreChat();
+  // ❌ No restaurar mensajes desde localStorage
+  // restoreChat();  ← ELIMINADO
 
   // ✅ Activar listener en tiempo real para recibir mensajes del agente
   activarListenerRealtime();
