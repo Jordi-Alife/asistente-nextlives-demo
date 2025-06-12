@@ -963,3 +963,12 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('load', () => {
   notifyReadyToReceiveParams();
 });
+/ 🟢 Activar listener completo solo si no hay mensajes en pantalla
+setTimeout(() => {
+  if (messagesDiv.children.length === 0) {
+    console.log("🟢 No hay mensajes visibles, activando listener completo...");
+    activarListenerCompleto();
+  } else {
+    console.log("📭 Hay mensajes visibles, no se activa el listener completo.");
+  }
+}, 500); // ⏱️ Esperamos un poco para asegurar que todo cargó
