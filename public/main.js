@@ -142,7 +142,30 @@ function restoreChat() {
       mensajes.splice(0, mensajes.length - 50);
     }
 
-    messagesDiv.innerHTML = "";
+    // Eliminar solo mensajes restaurados anteriormente
+const mensajesFirestore = new Set();
+snapshot.forEach((doc) => {
+  const msg = doc.data();
+  const id = doc.id;
+  mensajesFirestore.add(id);
+
+  // Solo renderizar si aún no está visible
+  if (!document.querySelector(`[data-id-mensaje="${id}"]`)) {
+    const contenido = msg.mensaje || msg.message || msg.original || "";
+    const esImagen = /\.(jpeg|jpg|png|gif|webp)$/i.test(contenido);
+    const div = document.createElement("div");
+    div.className = `message ${msg.rol === "usuario" ? "user" : "assistant"}`;
+    div.dataset.idMensaje = id;
+
+    if (esImagen) {
+      div.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+    } else {
+      div.innerText = contenido;
+    }
+
+    messagesDiv.appendChild(div);
+  }
+});
     mensajes.forEach((el) => messagesDiv.appendChild(el));
 
     // ✅ Eliminar imágenes con blobs expirados
