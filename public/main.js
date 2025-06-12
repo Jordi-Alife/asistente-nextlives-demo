@@ -415,13 +415,15 @@ async function cerrarChatConfirmado() {
     }
   }
 
+  // ✅ Limpiar historial al cerrar completamente
+  localStorage.removeItem("chatMessages");
+
   localStorage.setItem('chatEstado', 'cerrado');
   document.getElementById('chat-widget').style.display = 'none';
   document.getElementById('chat-toggle').style.display = 'flex';
   document.getElementById('scrollToBottomBtn').style.display = 'none';
   document.getElementById('modalConfirm').style.display = 'none';
 }
-
 function abrirChat() {
   // ✅ Restaurar mensajes guardados (si existen)
   restoreChat();
