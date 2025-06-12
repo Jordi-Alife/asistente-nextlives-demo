@@ -619,7 +619,12 @@ let blurActivo = false; // ✅ Marca si el teclado se ha cerrado
 
 input.addEventListener('input', () => {
   reiniciarTemporizadorInactividad();
-  avisarEscribiendo(input.value);
+
+  // ✅ Solo avisar si la conversación está intervenida
+  if (window.chatSystem?.intervenida) {
+    avisarEscribiendo(input.value);
+  }
+
   if (input.value.trim() !== "" || imagenSeleccionada) {
     sendBtn.classList.add('active');
   } else {
