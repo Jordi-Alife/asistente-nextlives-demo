@@ -963,6 +963,44 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('load', () => {
   notifyReadyToReceiveParams();
 });
+// ✅ FUNCIÓN para cargar todos los mensajes desde Firestore al abrir
+function activarListenerCompleto() {
+  const userId = getUserId();
+  if (!window.firestore?.collection || !userId) {
+    console.warn("❌ Firestore o userId no disponible para listener completo.");
+    return;
+  }
+
+  const q = window.firestore
+    .collection("mensajes")
+    .where("idConversacion", "==", userId)
+    .orderBy("timestamp", "asc");
+
+  window._unsubscribeCompleto = window.firestore.onSnapshot(q, (snapshot) => {
+    console.log("📥 Listener completo: recibido", snapshot.size, "mensajes");
+    messagesDiv.innerHTML = "";
+
+    snapshot.forEach((doc) => {
+      const msg = doc.data();
+      const contenido = msg.mensaje || msg.message || msg.original || "";
+      const esImagen = /\.(jpeg|jpg|png|gif|webp)$/i.test(contenido);
+      const div = document.createElement("div");
+      div.className = `message ${msg.rol === "usuario" ? "user" : "assistant"}`;
+
+      if (esImagen) {
+        div.innerHTML = `<img src="${contenido}" alt="Imagen enviada" style="max-width: 100%; border-radius: 12px;" data-is-image="true" />`;
+      } else {
+        div.innerText = contenido;
+      }
+
+      messagesDiv.appendChild(div);
+    });
+
+    scrollToBottom(false);
+    saveChat();
+  });
+}
+
 / 🟢 Activar listener completo solo si no hay mensajes en pantalla
 setTimeout(() => {
   if (messagesDiv.children.length === 0) {
