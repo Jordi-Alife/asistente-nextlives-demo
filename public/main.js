@@ -423,12 +423,11 @@ async function cerrarChatConfirmado() {
 }
 
 function abrirChat() {
- // ✅ Limpiar mensajes viejos de localStorage (si existen)
-localStorage.removeItem("chatMessages");
-messagesDiv.innerHTML = "";
+  // ✅ Restaurar mensajes guardados (si existen)
+  restoreChat();
 
-// ✅ Activar listener en tiempo real para recibir mensajes manuales
-activarListenerRealtime();
+  // ✅ Activar listener en tiempo real para recibir mensajes del agente
+  activarListenerRealtime();
 
   // ✅ Mostrar el chat
   document.getElementById('chat-widget').style.display = 'flex';
