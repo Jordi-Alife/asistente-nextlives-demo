@@ -569,17 +569,6 @@ esperarChatSystem((userId) => {
     });
   });
 
-  // ✅ Activar listener de escribiendo solo si está intervenida
-  if (window.chatSystem?.intervenida) {
-    console.log("✍️ Activando listener de escribiendo porque está intervenida");
-    activarListenerEscribiendo(userId);
-  } else {
-    console.log("🛑 No se activa listener de escribiendo: conversación NO intervenida");
-  }
-});
-// ✅ Activar listener en tiempo real para recibir mensajes manuales
-activarListenerRealtime();
-
 // ✅ Si no hay mensajes en pantalla, pedir saludo inicial
 if (messagesDiv.children.length === 0) {
   const userId = getUserId();
