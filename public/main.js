@@ -155,10 +155,11 @@ function restoreChat() {
 
     // ✅ Eliminar mensajes vacíos
     const allMessages = messagesDiv.querySelectorAll(".message");
-    allMessages.forEach((msg) => {
-      const isEmpty = !msg.textContent.trim() && msg.children.length === 0;
-      if (isEmpty) msg.remove();
-    });
+allMessages.forEach((msg) => {
+  const isEmpty = !msg.textContent.trim() && msg.children.length === 0;
+  const isUsuario = msg.classList.contains("user");
+  if (isEmpty && !isUsuario) msg.remove();
+});
   }
   scrollToBottom(false);
 }
