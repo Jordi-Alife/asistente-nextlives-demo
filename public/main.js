@@ -622,8 +622,11 @@ input.addEventListener('input', () => {
 
   // ✅ Solo avisar si la conversación está intervenida
   if (window.chatSystem?.intervenida) {
-    avisarEscribiendo(input.value);
-  }
+  console.log("✍️ Enviando estado escribiendo a Firestore:", input.value);
+  avisarEscribiendo(input.value);
+} else {
+  console.log("🚫 No se envía escribiendo: conversación NO intervenida");
+}
 
   if (input.value.trim() !== "" || imagenSeleccionada) {
     sendBtn.classList.add('active');
