@@ -876,6 +876,32 @@ function minimizeChat() {
 /**
  * Función para notificar eventos al padre
  */
+
+// ✅ FUNCIÓN PARA MOSTRAR EL NOMBRE REAL DE LA FUNERARIA
+function cargarNombreFuneraria(userUuid) {
+  if (!window.firestore?.db || !userUuid) return;
+
+  window.firestore.db
+    .collection("conversaciones")
+    .doc(userUuid)
+    .get()
+    .then((doc) => {
+      if (doc.exists) {
+        const data = doc.data();
+        const nombre =
+          data?.datosContexto?.line?.company?.name || "Canal Digital";
+
+        const el = document.getElementById("nombreFuneraria");
+        if (el) el.textContent = nombre;
+      } else {
+        console.warn("❌ No se encontró la conversación en Firestore");
+      }
+    })
+    .catch((err) => {
+      console.error("❌ Error al obtener datos de la funeraria:", err);
+    });
+}
+
 function notifyParentEvent(eventType, data = {}) {
   if (window.parent && window.parent !== window) {
     window.parent.postMessage({
