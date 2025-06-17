@@ -1105,6 +1105,25 @@ app.use((err, req, res, next) => {
   res.json({ error: "Error interno del servidor" });
 });
 
+app.get("/api/nombre-funeraria/:userId", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const doc = await db.collection("conversaciones").doc(userId).get();
+    if (!doc.exists) {
+      return res.status(404).json({ nombre: "Canal Digital" });
+    }
+
+    const data = doc.data();
+    const nombre = data?.datosContexto?.line?.company?.name || "Canal Digital";
+
+    res.json({ nombre });
+  } catch (err) {
+    console.error("❌ Error en /api/nombre-funeraria:", err);
+    res.status(500).json({ nombre: "Canal Digital" });
+  }
+});
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
   console.log(`🌐 Panel de gestión configurado en: ${process.env.PANEL_GESTION_URL || 'NO CONFIGURADO'}`);
