@@ -747,6 +747,7 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
       language: language,
       initialized: true
     };
+    cargarNombreFuneraria(userUuid);
 
     // ✅ Mostrar el ID de usuario en la interfaz
     const userInfoElement = document.getElementById('userIdDisplay');
