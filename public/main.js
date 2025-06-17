@@ -748,34 +748,6 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
       initialized: true
     };
 
-    // ✅ Obtener datosContexto para extraer el nombre real de la funeraria
-window.firestore
-  .collection("conversaciones")
-  .doc(userUuid)
-  .get()
-  .then((doc) => {
-    const datos = doc.data();
-    const nombreFuneraria = datos?.datosContexto?.line?.company?.name || null;
-
-    if (nombreFuneraria) {
-      // ✅ Guardar el nombre en window.chatSystem para usarlo en otras partes si hace falta
-      window.chatSystem.funeraria = nombreFuneraria;
-
-      // ✅ Reemplazar visualmente en el encabezado
-      const span = document.getElementById("nombreFuneraria");
-      if (span) {
-        span.textContent = nombreFuneraria;
-      }
-
-      console.log("✅ Nombre de funeraria cargado:", nombreFuneraria);
-    } else {
-      console.warn("⚠️ No se encontró el nombre de la funeraria en Firestore.");
-    }
-  })
-  .catch((err) => {
-    console.error("❌ Error al obtener datosContexto:", err);
-  });
-
     // ✅ Mostrar el ID de usuario en la interfaz
     const userInfoElement = document.getElementById('userIdDisplay');
     if (userInfoElement) {
