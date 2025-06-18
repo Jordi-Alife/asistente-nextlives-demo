@@ -885,10 +885,18 @@ function cargarNombreFunerariaDesdeContexto(userUuid, lineUuid) {
   fetch(`/api/contexto-inicial/${userUuid}/${lineUuid}`)
     .then(res => res.json())
     .then(data => {
-      const nombre = data?.line?.company?.name || "Canal Digital";
+      const nombreFuneraria = data?.line?.company?.name || "Canal Digital";
+      const nombreUsuario = data?.user?.name || "";
+
+      // ✅ Mostrar la funeraria
       const el = document.getElementById("nombreFuneraria");
-      if (el) el.textContent = nombre;
-      console.log("🏷️ Nombre funeraria mostrado desde contexto:", nombre);
+      if (el) el.textContent = nombreFuneraria;
+
+      // ✅ Guardar nombre del usuario globalmente para el saludo inicial
+      window.chatSystem.nombre = nombreUsuario;
+
+      console.log("🏷️ Nombre funeraria mostrado desde contexto:", nombreFuneraria);
+      console.log("👤 Nombre usuario detectado:", nombreUsuario);
     })
     .catch(err => {
       console.warn("❌ Error al cargar contexto inicial:", err);
