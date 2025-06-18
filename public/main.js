@@ -885,6 +885,7 @@ function cargarNombreFuneraria(userUuid) {
   fetch(`/api/nombre-funeraria/${userUuid}`)
     .then((res) => res.json())
     .then((data) => {
+      console.log("🔍 Nombre funeraria recibido:", data?.nombre);  // <-- AÑADIDO AQUÍ
       const nombre = data?.nombre || "Canal Digital";
       const el = document.getElementById("nombreFuneraria");
       if (el) el.textContent = nombre;
@@ -893,7 +894,6 @@ function cargarNombreFuneraria(userUuid) {
       console.error("❌ Error al obtener nombre de funeraria:", err);
     });
 }
-
 function notifyParentEvent(eventType, data = {}) {
   if (window.parent && window.parent !== window) {
     window.parent.postMessage({
