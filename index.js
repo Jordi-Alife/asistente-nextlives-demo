@@ -239,16 +239,16 @@ if (convSnap.exists && convSnap.data().chatCerrado === true) {
 }
 
   // Llamar al webhook de contexto solo si existen userUuid y lineUuid
-  const datosContextoFrontend = req.body.datosContexto || {};
+const datosContextoFrontend = req.body.datosContexto || {};
 let datosContexto = {};
 
 if (userUuid && lineUuid) {
   const datosDelWebhook = await llamarWebhookContexto({ userUuid, lineUuid });
 
-  // Fusionar: frontend tiene prioridad (debe ir después)
+  // ✅ Fusión CORRECTA: frontend primero para que el nombre no se pierda
   datosContexto = {
-    ...datosDelWebhook,
-    ...datosContextoFrontend, // ← esta línea debe ir DESPUÉS para que `nombre` del frontend no se sobrescriba
+    ...datosContextoFrontend,
+    ...datosDelWebhook
   };
 } else {
   datosContexto = datosContextoFrontend;
