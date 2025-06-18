@@ -452,7 +452,9 @@ try {
     const promptSystem = [
   baseConocimiento,
   `\nHistorial reciente de conversación:\n${historialFormateado}`,
-  datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
+  datosContexto?.user?.name
+  ? `\nInformación útil para la respuesta:\nEl nombre del usuario es "${datosContexto.user.name}".`
+  : "",
   `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}".`,
   `IMPORTANTE: Si el usuario indica que quiere hablar con una persona, agente o humano, no insistas ni pidas más detalles. Solo responde con un mensaje claro diciendo que se le va a transferir a un agente humano. No digas que "intentarás ayudar". Simplemente confirma que será derivado.`,
 ].join("\n");
