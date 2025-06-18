@@ -637,7 +637,7 @@ if (messagesDiv.children.length === 0) {
 
     } else {
       intentos++;
-      setTimeout(esperarNombre, 150);
+      setTimeout(esperarNombre, 200);
     }
   };
 
