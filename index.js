@@ -253,7 +253,7 @@ if (userUuid && lineUuid) {
 } else {
   datosContexto = datosContextoFrontend;
 }
-  console.log("🧪 Nombre recibido en datosContexto:", datosContexto?.nombre);
+  console.log("🧪 Nombre que usará el backend para el saludo:", datosContexto?.nombre);
 
   // ✅ Si el mensaje es "__saludo_inicial__", devolver un saludo personalizado
 if (message === '__saludo_inicial__') {
