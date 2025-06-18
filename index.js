@@ -239,9 +239,20 @@ if (convSnap.exists && convSnap.data().chatCerrado === true) {
 }
 
   // Llamar al webhook de contexto solo si existen userUuid y lineUuid
-  const datosContexto = (userUuid && lineUuid) 
-    ? await llamarWebhookContexto({ userUuid, lineUuid })
-    : null;
+  const datosContextoFrontend = req.body.datosContexto || {};
+let datosContexto = {};
+
+if (userUuid && lineUuid) {
+  const datosDelWebhook = await llamarWebhookContexto({ userUuid, lineUuid });
+
+  // 🧠 Fusionar los datos: el nombre del usuario del frontend se respeta si el webhook no lo devuelve
+  datosContexto = {
+    ...datosDelWebhook,
+    ...datosContextoFrontend, // ⚠️ Esto tiene prioridad si hay conflicto
+  };
+} else {
+  datosContexto = datosContextoFrontend;
+}
   console.log("🧪 Nombre recibido en datosContexto:", datosContexto?.nombre);
 
   // ✅ Si el mensaje es "__saludo_inicial__", devolver un saludo personalizado
