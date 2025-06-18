@@ -879,19 +879,19 @@ function minimizeChat() {
  */
 
 // ✅ FUNCIÓN PARA MOSTRAR EL NOMBRE REAL DE LA FUNERARIA
-function cargarNombreFuneraria(userIdFirestore) {
-  if (!userIdFirestore) return;
+function cargarNombreFunerariaDesdeContexto(userUuid, lineUuid) {
+  if (!userUuid || !lineUuid) return;
 
-  fetch(`/api/nombre-funeraria/${userIdFirestore}`)
-    .then((res) => res.json())
-    .then((data) => {
-      console.log("🔍 Nombre funeraria recibido:", data?.nombre);
-      const nombre = data?.nombre || "Canal Digital";
+  fetch(`/api/contexto-inicial/${userUuid}/${lineUuid}`)
+    .then(res => res.json())
+    .then(data => {
+      const nombre = data?.line?.company?.name || "Canal Digital";
       const el = document.getElementById("nombreFuneraria");
       if (el) el.textContent = nombre;
+      console.log("🏷️ Nombre funeraria mostrado desde contexto:", nombre);
     })
-    .catch((err) => {
-      console.error("❌ Error al obtener nombre de funeraria:", err);
+    .catch(err => {
+      console.warn("❌ Error al cargar contexto inicial:", err);
     });
 }
 function notifyParentEvent(eventType, data = {}) {
