@@ -245,10 +245,10 @@ let datosContexto = {};
 if (userUuid && lineUuid) {
   const datosDelWebhook = await llamarWebhookContexto({ userUuid, lineUuid });
 
-  // 🧠 Fusionar los datos: el nombre del usuario del frontend se respeta si el webhook no lo devuelve
+  // Fusionar: frontend tiene prioridad (debe ir después)
   datosContexto = {
     ...datosDelWebhook,
-    ...datosContextoFrontend, // ⚠️ Esto tiene prioridad si hay conflicto
+    ...datosContextoFrontend, // ← esta línea debe ir DESPUÉS para que `nombre` del frontend no se sobrescriba
   };
 } else {
   datosContexto = datosContextoFrontend;
