@@ -588,38 +588,47 @@ activarListenerRealtime();
 if (messagesDiv.children.length === 0) {
   const userId = getUserId();
 
-  const datosContexto = {
-    nombre: window.chatSystem?.nombre || null,
-    userUuid: window.chatSystem?.currentUser || null,
-    lineUuid: window.chatSystem?.currentLine || null,
-    language: window.chatSystem?.language || "es"
+  // ⏳ Esperar hasta que el nombre esté disponible (máximo 10 intentos)
+  let intentos = 0;
+  const esperarNombre = () => {
+    if (window.chatSystem?.nombre || intentos > 10) {
+      const datosContexto = {
+        nombre: window.chatSystem?.nombre || null,
+        userUuid: window.chatSystem?.currentUser || null,
+        lineUuid: window.chatSystem?.currentLine || null,
+        language: window.chatSystem?.language || "es"
+      };
+
+      fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: "__saludo_inicial__",
+          userId,
+          userAgent: metadata.userAgent,
+          pais: metadata.pais,
+          historial: metadata.historial,
+          userUuid: datosContexto.userUuid,
+          lineUuid: datosContexto.lineUuid,
+          language: datosContexto.language,
+          datosContexto // 👈 Aquí incluimos el nombre
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.reply) {
+          addMessage(data.reply, 'assistant');
+        }
+      })
+      .catch(err => console.error("❌ Error al obtener saludo inicial:", err));
+    } else {
+      intentos++;
+      setTimeout(esperarNombre, 200);
+    }
   };
 
-  fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      message: "__saludo_inicial__",
-      userId,
-      userAgent: metadata.userAgent,
-      pais: metadata.pais,
-      historial: metadata.historial,
-      userUuid: datosContexto.userUuid,
-      lineUuid: datosContexto.lineUuid,
-      language: datosContexto.language,
-      datosContexto // 👈 Aquí incluimos el nombre
-    })
-  })
-  .then(res => res.json())
-  .then(data => {
-    if (data.reply) {
-      addMessage(data.reply, 'assistant');
-    }
-  })
-  .catch(err => console.error("❌ Error al obtener saludo inicial:", err));
+  esperarNombre();
 }
-getUserId();
-
 const scrollBtn = document.getElementById('scrollToBottomBtn');
 messagesDiv.addEventListener('scroll', () => {
   const threshold = 150;
