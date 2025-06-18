@@ -246,7 +246,7 @@ if (convSnap.exists && convSnap.data().chatCerrado === true) {
   // ✅ Si el mensaje es "__saludo_inicial__", devolver un saludo personalizado
   if (message === '__saludo_inicial__') {
   const saludo = obtenerSaludoHoraActual(language || idioma);
-  const nombre = datosContexto?.user?.name?.trim();
+  const nombre = datosContexto?.nombre?.trim();
 
   const saludoFinal = nombre
     ? `${saludo}, ${nombre}, ¿en qué puedo ayudarte?`
