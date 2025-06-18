@@ -591,7 +591,7 @@ if (messagesDiv.children.length === 0) {
   // ⏳ Esperar hasta que el nombre esté disponible (máximo 10 intentos)
   let intentos = 0;
   const esperarNombre = () => {
-    if (!window.chatSystem?.nombre || intentos < 6)
+    if (!window.chatSystem?.nombre || intentos < 10)
       const datosContexto = {
         nombre: window.chatSystem?.nombre || null,
         userUuid: window.chatSystem?.currentUser || null,
