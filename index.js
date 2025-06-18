@@ -245,9 +245,10 @@ let datosContexto = {};
 if (userUuid && lineUuid) {
   const datosDelWebhook = await llamarWebhookContexto({ userUuid, lineUuid });
 
+  // ✅ Fusión CORRECTA: frontend primero para que el nombre no se pierda
   datosContexto = {
-    ...datosDelWebhook,
-    ...(datosContextoFrontend.nombre ? { nombre: datosContextoFrontend.nombre } : {})
+    ...datosContextoFrontend,
+    ...datosDelWebhook
   };
 } else {
   datosContexto = datosContextoFrontend;
@@ -516,15 +517,9 @@ await db.collection("conversaciones").doc(finalUserId).set(
   intervenida: convData?.intervenida || false 
 });
   } catch (error) {
-  console.error("❌ Error general en /api/chat:", {
-    error: error.message,
-    stack: error.stack,
-    datosContexto,
-    message,
-    userId: finalUserId
-  });
-  res.status(500).json({ reply: "Lo siento, ocurrió un error." });
-}
+    console.error("❌ Error general en /api/chat:", error);
+    res.status(500).json({ reply: "Lo siento, ocurrió un error." });
+  }
 });
 app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
