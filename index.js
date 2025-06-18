@@ -245,10 +245,9 @@ let datosContexto = {};
 if (userUuid && lineUuid) {
   const datosDelWebhook = await llamarWebhookContexto({ userUuid, lineUuid });
 
-  // ✅ Fusión CORRECTA: frontend primero para que el nombre no se pierda
   datosContexto = {
-    ...datosContextoFrontend,
-    ...datosDelWebhook
+    ...datosDelWebhook,
+    ...(datosContextoFrontend.nombre ? { nombre: datosContextoFrontend.nombre } : {})
   };
 } else {
   datosContexto = datosContextoFrontend;
