@@ -247,12 +247,21 @@ if (userUuid && lineUuid) {
 
   datosContexto = {
     ...datosDelWebhook,
-    ...(datosContextoFrontend.nombre ? { nombre: datosContextoFrontend.nombre } : {})
+    ...datosContextoFrontend,
+    user: {
+      ...(datosDelWebhook.user || {}),
+      ...(datosContextoFrontend.user || {}),
+    }
   };
+
+  if (datosContextoFrontend.nombre) {
+    datosContexto.nombre = datosContextoFrontend.nombre;
+  }
 } else {
   datosContexto = datosContextoFrontend;
 }
-  console.log("🧪 Nombre que usará el backend para el saludo:", datosContexto?.nombre);
+
+console.log("🧪 Nombre que usará el backend para el saludo:", datosContexto?.nombre);
 
   // ✅ Si el mensaje es "__saludo_inicial__", devolver un saludo personalizado
 if (message === '__saludo_inicial__') {
