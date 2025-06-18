@@ -879,13 +879,13 @@ function minimizeChat() {
  */
 
 // ✅ FUNCIÓN PARA MOSTRAR EL NOMBRE REAL DE LA FUNERARIA
-function cargarNombreFuneraria(userUuid) {
-  if (!userUuid) return;
+function cargarNombreFuneraria(userIdFirestore) {
+  if (!userIdFirestore) return;
 
-  fetch(`/api/nombre-funeraria/${userUuid}`)
+  fetch(`/api/nombre-funeraria/${userIdFirestore}`)
     .then((res) => res.json())
     .then((data) => {
-      console.log("🔍 Nombre funeraria recibido:", data?.nombre);  // <-- AÑADIDO AQUÍ
+      console.log("🔍 Nombre funeraria recibido:", data?.nombre);
       const nombre = data?.nombre || "Canal Digital";
       const el = document.getElementById("nombreFuneraria");
       if (el) el.textContent = nombre;
