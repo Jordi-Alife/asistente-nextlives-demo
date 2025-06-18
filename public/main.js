@@ -750,11 +750,12 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
 
     // ✅ Configurar correctamente los datos en window.chatSystem
     window.chatSystem = {
-      currentUser: userUuid,
-      currentLine: lineUuid,
-      language: language,
-      initialized: true
-    };
+  currentUser: userUuid,
+  currentLine: lineUuid,
+  language: language,
+  nombre: null,  // ← nuevo campo
+  initialized: true
+};
     cargarNombreFunerariaDesdeContexto(userUuid, lineUuid);
 
     // ✅ Mostrar el ID de usuario en la interfaz
