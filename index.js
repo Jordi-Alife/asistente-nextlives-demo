@@ -322,9 +322,9 @@ if (!idioma || idioma === "zxx") {
     );
 
     // Guardar info conversación
-await db.collection("conversaciones").doc(finalUserId).set(
+await db.collection("conversaciones").doc(userId).set(
   {
-    idUsuario: finalUserId,
+    idUsuario: userId,
     fechaInicio: new Date().toISOString(),
     ultimaRespuesta: new Date().toISOString(),
     lastMessage: message,
@@ -333,7 +333,7 @@ await db.collection("conversaciones").doc(finalUserId).set(
     navegador: userAgent || "",
     pais: pais || "",
     historial: historial || [],
-    datosContexto: datosContexto || null,  // 👈 MÁS LIMPIO Y FLEXIBLE
+    datosContexto: datosContexto || null,
     noVistos: admin.firestore.FieldValue.increment(1),
     userUuid: req.body.userUuid || null,
     lineUuid: req.body.lineUuid || null,
