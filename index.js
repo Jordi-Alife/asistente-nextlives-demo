@@ -1124,6 +1124,22 @@ app.get("/api/nombre-funeraria/:userId", async (req, res) => {
   }
 });
 
+app.get("/api/contexto-inicial/:userUuid/:lineUuid", async (req, res) => {
+  const { userUuid, lineUuid } = req.params;
+
+  if (!userUuid || !lineUuid) {
+    return res.status(400).json({ error: "Faltan userUuid o lineUuid" });
+  }
+
+  try {
+    const datos = await llamarWebhookContexto({ userUuid, lineUuid });
+    return res.json(datos);
+  } catch (error) {
+    console.error("❌ Error en /api/contexto-inicial:", error);
+    return res.status(500).json({ error: "No se pudo obtener contexto" });
+  }
+});
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT} en 0.0.0.0`);
   console.log(`🌐 Panel de gestión configurado en: ${process.env.PANEL_GESTION_URL || 'NO CONFIGURADO'}`);
