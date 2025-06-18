@@ -245,24 +245,26 @@ let datosContexto = {};
 if (userUuid && lineUuid) {
   const datosDelWebhook = await llamarWebhookContexto({ userUuid, lineUuid });
 
+  // Fusionar y asegurarse de que no hay colisiones peligrosas
   datosContexto = {
     ...datosDelWebhook,
     ...datosContextoFrontend,
     user: {
       ...(datosDelWebhook.user || {}),
       ...(datosContextoFrontend.user || {}),
-    }
+    },
   };
 
-  if (datosContextoFrontend.nombre) {
-    datosContexto.nombre = datosContextoFrontend.nombre;
+  // ✅ Si el nombre no vino en datosContexto.user.name, añadimos nombre directo como fallback
+  if (!datosContexto.user?.name && datosContextoFrontend.nombre) {
+    datosContexto.user = datosContexto.user || {};
+    datosContexto.user.name = datosContextoFrontend.nombre;
   }
 } else {
   datosContexto = datosContextoFrontend;
 }
 
-console.log("🧪 Nombre que usará el backend para el saludo:", datosContexto?.nombre);
-
+console.log("🧪 Nombre final en datosContexto.user.name:", datosContexto?.user?.name);
   // ✅ Si el mensaje es "__saludo_inicial__", devolver un saludo personalizado
 if (message === '__saludo_inicial__') {
   const saludo = obtenerSaludoHoraActual(language || idioma);
