@@ -228,7 +228,6 @@ function obtenerSaludoHoraActual(idioma = "es") {
 // Función para llamar al webhook de contexto con firma
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial, userUuid, lineUuid, language } = req.body;
-  console.log("🧪 Nombre recibido en datosContexto:", datosContexto?.nombre);
   const finalUserId = userId || "anon";
 
   // ✅ Si el chat estaba cerrado y el usuario vuelve a escribir, reabrir la conversación
@@ -243,6 +242,7 @@ if (convSnap.exists && convSnap.data().chatCerrado === true) {
   const datosContexto = (userUuid && lineUuid) 
     ? await llamarWebhookContexto({ userUuid, lineUuid })
     : null;
+  console.log("🧪 Nombre recibido en datosContexto:", datosContexto?.nombre);
 
   // ✅ Si el mensaje es "__saludo_inicial__", devolver un saludo personalizado
   if (message === '__saludo_inicial__') {
