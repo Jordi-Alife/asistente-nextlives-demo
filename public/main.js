@@ -756,16 +756,18 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
   nombre: null,  // ← nuevo campo
   initialized: true
 };
-    cargarNombreFunerariaDesdeContexto(userUuid, lineUuid);
 
-    // ✅ Mostrar el ID de usuario en la interfaz
-    const userInfoElement = document.getElementById('userIdDisplay');
-    if (userInfoElement) {
-      userInfoElement.textContent = `Usuario: ${getUserId()}`;
-    }
+// ✅ Mostrar el ID de usuario en la interfaz
+const userInfoElement = document.getElementById('userIdDisplay');
+if (userInfoElement) {
+  userInfoElement.textContent = `Usuario: ${getUserId()}`;
+}
 
-    const userId = window.chatSystem.currentUser;
-    if (!userId) return;
+// ✅ Obtener nombre de funeraria y del usuario
+cargarNombreFunerariaDesdeContexto(userUuid, lineUuid);
+
+const userId = window.chatSystem.currentUser;
+if (!userId) return;
 
     // ✅ Listener realtime Firestore (filtrado manual)
     window.escucharMensajesUsuario = (userId, callback) => {
