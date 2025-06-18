@@ -585,15 +585,20 @@ esperarChatSystem((userId) => {
 activarListenerRealtime();
 
 // ✅ Si no hay mensajes en pantalla, pedir saludo inicial
+// ✅ Si no hay mensajes en pantalla, pedir saludo inicial
 if (messagesDiv.children.length === 0) {
   const userId = getUserId();
+
+  // ⏳ Mostrar bolitas mientras esperamos el saludo
+  const tempId = `saludo-${Date.now()}`;
+  addTypingBubble(tempId);
+
   let intentos = 0;
 
-  const tempId = `typing-saludo-${Date.now()}`;
-  addTypingBubble(tempId); // ✅ mostrar bolitas
-
   const esperarNombre = () => {
-    if (window.chatSystem?.nombre || intentos > 6) {
+    const nombreDisponible = !!window.chatSystem?.nombre;
+
+    if (nombreDisponible || intentos >= 10) {
       const datosContexto = {
         nombre: window.chatSystem?.nombre || null,
         userUuid: window.chatSystem?.currentUser || null,
@@ -615,24 +620,24 @@ if (messagesDiv.children.length === 0) {
           userUuid: datosContexto.userUuid,
           lineUuid: datosContexto.lineUuid,
           language: datosContexto.language,
-          datosContexto
+          datosContexto // ✅ incluimos el nombre aquí
         })
       })
-      .then(res => res.json())
-      .then(data => {
-        removeMessageByTempId(tempId); // 🧼 quitar bolitas
-        if (data.reply) {
-          addMessage(data.reply, 'assistant');
-        }
-      })
-      .catch(err => {
-        removeMessageByTempId(tempId); // 🧼 quitar bolitas si falla
-        console.error("❌ Error al obtener saludo inicial:", err);
-      });
+        .then(res => res.json())
+        .then(data => {
+          removeMessageByTempId(tempId);
+          if (data.reply) {
+            addMessage(data.reply, 'assistant');
+          }
+        })
+        .catch(err => {
+          removeMessageByTempId(tempId);
+          console.error("❌ Error al obtener saludo inicial:", err);
+        });
 
     } else {
       intentos++;
-      setTimeout(esperarNombre, 150);
+      setTimeout(esperarNombre, 200);
     }
   };
 
