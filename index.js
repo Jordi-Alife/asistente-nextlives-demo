@@ -436,13 +436,11 @@ if (convData?.intervenida) {
     let historialFormateado = "";
 
 try {
-  // Usamos historial ya guardado (si existe) para evitar lecturas adicionales
-const convDoc2 = await db.collection("conversaciones").doc(finalUserId).get();
-const historialFormateado = convDoc2.exists && convDoc2.data().historialFormateado
-  ? convDoc2.data().historialFormateado
-  : "";
+  const convDoc2 = await db.collection("conversaciones").doc(finalUserId).get();
+  historialFormateado = convDoc2.exists && convDoc2.data().historialFormateado
+    ? convDoc2.data().historialFormateado
+    : "";
 
-  // Guardar historial formateado para futuras respuestas sin volver a leer mensajes
   await db.collection("conversaciones").doc(finalUserId).set(
     { historialFormateado },
     { merge: true }
