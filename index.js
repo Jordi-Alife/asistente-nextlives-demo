@@ -245,16 +245,15 @@ let datosContexto = {};
 if (userUuid && lineUuid) {
   const datosDelWebhook = await llamarWebhookContexto({ userUuid, lineUuid });
 
-  // 🧠 Fusionar los datos: el nombre del usuario del frontend se respeta si el webhook no lo devuelve
   datosContexto = {
     ...datosDelWebhook,
-    ...datosContextoFrontend, // ⚠️ Esto tiene prioridad si hay conflicto
+    ...(datosContextoFrontend.nombre ? { nombre: datosContextoFrontend.nombre } : {})
   };
 } else {
   datosContexto = datosContextoFrontend;
 }
+  console.log("🧪 Nombre que usará el backend para el saludo:", datosContexto?.nombre);
 
-console.log("🧪 Nombre final en datosContexto.user.name:", datosContexto?.user?.name);
   // ✅ Si el mensaje es "__saludo_inicial__", devolver un saludo personalizado
 if (message === '__saludo_inicial__') {
   const saludo = obtenerSaludoHoraActual(language || idioma);
@@ -452,9 +451,7 @@ try {
     const promptSystem = [
   baseConocimiento,
   `\nHistorial reciente de conversación:\n${historialFormateado}`,
-  datosContexto?.user?.name
-  ? `\nInformación útil para la respuesta:\nEl nombre del usuario es "${datosContexto.user.name}".`
-  : "",
+  datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
   `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}".`,
   `IMPORTANTE: Si el usuario indica que quiere hablar con una persona, agente o humano, no insistas ni pidas más detalles. Solo responde con un mensaje claro diciendo que se le va a transferir a un agente humano. No digas que "intentarás ayudar". Simplemente confirma que será derivado.`,
 ].join("\n");
