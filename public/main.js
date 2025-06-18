@@ -587,19 +587,22 @@ activarListenerRealtime();
 // ✅ Si no hay mensajes en pantalla, pedir saludo inicial
 if (messagesDiv.children.length === 0) {
   const userId = getUserId();
-
-  // ⏳ Esperar hasta que el nombre esté disponible (máximo 10 intentos)
   let intentos = 0;
+
+  const tempId = `typing-saludo-${Date.now()}`;
+  addTypingBubble(tempId); // ✅ mostrar bolitas
+
   const esperarNombre = () => {
-    if (window.chatSystem?.nombre || intentos > 10) {
+    if (window.chatSystem?.nombre || intentos > 6) {
       const datosContexto = {
         nombre: window.chatSystem?.nombre || null,
         userUuid: window.chatSystem?.currentUser || null,
         lineUuid: window.chatSystem?.currentLine || null,
         language: window.chatSystem?.language || "es"
       };
-console.log("🚀 Enviando saludo inicial con datosContexto:", JSON.stringify(datosContexto));
-      
+
+      console.log("🚀 Enviando saludo inicial con datosContexto:", JSON.stringify(datosContexto));
+
       fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -612,19 +615,24 @@ console.log("🚀 Enviando saludo inicial con datosContexto:", JSON.stringify(da
           userUuid: datosContexto.userUuid,
           lineUuid: datosContexto.lineUuid,
           language: datosContexto.language,
-          datosContexto // 👈 Aquí incluimos el nombre
+          datosContexto
         })
       })
       .then(res => res.json())
       .then(data => {
+        removeMessageByTempId(tempId); // 🧼 quitar bolitas
         if (data.reply) {
           addMessage(data.reply, 'assistant');
         }
       })
-      .catch(err => console.error("❌ Error al obtener saludo inicial:", err));
+      .catch(err => {
+        removeMessageByTempId(tempId); // 🧼 quitar bolitas si falla
+        console.error("❌ Error al obtener saludo inicial:", err);
+      });
+
     } else {
       intentos++;
-      setTimeout(esperarNombre, 200);
+      setTimeout(esperarNombre, 150);
     }
   };
 
