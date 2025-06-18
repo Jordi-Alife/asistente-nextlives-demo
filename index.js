@@ -245,21 +245,11 @@ let datosContexto = {};
 if (userUuid && lineUuid) {
   const datosDelWebhook = await llamarWebhookContexto({ userUuid, lineUuid });
 
-  // Fusionar y asegurarse de que no hay colisiones peligrosas
+  // 🧠 Fusionar los datos: el nombre del usuario del frontend se respeta si el webhook no lo devuelve
   datosContexto = {
     ...datosDelWebhook,
-    ...datosContextoFrontend,
-    user: {
-      ...(datosDelWebhook.user || {}),
-      ...(datosContextoFrontend.user || {}),
-    },
+    ...datosContextoFrontend, // ⚠️ Esto tiene prioridad si hay conflicto
   };
-
-  // ✅ Si el nombre no vino en datosContexto.user.name, añadimos nombre directo como fallback
-  if (!datosContexto.user?.name && datosContextoFrontend.nombre) {
-    datosContexto.user = datosContexto.user || {};
-    datosContexto.user.name = datosContextoFrontend.nombre;
-  }
 } else {
   datosContexto = datosContextoFrontend;
 }
