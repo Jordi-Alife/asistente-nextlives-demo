@@ -598,7 +598,8 @@ if (messagesDiv.children.length === 0) {
         lineUuid: window.chatSystem?.currentLine || null,
         language: window.chatSystem?.language || "es"
       };
-
+console.log("🚀 Enviando saludo inicial con datosContexto:", JSON.stringify(datosContexto));
+      
       fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
