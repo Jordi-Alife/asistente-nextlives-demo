@@ -262,7 +262,7 @@ export function filtrarDatosContexto(data) {
     };
 
     // Filtrar orders (De momento, no se añaden las orders)
-    if (false && user.orders && Array.isArray(user.orders)) {
+    if (user.orders && Array.isArray(user.orders)) {
       resultado.user.orders = user.orders.map(order => {
         const filteredOrder = {
           uuid: order.uuid,
