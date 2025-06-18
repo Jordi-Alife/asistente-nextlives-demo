@@ -228,6 +228,7 @@ function obtenerSaludoHoraActual(idioma = "es") {
 // Función para llamar al webhook de contexto con firma
 app.post("/api/chat", async (req, res) => {
   const { message, system, userId, userAgent, pais, historial, userUuid, lineUuid, language } = req.body;
+  console.log("🧪 Nombre recibido en datosContexto:", datosContexto?.nombre);
   const finalUserId = userId || "anon";
 
   // ✅ Si el chat estaba cerrado y el usuario vuelve a escribir, reabrir la conversación
