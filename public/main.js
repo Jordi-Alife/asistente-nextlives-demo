@@ -588,6 +588,13 @@ activarListenerRealtime();
 if (messagesDiv.children.length === 0) {
   const userId = getUserId();
 
+  const datosContexto = {
+    nombre: window.chatSystem?.nombre || null,
+    userUuid: window.chatSystem?.currentUser || null,
+    lineUuid: window.chatSystem?.currentLine || null,
+    language: window.chatSystem?.language || "es"
+  };
+
   fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -597,9 +604,10 @@ if (messagesDiv.children.length === 0) {
       userAgent: metadata.userAgent,
       pais: metadata.pais,
       historial: metadata.historial,
-      userUuid: window.chatSystem?.currentUser || null,
-      lineUuid: window.chatSystem?.currentLine || null,
-      language: window.chatSystem?.language || "es"
+      userUuid: datosContexto.userUuid,
+      lineUuid: datosContexto.lineUuid,
+      language: datosContexto.language,
+      datosContexto // 👈 Aquí incluimos el nombre
     })
   })
   .then(res => res.json())
