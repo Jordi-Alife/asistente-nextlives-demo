@@ -236,26 +236,31 @@ app.post("/api/chat", async (req, res) => {
     : null;
 
   // ✅ Si el mensaje es "__saludo_inicial__", devolver un saludo personalizado
-  if (message === '__saludo_inicial__') {
+if (message === '__saludo_inicial__') {
   const saludo = obtenerSaludoHoraActual(language || idioma);
-  const nombre = datosContexto?.user?.name?.trim();
+
+  const nombre =
+    datosContexto?.user?.name?.trim() ||
+    datosContexto?.nombre?.trim() || null;
+
+  console.log("👋 Nombre extraído para saludo:", nombre);
 
   const saludoFinal = nombre
     ? `${saludo}, ${nombre}, ¿en qué puedo ayudarte?`
     : `${saludo}, ¿en qué puedo ayudarte?`;
 
-    await db.collection("mensajes").add({
-      idConversacion: finalUserId,
-      rol: "asistente",
-      mensaje: saludoFinal,
-      original: saludoFinal,
-      idiomaDetectado: language,
-      tipo: "texto",
-      timestamp: new Date().toISOString(),
-    });
+  await db.collection("mensajes").add({
+    idConversacion: finalUserId,
+    rol: "asistente",
+    mensaje: saludoFinal,
+    original: saludoFinal,
+    idiomaDetectado: language,
+    tipo: "texto",
+    timestamp: new Date().toISOString(),
+  });
 
-    return res.json({ reply: saludoFinal });
-  }
+  return res.json({ reply: saludoFinal });
+}
 
   // 🧠 Detectar idioma del mensaje
   let idiomaDetectado = await detectarIdiomaGPT(message);
