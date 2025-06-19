@@ -325,9 +325,9 @@ if (!idioma || idioma === "zxx") {
     );
 
     // Guardar info conversación
-await db.collection("conversaciones").doc(userId).set(
+await db.collection("conversaciones").doc(finalUserId).set(
   {
-    idUsuario: userId,
+    idUsuario: finalUserId,
     fechaInicio: new Date().toISOString(),
     ultimaRespuesta: new Date().toISOString(),
     lastMessage: message,
@@ -338,9 +338,9 @@ await db.collection("conversaciones").doc(userId).set(
     historial: historial || [],
     datosContexto: datosContexto || null,
     noVistos: admin.firestore.FieldValue.increment(1),
-    userUuid: req.body.userUuid || null,
-    lineUuid: req.body.lineUuid || null,
-    chatIdiomaDetectado: req.body.language || idioma
+    userUuid: userUuid || null,
+    lineUuid: lineUuid || null,
+    chatIdiomaDetectado: language || idioma
   },
   { merge: true }
 );
