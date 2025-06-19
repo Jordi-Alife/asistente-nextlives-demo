@@ -359,7 +359,6 @@ await db.collection("conversaciones").doc(finalUserId).set(
   },
   { merge: true }
 );
-
 // Traducir mensaje para guardar en español (para el panel)
 const traduccionUsuario = await traducir(message, "es");
 
