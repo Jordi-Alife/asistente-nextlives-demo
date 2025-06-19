@@ -322,9 +322,9 @@ if (!idioma || idioma === "zxx") {
     );
 
     // Guardar info conversación
-await db.collection("conversaciones").doc(userId).set(
+await db.collection("conversaciones").doc(finalUserId).set(
   {
-    idUsuario: userId,
+    idUsuario: finalUserId,
     fechaInicio: new Date().toISOString(),
     ultimaRespuesta: new Date().toISOString(),
     lastMessage: message,
