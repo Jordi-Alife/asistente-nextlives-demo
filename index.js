@@ -239,25 +239,39 @@ if (convSnap.exists && convSnap.data().chatCerrado === true) {
 }
 
   // Llamar al webhook de contexto solo si existen userUuid y lineUuid
-let datosContexto = {};
-
+// ✅ Paso 1: obtener contexto desde webhook si se puede
+let datosContextoWebhook = {};
 try {
   if (userUuid && lineUuid) {
-    datosContexto = await llamarWebhookContexto({ userUuid, lineUuid });
+    datosContextoWebhook = await llamarWebhookContexto({ userUuid, lineUuid });
+    console.log("✅ datosContexto recibido del webhook:", JSON.stringify(datosContextoWebhook, null, 2));
   }
-  console.log("✅ datosContexto recibido del webhook:", JSON.stringify(datosContexto, null, 2));
 } catch (e) {
   console.warn("⚠️ Error al obtener contexto del webhook:", e);
 }
 
-// Fusionamos con lo que venga del frontend solo si existe
-if (req.body.datosContexto) {
-  datosContexto = {
-    ...datosContexto,
-    ...req.body.datosContexto,
-  };
+// ✅ Paso 2: fusionar correctamente (el frontend tiene prioridad)
+let datosContexto = {
+  ...datosContextoWebhook,
+  ...(req.body.datosContexto || {})
+};
+
+// ✅ Paso 3: limpieza de posibles campos inválidos
+function limpiarContexto(ctx) {
+  const limpio = {};
+  for (const key in ctx) {
+    const val = ctx[key];
+    if (val !== undefined && typeof val !== "function") {
+      limpio[key] = val;
+    }
+  }
+  return limpio;
 }
-  console.log("🧪 Nombre que usará el backend para el saludo:", datosContexto?.nombre);
+datosContexto = limpiarContexto(datosContexto);
+
+// ✅ Paso 4: verificación final por consola
+console.log("🧪 Contexto final que se usará:", JSON.stringify(datosContexto, null, 2));
+console.log("🧪 Nombre que usará el backend para el saludo:", datosContexto?.user?.name || datosContexto?.nombre || null);
 
   // ✅ Si el mensaje es "__saludo_inicial__", devolver un saludo personalizado
 if (message === '__saludo_inicial__') {
