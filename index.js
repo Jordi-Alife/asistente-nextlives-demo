@@ -534,9 +534,10 @@ await db.collection("conversaciones").doc(finalUserId).set(
   intervenida: convData?.intervenida || false 
 });
   } catch (error) {
-    console.error("❌ Error general en /api/chat:", error);
-    res.status(500).json({ reply: "Lo siento, ocurrió un error." });
-  }
+  const errorDetails = JSON.stringify(error, Object.getOwnPropertyNames(error), 2);
+  console.error("❌ Error general en /api/chat:", errorDetails);
+  res.status(500).json({ reply: "Lo siento, ocurrió un error interno." });
+}
 });
 app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
