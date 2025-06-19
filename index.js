@@ -239,32 +239,48 @@ if (convSnap.exists && convSnap.data().chatCerrado === true) {
 }
 
   // Llamar al webhook de contexto solo si existen userUuid y lineUuid
-  const datosContexto = (userUuid && lineUuid) 
-    ? await llamarWebhookContexto({ userUuid, lineUuid })
-    : null;
+const datosContextoFrontend = req.body.datosContexto || {};
+let datosContexto = {};
+
+if (userUuid && lineUuid) {
+  const datosDelWebhook = await llamarWebhookContexto({ userUuid, lineUuid });
+
+  // ✅ Fusión CORRECTA: frontend primero para que el nombre no se pierda
+  datosContexto = {
+    ...datosContextoFrontend,
+    ...datosDelWebhook
+  };
+} else {
+  datosContexto = datosContextoFrontend;
+}
+  console.log("🧪 Nombre que usará el backend para el saludo:", datosContexto?.nombre);
 
   // ✅ Si el mensaje es "__saludo_inicial__", devolver un saludo personalizado
-  if (message === '__saludo_inicial__') {
+if (message === '__saludo_inicial__') {
   const saludo = obtenerSaludoHoraActual(language || idioma);
-  const nombre = datosContexto?.user?.name?.trim();
+
+  const nombre =
+    datosContexto?.user?.name?.trim() ||
+    datosContexto?.nombre?.trim() || null;
+
+  console.log("👋 Nombre extraído para saludo:", nombre);
 
   const saludoFinal = nombre
     ? `${saludo}, ${nombre}, ¿en qué puedo ayudarte?`
     : `${saludo}, ¿en qué puedo ayudarte?`;
 
-    await db.collection("mensajes").add({
-      idConversacion: finalUserId,
-      rol: "asistente",
-      mensaje: saludoFinal,
-      original: saludoFinal,
-      idiomaDetectado: language,
-      tipo: "texto",
-      timestamp: new Date().toISOString(),
-    });
+  await db.collection("mensajes").add({
+    idConversacion: finalUserId,
+    rol: "asistente",
+    mensaje: saludoFinal,
+    original: saludoFinal,
+    idiomaDetectado: language,
+    tipo: "texto",
+    timestamp: new Date().toISOString(),
+  });
 
-    return res.json({ reply: saludoFinal });
-  }
-
+  return res.json({ reply: saludoFinal });
+}
   // 🧠 Detectar idioma del mensaje
   let idiomaDetectado = await detectarIdiomaGPT(message);
   let idioma = idiomaDetectado;
@@ -306,9 +322,9 @@ if (!idioma || idioma === "zxx") {
     );
 
     // Guardar info conversación
-await db.collection("conversaciones").doc(finalUserId).set(
+await db.collection("conversaciones").doc(userId).set(
   {
-    idUsuario: finalUserId,
+    idUsuario: userId,
     fechaInicio: new Date().toISOString(),
     ultimaRespuesta: new Date().toISOString(),
     lastMessage: message,
@@ -317,7 +333,7 @@ await db.collection("conversaciones").doc(finalUserId).set(
     navegador: userAgent || "",
     pais: pais || "",
     historial: historial || [],
-    datosContexto: datosContexto || null,  // 👈 MÁS LIMPIO Y FLEXIBLE
+    datosContexto: datosContexto || null,
     noVistos: admin.firestore.FieldValue.increment(1),
     userUuid: req.body.userUuid || null,
     lineUuid: req.body.lineUuid || null,
@@ -420,13 +436,11 @@ if (convData?.intervenida) {
     let historialFormateado = "";
 
 try {
-  // Usamos historial ya guardado (si existe) para evitar lecturas adicionales
-const convDoc2 = await db.collection("conversaciones").doc(finalUserId).get();
-const historialFormateado = convDoc2.exists && convDoc2.data().historialFormateado
-  ? convDoc2.data().historialFormateado
-  : "";
+  const convDoc2 = await db.collection("conversaciones").doc(finalUserId).get();
+  historialFormateado = convDoc2.exists && convDoc2.data().historialFormateado
+    ? convDoc2.data().historialFormateado
+    : "";
 
-  // Guardar historial formateado para futuras respuestas sin volver a leer mensajes
   await db.collection("conversaciones").doc(finalUserId).set(
     { historialFormateado },
     { merge: true }
@@ -1121,6 +1135,22 @@ app.get("/api/nombre-funeraria/:userId", async (req, res) => {
   } catch (err) {
     console.error("❌ Error en /api/nombre-funeraria:", err);
     res.status(500).json({ nombre: "Canal Digital" });
+  }
+});
+
+app.get("/api/contexto-inicial/:userUuid/:lineUuid", async (req, res) => {
+  const { userUuid, lineUuid } = req.params;
+
+  if (!userUuid || !lineUuid) {
+    return res.status(400).json({ error: "Faltan userUuid o lineUuid" });
+  }
+
+  try {
+    const datos = await llamarWebhookContexto({ userUuid, lineUuid });
+    return res.json(datos);
+  } catch (error) {
+    console.error("❌ Error en /api/contexto-inicial:", error);
+    return res.status(500).json({ error: "No se pudo obtener contexto" });
   }
 });
 
