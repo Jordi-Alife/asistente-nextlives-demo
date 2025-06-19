@@ -239,19 +239,22 @@ if (convSnap.exists && convSnap.data().chatCerrado === true) {
 }
 
   // Llamar al webhook de contexto solo si existen userUuid y lineUuid
-const datosContextoFrontend = req.body.datosContexto || {};
 let datosContexto = {};
 
-if (userUuid && lineUuid) {
-  const datosDelWebhook = await llamarWebhookContexto({ userUuid, lineUuid });
+try {
+  if (userUuid && lineUuid) {
+    datosContexto = await llamarWebhookContexto({ userUuid, lineUuid });
+  }
+} catch (e) {
+  console.warn("⚠️ Error al obtener contexto del webhook:", e);
+}
 
-  // ✅ Fusión CORRECTA: frontend primero para que el nombre no se pierda
+// Fusionamos con lo que venga del frontend solo si existe
+if (req.body.datosContexto) {
   datosContexto = {
-    ...datosContextoFrontend,
-    ...datosDelWebhook
+    ...datosContexto,
+    ...req.body.datosContexto,
   };
-} else {
-  datosContexto = datosContextoFrontend;
 }
   console.log("🧪 Nombre que usará el backend para el saludo:", datosContexto?.nombre);
 
