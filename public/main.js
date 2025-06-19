@@ -585,29 +585,21 @@ esperarChatSystem((userId) => {
 activarListenerRealtime();
 
 // ✅ Si no hay mensajes en pantalla, pedir saludo inicial
-// ✅ Si no hay mensajes en pantalla, pedir saludo inicial
 if (messagesDiv.children.length === 0) {
   const userId = getUserId();
 
-  // ⏳ Mostrar bolitas mientras esperamos el saludo
-  const tempId = `saludo-${Date.now()}`;
-  addTypingBubble(tempId);
-
+  // ⏳ Esperar hasta que el nombre esté disponible (máximo 10 intentos)
   let intentos = 0;
-
   const esperarNombre = () => {
-    const nombreDisponible = !!window.chatSystem?.nombre;
-
-    if (nombreDisponible || intentos >= 16) {
+    if (!window.chatSystem?.nombre || intentos < 6)
       const datosContexto = {
         nombre: window.chatSystem?.nombre || null,
         userUuid: window.chatSystem?.currentUser || null,
         lineUuid: window.chatSystem?.currentLine || null,
         language: window.chatSystem?.language || "es"
       };
-
-      console.log("🚀 Enviando saludo inicial con datosContexto:", JSON.stringify(datosContexto));
-
+console.log("🚀 Enviando saludo inicial con datosContexto:", JSON.stringify(datosContexto));
+      
       fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -620,21 +612,16 @@ if (messagesDiv.children.length === 0) {
           userUuid: datosContexto.userUuid,
           lineUuid: datosContexto.lineUuid,
           language: datosContexto.language,
-          datosContexto // ✅ incluimos el nombre aquí
+          datosContexto // 👈 Aquí incluimos el nombre
         })
       })
-        .then(res => res.json())
-        .then(data => {
-          removeMessageByTempId(tempId);
-          if (data.reply) {
-            addMessage(data.reply, 'assistant');
-          }
-        })
-        .catch(err => {
-          removeMessageByTempId(tempId);
-          console.error("❌ Error al obtener saludo inicial:", err);
-        });
-
+      .then(res => res.json())
+      .then(data => {
+        if (data.reply) {
+          addMessage(data.reply, 'assistant');
+        }
+      })
+      .catch(err => console.error("❌ Error al obtener saludo inicial:", err));
     } else {
       intentos++;
       setTimeout(esperarNombre, 200);
