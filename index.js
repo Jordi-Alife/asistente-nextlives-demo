@@ -239,66 +239,32 @@ if (convSnap.exists && convSnap.data().chatCerrado === true) {
 }
 
   // Llamar al webhook de contexto solo si existen userUuid y lineUuid
-// ✅ Paso 1: obtener contexto desde webhook si se puede
-let datosContextoWebhook = {};
-try {
-  if (userUuid && lineUuid) {
-    datosContextoWebhook = await llamarWebhookContexto({ userUuid, lineUuid });
-    console.log("✅ datosContexto recibido del webhook:", JSON.stringify(datosContextoWebhook, null, 2));
-  }
-} catch (e) {
-  console.warn("⚠️ Error al obtener contexto del webhook:", e);
-}
-
-// ✅ Paso 2: fusionar correctamente (el frontend tiene prioridad)
-let datosContexto = {
-  ...datosContextoWebhook,
-  ...(req.body.datosContexto || {})
-};
-
-// ✅ Paso 3: limpieza de posibles campos inválidos
-function limpiarContexto(ctx) {
-  const limpio = {};
-  for (const key in ctx) {
-    const val = ctx[key];
-    if (val !== undefined && typeof val !== "function") {
-      limpio[key] = val;
-    }
-  }
-  return limpio;
-}
-datosContexto = limpiarContexto(datosContexto);
-
-// ✅ Paso 4: verificación final por consola
-console.log("🧪 Contexto final que se usará:", JSON.stringify(datosContexto, null, 2));
-console.log("🧪 Nombre que usará el backend para el saludo:", datosContexto?.user?.name || datosContexto?.nombre || null);
+  const datosContexto = (userUuid && lineUuid) 
+    ? await llamarWebhookContexto({ userUuid, lineUuid })
+    : null;
 
   // ✅ Si el mensaje es "__saludo_inicial__", devolver un saludo personalizado
-if (message === '__saludo_inicial__') {
+  if (message === '__saludo_inicial__') {
   const saludo = obtenerSaludoHoraActual(language || idioma);
-
-  const nombre =
-    datosContexto?.user?.name?.trim() ||
-    datosContexto?.nombre?.trim() || null;
-
-  console.log("👋 Nombre extraído para saludo:", nombre);
+  const nombre = datosContexto?.user?.name?.trim();
 
   const saludoFinal = nombre
     ? `${saludo}, ${nombre}, ¿en qué puedo ayudarte?`
     : `${saludo}, ¿en qué puedo ayudarte?`;
 
-  await db.collection("mensajes").add({
-    idConversacion: finalUserId,
-    rol: "asistente",
-    mensaje: saludoFinal,
-    original: saludoFinal,
-    idiomaDetectado: language,
-    tipo: "texto",
-    timestamp: new Date().toISOString(),
-  });
+    await db.collection("mensajes").add({
+      idConversacion: finalUserId,
+      rol: "asistente",
+      mensaje: saludoFinal,
+      original: saludoFinal,
+      idiomaDetectado: language,
+      tipo: "texto",
+      timestamp: new Date().toISOString(),
+    });
 
-  return res.json({ reply: saludoFinal });
-}
+    return res.json({ reply: saludoFinal });
+  }
+
   // 🧠 Detectar idioma del mensaje
   let idiomaDetectado = await detectarIdiomaGPT(message);
   let idioma = idiomaDetectado;
@@ -351,14 +317,15 @@ await db.collection("conversaciones").doc(finalUserId).set(
     navegador: userAgent || "",
     pais: pais || "",
     historial: historial || [],
-    datosContexto: datosContexto || null,
+    datosContexto: datosContexto || null,  // 👈 MÁS LIMPIO Y FLEXIBLE
     noVistos: admin.firestore.FieldValue.increment(1),
-    userUuid: userUuid || null,
-    lineUuid: lineUuid || null,
-    chatIdiomaDetectado: language || idioma
+    userUuid: req.body.userUuid || null,
+    lineUuid: req.body.lineUuid || null,
+    chatIdiomaDetectado: req.body.language || idioma
   },
   { merge: true }
 );
+
 // Traducir mensaje para guardar en español (para el panel)
 const traduccionUsuario = await traducir(message, "es");
 
@@ -453,11 +420,13 @@ if (convData?.intervenida) {
     let historialFormateado = "";
 
 try {
-  const convDoc2 = await db.collection("conversaciones").doc(finalUserId).get();
-  historialFormateado = convDoc2.exists && convDoc2.data().historialFormateado
-    ? convDoc2.data().historialFormateado
-    : "";
+  // Usamos historial ya guardado (si existe) para evitar lecturas adicionales
+const convDoc2 = await db.collection("conversaciones").doc(finalUserId).get();
+const historialFormateado = convDoc2.exists && convDoc2.data().historialFormateado
+  ? convDoc2.data().historialFormateado
+  : "";
 
+  // Guardar historial formateado para futuras respuestas sin volver a leer mensajes
   await db.collection("conversaciones").doc(finalUserId).set(
     { historialFormateado },
     { merge: true }
@@ -534,10 +503,9 @@ await db.collection("conversaciones").doc(finalUserId).set(
   intervenida: convData?.intervenida || false 
 });
   } catch (error) {
-  const errorDetails = JSON.stringify(error, Object.getOwnPropertyNames(error), 2);
-  console.error("❌ Error general en /api/chat:", errorDetails);
-  res.status(500).json({ reply: "Lo siento, ocurrió un error interno." });
-}
+    console.error("❌ Error general en /api/chat:", error);
+    res.status(500).json({ reply: "Lo siento, ocurrió un error." });
+  }
 });
 app.post("/api/upload-agente", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ninguna imagen" });
@@ -1153,22 +1121,6 @@ app.get("/api/nombre-funeraria/:userId", async (req, res) => {
   } catch (err) {
     console.error("❌ Error en /api/nombre-funeraria:", err);
     res.status(500).json({ nombre: "Canal Digital" });
-  }
-});
-
-app.get("/api/contexto-inicial/:userUuid/:lineUuid", async (req, res) => {
-  const { userUuid, lineUuid } = req.params;
-
-  if (!userUuid || !lineUuid) {
-    return res.status(400).json({ error: "Faltan userUuid o lineUuid" });
-  }
-
-  try {
-    const datos = await llamarWebhookContexto({ userUuid, lineUuid });
-    return res.json(datos);
-  } catch (error) {
-    console.error("❌ Error en /api/contexto-inicial:", error);
-    return res.status(500).json({ error: "No se pudo obtener contexto" });
   }
 });
 
