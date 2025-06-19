@@ -269,6 +269,22 @@ if (message === '__saludo_inicial__') {
     ? `${saludo}, ${nombre}, ¿en qué puedo ayudarte?`
     : `${saludo}, ¿en qué puedo ayudarte?`;
 
+  // ✅ GUARDAR DATOS EN FIRESTORE ANTES DE RESPONDER
+  try {
+    await db.collection("conversaciones").doc(userId).set(
+      {
+        datosContexto: datosContexto || null,
+        idiomaDetectado: language || idioma || "es",
+        actualizado: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+    console.log("✅ datosContexto guardado al abrir el chat");
+  } catch (err) {
+    console.error("❌ Error al guardar datosContexto:", err);
+  }
+
+  // ✅ Enviar mensaje de saludo al chat
   await db.collection("mensajes").add({
     idConversacion: finalUserId,
     rol: "asistente",
