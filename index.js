@@ -245,6 +245,7 @@ try {
   if (userUuid && lineUuid) {
     datosContexto = await llamarWebhookContexto({ userUuid, lineUuid });
   }
+  console.log("✅ datosContexto recibido del webhook:", JSON.stringify(datosContexto, null, 2));
 } catch (e) {
   console.warn("⚠️ Error al obtener contexto del webhook:", e);
 }
