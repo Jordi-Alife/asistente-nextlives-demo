@@ -585,64 +585,33 @@ esperarChatSystem((userId) => {
 activarListenerRealtime();
 
 // ✅ Si no hay mensajes en pantalla, pedir saludo inicial
-// ✅ Si no hay mensajes en pantalla, pedir saludo inicial
 if (messagesDiv.children.length === 0) {
   const userId = getUserId();
 
-  // ⏳ Mostrar bolitas mientras esperamos el saludo
-  const tempId = `saludo-${Date.now()}`;
-  addTypingBubble(tempId);
-
-  let intentos = 0;
-
-  const esperarNombre = () => {
-    const nombreDisponible = !!window.chatSystem?.nombre;
-
-    if (nombreDisponible || intentos >= 7) {
-      const datosContexto = {
-        nombre: window.chatSystem?.nombre || null,
-        userUuid: window.chatSystem?.currentUser || null,
-        lineUuid: window.chatSystem?.currentLine || null,
-        language: window.chatSystem?.language || "es"
-      };
-
-      console.log("🚀 Enviando saludo inicial con datosContexto:", JSON.stringify(datosContexto));
-
-      fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: "__saludo_inicial__",
-          userId,
-          userAgent: metadata.userAgent,
-          pais: metadata.pais,
-          historial: metadata.historial,
-          userUuid: datosContexto.userUuid,
-          lineUuid: datosContexto.lineUuid,
-          language: datosContexto.language,
-          datosContexto // ✅ incluimos el nombre aquí
-        })
-      })
-        .then(res => res.json())
-        .then(data => {
-          removeMessageByTempId(tempId);
-          if (data.reply) {
-            addMessage(data.reply, 'assistant');
-          }
-        })
-        .catch(err => {
-          removeMessageByTempId(tempId);
-          console.error("❌ Error al obtener saludo inicial:", err);
-        });
-
-    } else {
-      intentos++;
-      setTimeout(esperarNombre, 200);
+  fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message: "__saludo_inicial__",
+      userId,
+      userAgent: metadata.userAgent,
+      pais: metadata.pais,
+      historial: metadata.historial,
+      userUuid: window.chatSystem?.currentUser || null,
+      lineUuid: window.chatSystem?.currentLine || null,
+      language: window.chatSystem?.language || "es"
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.reply) {
+      addMessage(data.reply, 'assistant');
     }
-  };
-
-  esperarNombre();
+  })
+  .catch(err => console.error("❌ Error al obtener saludo inicial:", err));
 }
+getUserId();
+
 const scrollBtn = document.getElementById('scrollToBottomBtn');
 messagesDiv.addEventListener('scroll', () => {
   const threshold = 150;
@@ -773,24 +742,21 @@ function initializeChat(userUuid, lineUuid, language = 'en') {
 
     // ✅ Configurar correctamente los datos en window.chatSystem
     window.chatSystem = {
-  currentUser: userUuid,
-  currentLine: lineUuid,
-  language: language,
-  nombre: null,  // ← nuevo campo
-  initialized: true
-};
+      currentUser: userUuid,
+      currentLine: lineUuid,
+      language: language,
+      initialized: true
+    };
+    cargarNombreFuneraria(userUuid);
 
-// ✅ Mostrar el ID de usuario en la interfaz
-const userInfoElement = document.getElementById('userIdDisplay');
-if (userInfoElement) {
-  userInfoElement.textContent = `Usuario: ${getUserId()}`;
-}
+    // ✅ Mostrar el ID de usuario en la interfaz
+    const userInfoElement = document.getElementById('userIdDisplay');
+    if (userInfoElement) {
+      userInfoElement.textContent = `Usuario: ${getUserId()}`;
+    }
 
-// ✅ Obtener nombre de funeraria y del usuario
-cargarNombreFunerariaDesdeContexto(userUuid, lineUuid);
-
-const userId = window.chatSystem.currentUser;
-if (!userId) return;
+    const userId = window.chatSystem.currentUser;
+    if (!userId) return;
 
     // ✅ Listener realtime Firestore (filtrado manual)
     window.escucharMensajesUsuario = (userId, callback) => {
@@ -913,29 +879,21 @@ function minimizeChat() {
  */
 
 // ✅ FUNCIÓN PARA MOSTRAR EL NOMBRE REAL DE LA FUNERARIA
-function cargarNombreFunerariaDesdeContexto(userUuid, lineUuid) {
-  if (!userUuid || !lineUuid) return;
+function cargarNombreFuneraria(userUuid) {
+  if (!userUuid) return;
 
-  fetch(`/api/contexto-inicial/${userUuid}/${lineUuid}`)
-    .then(res => res.json())
-    .then(data => {
-      const nombreFuneraria = data?.line?.company?.name || "Canal Digital";
-      const nombreUsuario = data?.user?.name || "";
-
-      // ✅ Mostrar la funeraria
+  fetch(`/api/nombre-funeraria/${userUuid}`)
+    .then((res) => res.json())
+    .then((data) => {
+      const nombre = data?.nombre || "Canal Digital";
       const el = document.getElementById("nombreFuneraria");
-      if (el) el.textContent = nombreFuneraria;
-
-      // ✅ Guardar nombre del usuario globalmente para el saludo inicial
-      window.chatSystem.nombre = nombreUsuario;
-
-      console.log("🏷️ Nombre funeraria mostrado desde contexto:", nombreFuneraria);
-      console.log("👤 Nombre usuario detectado:", nombreUsuario);
+      if (el) el.textContent = nombre;
     })
-    .catch(err => {
-      console.warn("❌ Error al cargar contexto inicial:", err);
+    .catch((err) => {
+      console.error("❌ Error al obtener nombre de funeraria:", err);
     });
 }
+
 function notifyParentEvent(eventType, data = {}) {
   if (window.parent && window.parent !== window) {
     window.parent.postMessage({
