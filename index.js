@@ -461,13 +461,16 @@ if (convData?.intervenida) {
   }
 }
 
-   // ✅ Preparar prompt
+  // ✅ Preparar prompt
 const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
   ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
   : "";
 
-let historialFormateado = "";
+// No cargamos historial completo para evitar consumo innecesario
+let historialFormateado = ""; // ← Vacío intencionadamente
 
+// ⚠️ Ya no lo cargamos desde Firestore ni lo reenviamos
+/*
 try {
   const convDoc2 = await db.collection("conversaciones").doc(finalUserId).get();
   historialFormateado = convDoc2.exists && convDoc2.data().historialFormateado
@@ -482,7 +485,9 @@ try {
 } catch (err) {
   console.warn("⚠️ No se pudo cargar o guardar historial formateado:", err);
 }
-    // ✅ Resumen ligero de contexto (nombre usuario, difunto, funeraria)
+*/
+
+// ✅ Resumen ligero de contexto (nombre usuario, difunto, funeraria)
 const nombreUsuario = datosContexto?.user?.name?.trim() || datosContexto?.nombre?.trim() || null;
 const nombreDifunto = datosContexto?.line?.name?.trim() || null;
 const nombreFuneraria = datosContexto?.line?.company?.name?.trim() || null;
@@ -494,7 +499,6 @@ const resumenContexto =
 
 const promptSystem = [
   baseConocimiento,
-  `\nHistorial reciente de conversación:\n${historialFormateado}`,
   resumenContexto,
   `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}".`,
   `IMPORTANTE: Si el usuario indica que quiere hablar con una persona, agente o humano, no insistas ni pidas más detalles. Solo responde con un mensaje claro diciendo que se le va a transferir a un agente humano. No digas que "intentarás ayudar". Simplemente confirma que será derivado.`,
