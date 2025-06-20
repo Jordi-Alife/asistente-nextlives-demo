@@ -482,11 +482,20 @@ try {
 } catch (err) {
   console.warn("⚠️ No se pudo cargar o guardar historial formateado:", err);
 }
+    // ✅ Resumen ligero de contexto (nombre usuario, difunto, funeraria)
+const nombreUsuario = datosContexto?.user?.name?.trim() || datosContexto?.nombre?.trim() || null;
+const nombreDifunto = datosContexto?.line?.name?.trim() || null;
+const nombreFuneraria = datosContexto?.line?.company?.name?.trim() || null;
+
+const resumenContexto =
+  [nombreUsuario, nombreDifunto, nombreFuneraria].filter(Boolean).length > 0
+    ? `Información adicional: el usuario se llama ${nombreUsuario || "desconocido"}, escribe desde la web de ${nombreDifunto || "desconocido"}, que pertenece a la funeraria ${nombreFuneraria || "desconocida"}.`
+    : "";
 
 const promptSystem = [
   baseConocimiento,
   `\nHistorial reciente de conversación:\n${historialFormateado}`,
-  datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
+  resumenContexto,
   `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}".`,
   `IMPORTANTE: Si el usuario indica que quiere hablar con una persona, agente o humano, no insistas ni pidas más detalles. Solo responde con un mensaje claro diciendo que se le va a transferir a un agente humano. No digas que "intentarás ayudar". Simplemente confirma que será derivado.`,
 ].join("\n");
