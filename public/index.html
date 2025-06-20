@@ -15,12 +15,7 @@
     .chat-avatar { width: 36px; height: 36px; border-radius: 50%; background-color: #000; display: flex; align-items: center; justify-content: center; }
     .chat-avatar img { width: 20px; height: 20px; display: block; }
     .chat-status-dot { position: absolute; right: -2px; top: -2px; width: 10px; height: 10px; background-color: #2ecc71; border-radius: 50%; border: 2px solid white; }
-    .chat-header-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
-  gap: 2px; /* ⬅️ Esto añade espacio vertical entre las dos líneas */
-}
+    .chat-header-text { display: flex; flex-direction: column; line-height: 1.2; }
     .chat-header-text strong { font-size: 14px; color: #000; }
     .chat-header-text span { font-size: 12px; color: #888; }
     .chat-header-actions { display: flex; gap: 8px; }
@@ -72,10 +67,7 @@
         <div class="chat-avatar-wrapper">
           <div class="chat-avatar"><img src="/chat-icon.svg" alt="Chat Icon" /></div><span class="chat-status-dot"></span>
         </div>
-        <div class="chat-header-text">
-  <strong id="nombreFuneraria" style="font-size: 15px; color: #111;">Canal Digital</strong>
-  <span style="font-size: 13px; color: #888;">Soporte Canal Digital</span>
-</div>
+        <div class="chat-header-text"><strong>Soporte Canal Digital</strong><span>Funeraria Esperanza</span></div>
       </div>
       <div class="chat-header-actions">
         <button onclick="minimizarChat()">–</button><button onclick="mostrarModal()">×</button>
@@ -142,10 +134,8 @@
       target.postMessage(chatParams, "*");
       console.log("📤 CHAT_PARAMS enviados:", chatParams);
     }, 500);
-
-    // ❌ Se elimina llamada duplicada a cargarNombreFuneraria(userUuid)
   });
-</script>
+  </script>
 
 <!-- 🔥 Firebase SDK compat para navegador (sin import ni build) -->
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
