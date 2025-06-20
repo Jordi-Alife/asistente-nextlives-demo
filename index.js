@@ -244,16 +244,33 @@ let datosContexto = {};
 
 if (userUuid && lineUuid) {
   const datosDelWebhook = await llamarWebhookContexto({ userUuid, lineUuid });
-console.log("🧩 Datos desde webhook:", datosDelWebhook); // <- AÑADE ESTO
-  // ✅ Fusión CORRECTA: frontend primero para que el nombre no se pierda
+  console.log("🧩 Datos desde webhook:", datosDelWebhook);
+
+  // ✅ Extraer solo campos necesarios
+  const nombreUsuario = datosContextoFrontend?.user?.name || datosDelWebhook?.user?.name || null;
+  const nombreDifunto = datosContextoFrontend?.line?.name || datosDelWebhook?.line?.name || null;
+  const nombreFuneraria = datosContextoFrontend?.line?.company?.name || datosDelWebhook?.line?.company?.name || null;
+
+  // ✅ Limitar el JSON a lo esencial
   datosContexto = {
-    ...datosContextoFrontend,
-    ...datosDelWebhook
+    user: { name: nombreUsuario },
+    line: { name: nombreDifunto },
+    company: { name: nombreFuneraria }
   };
 } else {
-  datosContexto = datosContextoFrontend;
+  // En caso de no haber webhooks, solo se extraen valores del frontend y se recortan
+  const nombreUsuario = datosContextoFrontend?.user?.name || null;
+  const nombreDifunto = datosContextoFrontend?.line?.name || null;
+  const nombreFuneraria = datosContextoFrontend?.line?.company?.name || null;
+
+  datosContexto = {
+    user: { name: nombreUsuario },
+    line: { name: nombreDifunto },
+    company: { name: nombreFuneraria }
+  };
 }
-  console.log("🧪 Nombre que usará el backend para el saludo:", datosContexto?.nombre);
+
+console.log("🧪 Nombre que usará el backend para el saludo:", datosContexto?.user?.name || datosContexto?.nombre);
 
   // ✅ Si el mensaje es "__saludo_inicial__", devolver un saludo personalizado
 if (message === '__saludo_inicial__') {
