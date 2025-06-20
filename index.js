@@ -257,40 +257,15 @@ console.log("🧩 Datos desde webhook:", datosDelWebhook); // <- AÑADE ESTO
 
   // ✅ Si el mensaje es "__saludo_inicial__", devolver un saludo personalizado
 if (message === '__saludo_inicial__') {
-  const saludo = obtenerSaludoHoraActual(language || idioma);
+  const saludo = obtenerSaludoHoraActual(language || idioma || "es");
+  const saludoFinal = `${saludo}, ¿en qué puedo ayudarte?`;
 
-  const nombre =
-    datosContexto?.user?.name?.trim() ||
-    datosContexto?.nombre?.trim() || null;
-
-  console.log("👋 Nombre extraído para saludo:", nombre);
-
-  const saludoFinal = nombre
-    ? `${saludo}, ${nombre}, ¿en qué puedo ayudarte?`
-    : `${saludo}, ¿en qué puedo ayudarte?`;
-
-  // ✅ GUARDAR DATOS EN FIRESTORE ANTES DE RESPONDER
-  try {
-    await db.collection("conversaciones").doc(userId).set(
-      {
-        datosContexto: datosContexto || null,
-        idiomaDetectado: language || idioma || "es",
-        actualizado: new Date().toISOString(),
-      },
-      { merge: true }
-    );
-    console.log("✅ datosContexto guardado al abrir el chat");
-  } catch (err) {
-    console.error("❌ Error al guardar datosContexto:", err);
-  }
-
-  // ✅ Enviar mensaje de saludo al chat
   await db.collection("mensajes").add({
     idConversacion: finalUserId,
     rol: "asistente",
     mensaje: saludoFinal,
     original: saludoFinal,
-    idiomaDetectado: language,
+    idiomaDetectado: language || "es",
     tipo: "texto",
     timestamp: new Date().toISOString(),
   });
