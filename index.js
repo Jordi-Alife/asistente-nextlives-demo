@@ -444,12 +444,12 @@ if (convData?.intervenida) {
   }
 }
 
-    // Preparar prompt
-    const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
-      ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
-      : "";
+   // ✅ Preparar prompt
+const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
+  ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
+  : "";
 
-    let historialFormateado = "";
+let historialFormateado = "";
 
 try {
   const convDoc2 = await db.collection("conversaciones").doc(finalUserId).get();
@@ -461,17 +461,20 @@ try {
     { historialFormateado },
     { merge: true }
   );
+  console.log("✅ Historial formateado cargado:", historialFormateado);
 } catch (err) {
   console.warn("⚠️ No se pudo cargar o guardar historial formateado:", err);
 }
 
-    const promptSystem = [
+const promptSystem = [
   baseConocimiento,
   `\nHistorial reciente de conversación:\n${historialFormateado}`,
   datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
   `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}".`,
   `IMPORTANTE: Si el usuario indica que quiere hablar con una persona, agente o humano, no insistas ni pidas más detalles. Solo responde con un mensaje claro diciendo que se le va a transferir a un agente humano. No digas que "intentarás ayudar". Simplemente confirma que será derivado.`,
 ].join("\n");
+
+console.log("🧠 promptSystem generado:", promptSystem);
 
 // ✅ Generar saludo si es el primer mensaje
 let saludoInicial = "";
@@ -482,7 +485,10 @@ if (!historialFormateado || historialFormateado.trim() === "") {
   saludoInicial = nombre
     ? `${saludo}, ${nombre}. `
     : `${saludo}. `;
+  console.log("👋 Se ha generado saludo inicial:", saludoInicial);
 }
+
+console.log("📨 Enviando a OpenAI:", saludoInicial + message);
 
 const response = await openai.chat.completions.create({
   model: "gpt-4",
@@ -492,11 +498,15 @@ const response = await openai.chat.completions.create({
   ],
 });
 
-    const reply = response.choices[0].message.content;
+console.log("✅ Respuesta recibida de OpenAI:", response);
 
-    const traduccionRespuesta = await traducir(reply, "es");
+const reply = response.choices[0].message.content;
+console.log("💬 Respuesta GPT extraída:", reply);
 
-    // Guardar mensaje del asistente (traducido para el panel)
+const traduccionRespuesta = await traducir(reply, "es");
+console.log("🌍 Traducción al español:", traduccionRespuesta);
+
+// ✅ Guardar mensaje del asistente (traducido para el panel)
 await db.collection("mensajes").add({
   idConversacion: finalUserId,
   rol: "asistente",
@@ -506,6 +516,7 @@ await db.collection("mensajes").add({
   tipo: "texto",
   timestamp: new Date().toISOString(),
 });
+console.log("📝 Mensaje guardado en Firestore correctamente.");
 
 // ✅ Guardar historial formateado optimizado en el documento de la conversación
 const nuevoHistorial = historialFormateado
