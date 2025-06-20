@@ -142,11 +142,10 @@
       target.postMessage(chatParams, "*");
       console.log("📤 CHAT_PARAMS enviados:", chatParams);
     }, 500);
-  cargarNombreFuneraria(userUuid);
-    console.log("📛 Ejecutando cargarNombreFuneraria con userUuid:", userUuid);
-    
+
+    // ❌ Se elimina llamada duplicada a cargarNombreFuneraria(userUuid)
   });
-  </script>
+</script>
 
 <!-- 🔥 Firebase SDK compat para navegador (sin import ni build) -->
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
