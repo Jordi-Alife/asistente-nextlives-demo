@@ -239,32 +239,64 @@ if (convSnap.exists && convSnap.data().chatCerrado === true) {
 }
 
   // Llamar al webhook de contexto solo si existen userUuid y lineUuid
-  const datosContexto = (userUuid && lineUuid) 
-    ? await llamarWebhookContexto({ userUuid, lineUuid })
-    : null;
+const datosContextoFrontend = req.body.datosContexto || {};
+let datosContexto = {};
+
+if (userUuid && lineUuid) {
+  const datosDelWebhook = await llamarWebhookContexto({ userUuid, lineUuid });
+console.log("🧩 Datos desde webhook:", datosDelWebhook); // <- AÑADE ESTO
+  // ✅ Fusión CORRECTA: frontend primero para que el nombre no se pierda
+  datosContexto = {
+    ...datosContextoFrontend,
+    ...datosDelWebhook
+  };
+} else {
+  datosContexto = datosContextoFrontend;
+}
+  console.log("🧪 Nombre que usará el backend para el saludo:", datosContexto?.nombre);
 
   // ✅ Si el mensaje es "__saludo_inicial__", devolver un saludo personalizado
-  if (message === '__saludo_inicial__') {
+if (message === '__saludo_inicial__') {
   const saludo = obtenerSaludoHoraActual(language || idioma);
-  const nombre = datosContexto?.user?.name?.trim();
+
+  const nombre =
+    datosContexto?.user?.name?.trim() ||
+    datosContexto?.nombre?.trim() || null;
+
+  console.log("👋 Nombre extraído para saludo:", nombre);
 
   const saludoFinal = nombre
     ? `${saludo}, ${nombre}, ¿en qué puedo ayudarte?`
     : `${saludo}, ¿en qué puedo ayudarte?`;
 
-    await db.collection("mensajes").add({
-      idConversacion: finalUserId,
-      rol: "asistente",
-      mensaje: saludoFinal,
-      original: saludoFinal,
-      idiomaDetectado: language,
-      tipo: "texto",
-      timestamp: new Date().toISOString(),
-    });
-
-    return res.json({ reply: saludoFinal });
+  // ✅ GUARDAR DATOS EN FIRESTORE ANTES DE RESPONDER
+  try {
+    await db.collection("conversaciones").doc(userId).set(
+      {
+        datosContexto: datosContexto || null,
+        idiomaDetectado: language || idioma || "es",
+        actualizado: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+    console.log("✅ datosContexto guardado al abrir el chat");
+  } catch (err) {
+    console.error("❌ Error al guardar datosContexto:", err);
   }
 
+  // ✅ Enviar mensaje de saludo al chat
+  await db.collection("mensajes").add({
+    idConversacion: finalUserId,
+    rol: "asistente",
+    mensaje: saludoFinal,
+    original: saludoFinal,
+    idiomaDetectado: language,
+    tipo: "texto",
+    timestamp: new Date().toISOString(),
+  });
+
+  return res.json({ reply: saludoFinal });
+}
   // 🧠 Detectar idioma del mensaje
   let idiomaDetectado = await detectarIdiomaGPT(message);
   let idioma = idiomaDetectado;
@@ -317,7 +349,7 @@ await db.collection("conversaciones").doc(finalUserId).set(
     navegador: userAgent || "",
     pais: pais || "",
     historial: historial || [],
-    datosContexto: datosContexto || null,  // 👈 MÁS LIMPIO Y FLEXIBLE
+    datosContexto: datosContexto || null,
     noVistos: admin.firestore.FieldValue.increment(1),
     userUuid: req.body.userUuid || null,
     lineUuid: req.body.lineUuid || null,
@@ -412,36 +444,37 @@ if (convData?.intervenida) {
   }
 }
 
-    // Preparar prompt
-    const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
-      ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
-      : "";
-
-    let historialFormateado = "";
-
-try {
-  // Usamos historial ya guardado (si existe) para evitar lecturas adicionales
-const convDoc2 = await db.collection("conversaciones").doc(finalUserId).get();
-const historialFormateado = convDoc2.exists && convDoc2.data().historialFormateado
-  ? convDoc2.data().historialFormateado
+   // ✅ Preparar prompt
+const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
+  ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
   : "";
 
-  // Guardar historial formateado para futuras respuestas sin volver a leer mensajes
+let historialFormateado = "";
+
+try {
+  const convDoc2 = await db.collection("conversaciones").doc(finalUserId).get();
+  historialFormateado = convDoc2.exists && convDoc2.data().historialFormateado
+    ? convDoc2.data().historialFormateado
+    : "";
+
   await db.collection("conversaciones").doc(finalUserId).set(
     { historialFormateado },
     { merge: true }
   );
+  console.log("✅ Historial formateado cargado:", historialFormateado);
 } catch (err) {
   console.warn("⚠️ No se pudo cargar o guardar historial formateado:", err);
 }
 
-    const promptSystem = [
+const promptSystem = [
   baseConocimiento,
   `\nHistorial reciente de conversación:\n${historialFormateado}`,
   datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
   `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}".`,
   `IMPORTANTE: Si el usuario indica que quiere hablar con una persona, agente o humano, no insistas ni pidas más detalles. Solo responde con un mensaje claro diciendo que se le va a transferir a un agente humano. No digas que "intentarás ayudar". Simplemente confirma que será derivado.`,
 ].join("\n");
+
+console.log("🧠 promptSystem generado:", promptSystem);
 
 // ✅ Generar saludo si es el primer mensaje
 let saludoInicial = "";
@@ -452,7 +485,10 @@ if (!historialFormateado || historialFormateado.trim() === "") {
   saludoInicial = nombre
     ? `${saludo}, ${nombre}. `
     : `${saludo}. `;
+  console.log("👋 Se ha generado saludo inicial:", saludoInicial);
 }
+
+console.log("📨 Enviando a OpenAI:", saludoInicial + message);
 
 const response = await openai.chat.completions.create({
   model: "gpt-4",
@@ -462,11 +498,15 @@ const response = await openai.chat.completions.create({
   ],
 });
 
-    const reply = response.choices[0].message.content;
+console.log("✅ Respuesta recibida de OpenAI:", response);
 
-    const traduccionRespuesta = await traducir(reply, "es");
+const reply = response.choices[0].message.content;
+console.log("💬 Respuesta GPT extraída:", reply);
 
-    // Guardar mensaje del asistente (traducido para el panel)
+const traduccionRespuesta = await traducir(reply, "es");
+console.log("🌍 Traducción al español:", traduccionRespuesta);
+
+// ✅ Guardar mensaje del asistente (traducido para el panel)
 await db.collection("mensajes").add({
   idConversacion: finalUserId,
   rol: "asistente",
@@ -476,6 +516,7 @@ await db.collection("mensajes").add({
   tipo: "texto",
   timestamp: new Date().toISOString(),
 });
+console.log("📝 Mensaje guardado en Firestore correctamente.");
 
 // ✅ Guardar historial formateado optimizado en el documento de la conversación
 const nuevoHistorial = historialFormateado
@@ -1103,6 +1144,41 @@ app.use((err, req, res, next) => {
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
   res.status(500).json({ error: "Error interno del servidor" });
   res.json({ error: "Error interno del servidor" });
+});
+
+app.get("/api/nombre-funeraria/:userId", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const doc = await db.collection("conversaciones").doc(userId).get();
+    if (!doc.exists) {
+      return res.status(404).json({ nombre: "Canal Digital" });
+    }
+
+    const data = doc.data();
+    const nombre = data?.datosContexto?.line?.company?.name || "Canal Digital";
+
+    res.json({ nombre });
+  } catch (err) {
+    console.error("❌ Error en /api/nombre-funeraria:", err);
+    res.status(500).json({ nombre: "Canal Digital" });
+  }
+});
+
+app.get("/api/contexto-inicial/:userUuid/:lineUuid", async (req, res) => {
+  const { userUuid, lineUuid } = req.params;
+
+  if (!userUuid || !lineUuid) {
+    return res.status(400).json({ error: "Faltan userUuid o lineUuid" });
+  }
+
+  try {
+    const datos = await llamarWebhookContexto({ userUuid, lineUuid });
+    return res.json(datos);
+  } catch (error) {
+    console.error("❌ Error en /api/contexto-inicial:", error);
+    return res.status(500).json({ error: "No se pudo obtener contexto" });
+  }
 });
 
 app.listen(PORT, "0.0.0.0", () => {
