@@ -261,6 +261,8 @@ const bodyData = {
 };
 
   try {
+  console.log("🟢 Enviando mensaje al backend:", bodyData); // 👈 ESTE AÑADIDO
+
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -275,7 +277,6 @@ const bodyData = {
     if (data.reply?.trim()) addMessage(data.reply, 'assistant');
   }, delay);
 
-  // ✅ Activar escucha solo si la conversación está intervenida
   if (data.intervenida) {
     console.log("👂 Activando listener realtime porque la conversación está intervenida");
     activarListenerRealtime(userId);
