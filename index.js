@@ -444,7 +444,7 @@ if (convData?.intervenida) {
   }
 }
 
-   // 🧠 Preparar prompt sin datosContexto
+   // ✅ Preparar prompt
 const baseConocimiento = fs.existsSync("./base_conocimiento_actualizado.txt")
   ? fs.readFileSync("./base_conocimiento_actualizado.txt", "utf8")
   : "";
@@ -466,22 +466,26 @@ try {
   console.warn("⚠️ No se pudo cargar o guardar historial formateado:", err);
 }
 
-// 🔕 TEMPORAL: Eliminamos datosContexto del prompt
 const promptSystem = [
   baseConocimiento,
   `\nHistorial reciente de conversación:\n${historialFormateado}`,
+  datosContexto ? `\nInformación adicional de contexto JSON:\n${JSON.stringify(datosContexto)}` : "",
   `IMPORTANTE: Responde siempre en el idioma detectado del usuario: "${idioma}".`,
   `IMPORTANTE: Si el usuario indica que quiere hablar con una persona, agente o humano, no insistas ni pidas más detalles. Solo responde con un mensaje claro diciendo que se le va a transferir a un agente humano. No digas que "intentarás ayudar". Simplemente confirma que será derivado.`,
 ].join("\n");
 
 console.log("🧠 promptSystem generado:", promptSystem);
 
-// ✅ Generar saludo si es el primer mensaje (sin nombre)
+// ✅ Generar saludo si es el primer mensaje
 let saludoInicial = "";
 if (!historialFormateado || historialFormateado.trim() === "") {
   const saludo = obtenerSaludoHoraActual(idioma);
-  saludoInicial = `${saludo}. `;
-  console.log("👋 Se ha generado saludo inicial SIN nombre:", saludoInicial);
+  const nombre = datosContexto?.user?.name || null;
+
+  saludoInicial = nombre
+    ? `${saludo}, ${nombre}. `
+    : `${saludo}. `;
+  console.log("👋 Se ha generado saludo inicial:", saludoInicial);
 }
 
 console.log("📨 Enviando a OpenAI:", saludoInicial + message);
