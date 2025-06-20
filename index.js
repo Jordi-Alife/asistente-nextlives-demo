@@ -490,18 +490,22 @@ if (!historialFormateado || historialFormateado.trim() === "") {
 
 console.log("📨 Enviando a OpenAI:", saludoInicial + message);
 
-const response = await openai.chat.completions.create({
-  model: "gpt-4",
-  messages: [
-    { role: "system", content: promptSystem },
-    { role: "user", content: saludoInicial + message },
-  ],
-});
-
-console.log("✅ Respuesta recibida de OpenAI:", response);
-
-const reply = response.choices[0].message.content;
-console.log("💬 Respuesta GPT extraída:", reply);
+let reply = "";
+try {
+  const response = await openai.chat.completions.create({
+    model: "gpt-4",
+    messages: [
+      { role: "system", content: promptSystem },
+      { role: "user", content: saludoInicial + message },
+    ],
+  });
+  console.log("✅ Respuesta recibida de OpenAI:", response);
+  reply = response.choices[0].message.content;
+  console.log("💬 Respuesta GPT extraída:", reply);
+} catch (err) {
+  console.error("❌ ERROR AL LLAMAR A OPENAI:", err);
+  return res.status(500).json({ reply: "Lo siento, no pude obtener respuesta del asistente." });
+}
 
 const traduccionRespuesta = await traducir(reply, "es");
 console.log("🌍 Traducción al español:", traduccionRespuesta);
