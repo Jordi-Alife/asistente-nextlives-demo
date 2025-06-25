@@ -553,15 +553,20 @@ await db.collection("mensajes").add({
 console.log("📝 Mensaje guardado en Firestore correctamente.");
 
 // ✅ Guardar historial formateado optimizado en el documento de la conversación
-const nuevoHistorial = historialFormateado
-  ? `${historialFormateado}\nUsuario: ${message}\nAsistente: ${reply}`
-  : `Usuario: ${message}\nAsistente: ${reply}`;
+// Limitamos a las últimas 20 líneas del historial para evitar exceso de tokens
+let historialRecortado = "";
+if (historialFormateado && historialFormateado.trim() !== "") {
+  const lineas = historialFormateado.split("\n");
+  const ultimasLineas = lineas.slice(-20); // puedes ajustar a -10 o -30 si quieres
+  historialRecortado = ultimasLineas.join("\n");
+}
+
+const nuevoHistorial = `${historialRecortado}\nUsuario: ${message}\nAsistente: ${reply}`;
 
 await db.collection("conversaciones").doc(finalUserId).set(
   { historialFormateado: nuevoHistorial },
   { merge: true }
 );
-
     // ✅ Etiqueta "Intervenida" se añade después del mensaje GPT
     if (shouldEscalateToHuman(message)) {
       await db.collection("mensajes").add({
